@@ -21,7 +21,6 @@ classifiers = [
 dev = [
   "homeassistant==2026.9.0",
   "pytest-homeassistant-custom-component==0.13.363",
-  "aioresponses==0.7.9",
   "pytest-cov",
   "mypy>=1.14",
   "ruff>=0.9",
@@ -67,7 +66,3 @@ python_version = "3.14"
 strict = true
 warn_unreachable = true
 files = ["pyklyqa_pet", "custom_components/klyqa_pet"]
-
-[[tool.mypy.overrides]]
-module = ["aioresponses.*"]
-ignore_missing_imports = true

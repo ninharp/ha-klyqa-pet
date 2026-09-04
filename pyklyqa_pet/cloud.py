@@ -43,10 +43,19 @@ class CloudDevice:
 class KlyqaCloudClient:
     """Minimal cloud client: login and list devices with their local access tokens."""
 
-    def __init__(self, session: aiohttp.ClientSession, environment: Environment) -> None:
-        """Create the client using an externally managed aiohttp session."""
+    def __init__(
+        self,
+        session: aiohttp.ClientSession,
+        environment: Environment,
+        *,
+        base_url: str | None = None,
+    ) -> None:
+        """Create the client using an externally managed aiohttp session.
+
+        `base_url` overrides the environment's cloud URL (used by tests).
+        """
         self._session = session
-        self._base_url = CLOUD_BASE_URLS[environment]
+        self._base_url = (base_url or CLOUD_BASE_URLS[environment]).rstrip("/")
         self._account_token: str | None = None
 
     @property
