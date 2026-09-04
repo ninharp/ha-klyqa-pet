@@ -1,0 +1,72 @@
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[project]
+name = "pyklyqa-pet"
+version = "0.1.0"
+description = "Async client for Klyqa pet devices (Welly, Foody, Airpurifier) using the local QConnex REST API"
+readme = "README.md"
+requires-python = ">=3.13"
+license = "MIT"
+authors = [{ name = "Michael Sauer" }]
+dependencies = ["aiohttp>=3.10"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Framework :: AsyncIO",
+  "Topic :: Home Automation",
+]
+
+[project.optional-dependencies]
+dev = [
+  "homeassistant==2026.9.0",
+  "pytest-homeassistant-custom-component==0.13.363",
+  "aioresponses==0.7.9",
+  "pytest-cov",
+  "mypy>=1.14",
+  "ruff>=0.9",
+  "pre-commit",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["pyklyqa_pet"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests", "tests_lib"]
+asyncio_mode = "auto"
+addopts = "-p no:cacheprovider"
+
+[tool.coverage.run]
+source = ["pyklyqa_pet", "custom_components/klyqa_pet"]
+branch = true
+
+[tool.coverage.report]
+fail_under = 95
+show_missing = true
+
+[tool.ruff]
+target-version = "py313"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF", "ASYNC", "ANN", "D"]
+ignore = ["D203", "D213", "D107", "ANN401"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["D", "ANN"]
+"tests_lib/**" = ["D", "ANN"]
+"scripts/**" = ["D"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["pyklyqa_pet", "custom_components.klyqa_pet"]
+force-sort-within-sections = true
+
+[tool.mypy]
+python_version = "3.13"
+strict = true
+warn_unreachable = true
+files = ["pyklyqa_pet", "custom_components/klyqa_pet"]
+
+[[tool.mypy.overrides]]
+module = ["aioresponses.*"]
+ignore_missing_imports = true
