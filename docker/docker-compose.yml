@@ -1,0 +1,17 @@
+services:
+  homeassistant:
+    build: .
+    container_name: ha-klyqa-pet-dev
+    # host networking would be preferable for mDNS discovery, but Docker Desktop for
+    # macOS on this machine does not expose it to the host without the "Enable host
+    # networking" beta feature (Settings > Resources > Network); falling back to a
+    # published port. See docker/README.md for details.
+    ports:
+      - "8123:8123"
+    environment:
+      TZ: Europe/Berlin
+    volumes:
+      - ./config:/config
+      - ../custom_components:/config/custom_components:ro
+      - ..:/workspace:ro
+    restart: unless-stopped

@@ -1,0 +1,8 @@
+default_config:
+
+logger:
+  default: warning
+  logs:
+    custom_components.klyqa_pet: debug
+    pyklyqa_pet: debug
+    homeassistant.components.zeroconf: info
