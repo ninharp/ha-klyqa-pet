@@ -9,4 +9,3 @@ htmlcov/
 dist/
 docker/config/*
 !docker/config/configuration.yaml
-docs/*
