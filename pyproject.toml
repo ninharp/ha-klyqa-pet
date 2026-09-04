@@ -63,10 +63,10 @@ known-first-party = ["pyklyqa_pet", "custom_components.klyqa_pet"]
 force-sort-within-sections = true
 
 [tool.mypy]
-python_version = "3.13"
+python_version = "3.14"
 strict = true
 warn_unreachable = true
-files = ["pyklyqa_pet"]
+files = ["pyklyqa_pet", "custom_components/klyqa_pet"]
 
 [[tool.mypy.overrides]]
 module = ["aioresponses.*"]
