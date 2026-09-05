@@ -42,5 +42,7 @@ cards:
       - entity: sensor.klyqa_welly_3868c0_pump_status
       - entity: sensor.klyqa_welly_3868c0_power_status
       - entity: sensor.klyqa_welly_3868c0_battery
+      - entity: sensor.klyqa_welly_3868c0_descaling_status
+      - entity: sensor.klyqa_welly_3868c0_light_effect
       - entity: button.klyqa_welly_3868c0_start_descaling
       - entity: button.klyqa_welly_3868c0_stop_descaling

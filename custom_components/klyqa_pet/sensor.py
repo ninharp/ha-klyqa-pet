@@ -130,7 +130,7 @@ WELLY_SENSORS: tuple[KlyqaSensorEntityDescription, ...] = (
     KlyqaSensorEntityDescription(
         key="clean_tank_volume",
         translation_key="clean_tank_volume",
-        device_class=SensorDeviceClass.VOLUME,
+        device_class=SensorDeviceClass.VOLUME_STORAGE,
         native_unit_of_measurement=UnitOfVolume.MILLILITERS,
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda data: data.welly.tank_clean,
@@ -138,7 +138,7 @@ WELLY_SENSORS: tuple[KlyqaSensorEntityDescription, ...] = (
     KlyqaSensorEntityDescription(
         key="sewage_tank_volume",
         translation_key="sewage_tank_volume",
-        device_class=SensorDeviceClass.VOLUME,
+        device_class=SensorDeviceClass.VOLUME_STORAGE,
         native_unit_of_measurement=UnitOfVolume.MILLILITERS,
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda data: data.welly.tank_sewage,
@@ -148,7 +148,7 @@ WELLY_SENSORS: tuple[KlyqaSensorEntityDescription, ...] = (
         translation_key="drinking_volume",
         device_class=SensorDeviceClass.VOLUME,
         native_unit_of_measurement=UnitOfVolume.MILLILITERS,
-        state_class=SensorStateClass.MEASUREMENT,
+        state_class=SensorStateClass.TOTAL,
         value_fn=lambda data: data.welly.drinking_volume,
     ),
     KlyqaSensorEntityDescription(
