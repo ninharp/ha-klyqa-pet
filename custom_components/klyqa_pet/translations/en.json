@@ -97,6 +97,7 @@
   },
   "exceptions": {
     "update_failed": { "message": "Updating {device} failed: {error}" },
+    "rate_limited": { "message": "{device} is rate limiting requests; another client (for example the Klyqa app) is polling it at the same time" },
     "token_refresh_failed": { "message": "{device} rejected its access token and the Klyqa cloud could not be reached to refresh it" },
     "device_auth_failed": { "message": "{device} rejects the access token from the Klyqa account; re-pair the device in the Klyqa app" },
     "auth_failed": { "message": "{device} rejected the access token" },

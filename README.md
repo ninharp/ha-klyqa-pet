@@ -152,7 +152,10 @@ mains power, since the device never reports a battery level in that configuratio
 
 Each device is polled independently through its own `DataUpdateCoordinator`:
 
-- Device state and settings are refreshed every **15 seconds**.
+- Device state is refreshed every **15 seconds**.
+- Settings (Welly/Foody) are refreshed every **4th poll (60 seconds)**, since they
+  change far less often than state; a settings change made through Home Assistant is
+  reflected immediately, without waiting for the next scheduled settings poll.
 - System information (firmware/SDK version, last boot, etc.) is refreshed every
   **5 minutes**, since it changes far less often.
 - Devices are also discovered passively via mDNS (`_qcxrest._tcp`). If a known
@@ -246,6 +249,15 @@ manually** using its current token.
 cloud itself rejects your account password (not when an individual device rejects its
 token). Go to the integration's entry and follow the re-authentication prompt with
 your current password.
+
+**A device intermittently shows as unavailable even though it is reachable.** The
+device firmware allows at most 3 REST requests per 300 ms and answers further requests
+with an error until that window passes. The integration already spaces out and retries
+its own requests to stay under this limit, so a device flipping to "unavailable" like
+this usually means something else is polling it at the same time — the Klyqa app, or
+the same device added to Home Assistant a second time. The log then names the affected
+device: "… is rate limiting requests; another client (for example the Klyqa app) is
+polling it at the same time". Close the other client, or wait for the poll to succeed.
 
 **Enable debug logging** to see the raw REST requests/responses:
 

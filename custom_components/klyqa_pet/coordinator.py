@@ -25,6 +25,7 @@ from pyklyqa_pet import (
     KlyqaConnectionError,
     KlyqaDevice,
     KlyqaDeviceError,
+    KlyqaRateLimitError,
     SystemInfo,
     WellyDevice,
     WellySettings,
@@ -37,6 +38,7 @@ from .const import (
     CONF_PRODUCT_NAME,
     DOMAIN,
     SCAN_INTERVAL,
+    SETTINGS_POLL_INTERVAL,
     SYSTEM_INFO_INTERVAL,
     TOKEN_RECOVERY_BACKOFF,
 )
@@ -134,6 +136,11 @@ class KlyqaDeviceCoordinator(DataUpdateCoordinator[KlyqaDeviceData]):
         )
         self.dispense_portions: int = 1
         self._system_info: SystemInfo | None = None
+        # Cached settings for Welly/Foody devices, refreshed only every
+        # SETTINGS_POLL_INTERVAL polls (see _async_fetch) to reduce REST pressure; a
+        # settings write marks this stale so the very next poll reloads it.
+        self._settings: DeviceSettings = None
+        self._poll_count = 0
         # dt_util.utcnow() (not time.monotonic()) so tests can control this clock with
         # freezegun; monotonic() is untouched by freezegun and made the cache gate
         # untestable.
@@ -215,11 +222,28 @@ class KlyqaDeviceCoordinator(DataUpdateCoordinator[KlyqaDeviceData]):
         return data
 
     def _update_failed(self, err: Exception) -> UpdateFailed:
+        if isinstance(err, KlyqaRateLimitError):
+            # The library already retried a couple of times before giving up; a device
+            # keeps rejecting requests only when something else (the Klyqa app, another
+            # HA entry) is also polling it at the same time.
+            return UpdateFailed(
+                translation_domain=DOMAIN,
+                translation_key="rate_limited",
+                translation_placeholders={"device": self.device_name},
+            )
         return UpdateFailed(
             translation_domain=DOMAIN,
             translation_key="update_failed",
             translation_placeholders={"device": self.device_name, "error": str(err)},
         )
+
+    def mark_settings_stale(self) -> None:
+        """Force the next poll to reload settings instead of reusing the cached copy.
+
+        Called after a settings write so the change is reflected as soon as the write's
+        automatic refresh runs, without waiting for the next periodic settings poll.
+        """
+        self._settings = None
 
     async def _async_recover_token(self) -> None:
         """Fetch fresh tokens from the cloud after the device rejected ours."""
@@ -250,7 +274,10 @@ class KlyqaDeviceCoordinator(DataUpdateCoordinator[KlyqaDeviceData]):
         state: DeviceState
         if isinstance(self.device, WellyDevice | FoodyDevice):
             state = await self.device.get_state()
-            settings = await self.device.get_settings()
+            self._poll_count += 1
+            if self._settings is None or self._poll_count % SETTINGS_POLL_INTERVAL == 0:
+                self._settings = await self.device.get_settings()
+            settings = self._settings
         elif isinstance(self.device, AirPurifierDevice):
             state = await self.device.get_state()
         else:  # pragma: no cover - guarded by create_device

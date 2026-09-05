@@ -38,6 +38,10 @@ PLATFORMS: Final = [
 
 SCAN_INTERVAL: Final = timedelta(seconds=15)
 SYSTEM_INFO_INTERVAL: Final = timedelta(seconds=300)
+# Settings (Welly/Foody) change far less often than state; fetch them only every 4th
+# poll (60 s at the default SCAN_INTERVAL) to reduce REST pressure on the device, unless
+# a settings write forces an earlier reload (see KlyqaDeviceCoordinator.mark_settings_stale).
+SETTINGS_POLL_INTERVAL: Final = 4
 
 # How long a device that still rejects its token after a cloud token recovery is left
 # alone before another recovery is attempted for it.

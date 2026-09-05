@@ -72,6 +72,7 @@
   "selector": { "environment": { "options": { "prod": "Produktion", "test": "Test" } } },
   "exceptions": {
     "update_failed": { "message": "Aktualisierung von {device} fehlgeschlagen: {error}" },
+    "rate_limited": { "message": "{device} begrenzt die Anfragen; ein anderer Client (z. B. die Klyqa-App) fragt das Gerät gleichzeitig ab" },
     "token_refresh_failed": { "message": "{device} hat den Zugriffstoken abgelehnt und die Klyqa-Cloud war zum Erneuern nicht erreichbar" },
     "device_auth_failed": { "message": "{device} lehnt den Zugriffstoken des Klyqa-Kontos ab; das Gerät in der Klyqa-App neu koppeln" },
     "auth_failed": { "message": "{device} hat den Zugriffstoken abgelehnt" },

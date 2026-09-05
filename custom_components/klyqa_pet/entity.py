@@ -11,7 +11,13 @@ from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity import Entity, EntityDescription
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from pyklyqa_pet import KlyqaAuthError, KlyqaConnectionError, KlyqaDeviceError
+from pyklyqa_pet import (
+    FoodySettings,
+    KlyqaAuthError,
+    KlyqaConnectionError,
+    KlyqaDeviceError,
+    WellySettings,
+)
 
 from .const import DOMAIN, MANUFACTURER
 from .coordinator import KlyqaDeviceCoordinator
@@ -49,7 +55,7 @@ class KlyqaPetEntity(CoordinatorEntity[KlyqaDeviceCoordinator]):
         """Run a device command, translate library errors and refresh the coordinator."""
         device = self.coordinator.device_name
         try:
-            await command
+            result = await command
         except KlyqaAuthError as err:
             raise HomeAssistantError(
                 translation_domain=DOMAIN,
@@ -68,6 +74,11 @@ class KlyqaPetEntity(CoordinatorEntity[KlyqaDeviceCoordinator]):
                 translation_key="cannot_connect",
                 translation_placeholders={"device": device},
             ) from err
+        if isinstance(result, WellySettings | FoodySettings):
+            # A settings write already returns the fresh settings; mark the coordinator's
+            # cache stale so the refresh below reloads it instead of reusing the copy
+            # from before the write (see KlyqaDeviceCoordinator.mark_settings_stale).
+            self.coordinator.mark_settings_stale()
         await self.coordinator.async_request_refresh()
 
 
