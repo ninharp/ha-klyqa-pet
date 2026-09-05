@@ -19,7 +19,7 @@ from .exceptions import (
 from .foody import FoodyDevice, FoodySettings, FoodyState
 from .welly import WellyDevice, WellyMode, WellySettings, WellyState
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 
 _DEVICE_CLASSES: dict[DeviceType, type[KlyqaDevice]] = {
     DeviceType.WELLY: WellyDevice,
