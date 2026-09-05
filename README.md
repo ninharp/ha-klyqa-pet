@@ -90,7 +90,7 @@ except where noted):
 | switch | Light, Ambient light, Sensor mode light, Clean tank low alert, Dirty tank full alert, Super power saving, Telemetry | Config category |
 | number | Heating temperature, Daily drinking goal, Radar sensitivity, Circulation pump speed, Clean tank low threshold, Dirty tank full threshold | Config category |
 | sensor | Water temperature, Clean tank volume, Sewage tank volume, Drinking volume, Total consumption, Last drinking, Filter life | |
-| sensor | Pump status, Power status, Power supply, Descaling status, Light effect | Power status/supply, descaling status and light effect are diagnostic |
+| sensor | Pump status, Power status, Power supply, Descaling status, Light effect, Battery | Power status/supply, descaling status, light effect and battery are diagnostic |
 | binary_sensor | Water tray low, Pump problem, Do not disturb, Charging | |
 | button | Start descaling, Stop descaling | |
 
@@ -104,7 +104,8 @@ except where noted):
 | number | Feed audio volume | Config category |
 | select | Custom button function, Battery mode, Charging protection | Config category |
 | sensor | Bowl remaining, Real-time weight, Feeding state, Bowl state, Food bin, Error state, Last manual feeding, Last manual portions, Last scheduled feeding, Last scheduled portions, Next scheduled feeding | |
-| binary_sensor | Power, Power adapter, Food low, Bowl removed | |
+| sensor | Battery, MCU firmware version | Diagnostic category |
+| binary_sensor | Power, Power adapter, Problem, Food low, Bowl removed | |
 
 The Foody's built-in battery sensor reports "unknown" on units that run only on
 mains power, since the device never reports a battery level in that configuration.
@@ -116,7 +117,7 @@ mains power, since the device never reports a battery level in that configuratio
 | fan | Air purifier | On/off, speed (3 levels), preset modes standalone/auto/night/pet |
 | light | LED | On/off and RGB colour of the ring; brightness is read-only (see Known limitations) |
 | switch | Ionizer, Child lock, Key tone | Ionizer is a primary control; Child lock and Key tone are config category |
-| sensor | Air quality, Filter remaining, Total run time, Air volume, Pet mode time | |
+| sensor | PM2.5, Air quality, Filter remaining, Filter life (%), Total run time, Air volume, Pet mode time | |
 | binary_sensor | Tilted, Filter removed, Ionizer active | |
 
 ## Data updates
