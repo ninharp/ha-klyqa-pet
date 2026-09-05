@@ -10,3 +10,4 @@ dist/
 docker/config/*
 !docker/config/configuration.yaml
 docs/superpowers/
+docs/bruno/
