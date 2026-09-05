@@ -35,29 +35,35 @@ async def discover(timeout: float) -> list[DiscoveredDevice]:  # noqa: ASYNC109
     aiozc = AsyncZeroconf(ip_version=IPVersion.V4Only)
     found: dict[str, DiscoveredDevice] = {}
     pending: list[asyncio.Task[None]] = []
+    browser: AsyncServiceBrowser | None = None
+    try:
 
-    async def resolve(zc: Zeroconf, service_type: str, name: str) -> None:
-        info = AsyncServiceInfo(service_type, name)
-        if not await info.async_request(zc, 3000):
-            return
-        addresses = info.parsed_addresses()
-        if not addresses:
-            return
-        device = parse_zeroconf_properties(addresses[0], info.port, info.properties)
-        if device is not None:
-            found[device.local_device_id] = device
+        async def resolve(zc: Zeroconf, service_type: str, name: str) -> None:
+            info = AsyncServiceInfo(service_type, name)
+            if not await info.async_request(zc, 3000):
+                return
+            addresses = info.parsed_addresses()
+            if not addresses:
+                return
+            device = parse_zeroconf_properties(addresses[0], info.port, info.properties)
+            if device is not None:
+                found[device.local_device_id] = device
 
-    def on_change(
-        zeroconf: Zeroconf, service_type: str, name: str, state_change: ServiceStateChange
-    ) -> None:
-        if state_change is ServiceStateChange.Added:
-            pending.append(asyncio.ensure_future(resolve(zeroconf, service_type, name)))
+        def on_change(
+            zeroconf: Zeroconf, service_type: str, name: str, state_change: ServiceStateChange
+        ) -> None:
+            if state_change is ServiceStateChange.Added:
+                pending.append(asyncio.ensure_future(resolve(zeroconf, service_type, name)))
 
-    browser = AsyncServiceBrowser(aiozc.zeroconf, ZEROCONF_TYPE, handlers=[on_change])
-    await asyncio.sleep(timeout)
-    await asyncio.gather(*pending, return_exceptions=True)
-    await browser.async_cancel()
-    await aiozc.async_close()
+        browser = AsyncServiceBrowser(aiozc.zeroconf, ZEROCONF_TYPE, handlers=[on_change])
+        await asyncio.sleep(timeout)
+        await asyncio.gather(*pending, return_exceptions=True)
+    finally:
+        for task in pending:
+            task.cancel()
+        if browser is not None:
+            await browser.async_cancel()
+        await aiozc.async_close()
     return list(found.values())
 
 
@@ -82,14 +88,20 @@ async def main() -> None:
                     f"   firmware {info.app_version} (sdk {info.sdk_version}),"
                     f" hw {info.hw_revision}"
                 )
-                if isinstance(device, WellyDevice | FoodyDevice | AirPurifierDevice):
+            except KlyqaError as err:
+                print(f"   system/info ERROR: {err}")
+            if isinstance(device, WellyDevice | FoodyDevice | AirPurifierDevice):
+                try:
                     state = await device.get_state()
                     print("   state:", json.dumps(state.raw, indent=2))
-                if isinstance(device, WellyDevice | FoodyDevice):
+                except KlyqaError as err:
+                    print(f"   device/state ERROR: {err}")
+            if isinstance(device, WellyDevice | FoodyDevice):
+                try:
                     settings = await device.get_settings()
                     print("   settings:", json.dumps(settings.raw, indent=2))
-            except KlyqaError as err:
-                print(f"   ERROR: {err}")
+                except KlyqaError as err:
+                    print(f"   device/settings ERROR: {err}")
             print()
 
 
