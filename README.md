@@ -317,7 +317,11 @@ pytest
   their system info and state — useful for verifying connectivity and firmware
   behaviour outside of Home Assistant.
 - `brands/klyqa_pet/` contains the icon and logo assets prepared for submission
-  to [home-assistant/brands](https://github.com/home-assistant/brands).
+  to [home-assistant/brands](https://github.com/home-assistant/brands). The same
+  files are also copied into `custom_components/klyqa_pet/brand/` as an interim
+  fallback so HACS's brand check passes before that submission is merged; once
+  the `home-assistant/brands` PR lands, the icon shown in Home Assistant's UI
+  comes from there and the local copy can be removed.
 - The integration implements the Home Assistant Bronze through Platinum quality
   scale rules (see `custom_components/klyqa_pet/quality_scale.yaml`), except for the
   `brands` rule: the assets above still need to be submitted and merged upstream
