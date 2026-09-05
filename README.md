@@ -39,6 +39,16 @@ counterparts but have not been verified against real hardware.
    Assistant `config/custom_components` directory.
 2. Restart Home Assistant.
 
+### A note on the `pyklyqa-pet` dependency
+
+The integration's `manifest.json` requires the `pyklyqa-pet` library from PyPI so
+that HACS and manual installs can pull it in automatically. Until that library is
+published, a normal HACS or manual install will fail during setup with "Requirements
+for klyqa_pet not found". Until then, run Home Assistant for development with
+`--skip-pip-packages pyklyqa-pet` and the repository root on `PYTHONPATH`, so the
+in-repo copy of the library is used instead — see
+[`docker/README.md`](docker/README.md) for a working example.
+
 ## Configuration
 
 Configuration is done entirely from the UI — there is nothing to add to
@@ -192,15 +202,23 @@ devices (Settings → Devices & services → Klyqa Pet → your device).
 
 **A device shows as unavailable.** Confirm the device is powered on and on the same
 network as Home Assistant, and that Home Assistant can reach it on port `3333`
-(`curl http://<device-ip>:3333/device/state`). If the device was previously
-discovered via mDNS and has since changed its IP address, wait for the next mDNS
-announcement or restart Home Assistant to force a re-resolve.
+(`curl -H "Authorization: <token>" http://<device-ip>:3333/api/v1/system/info`). If
+the device was previously discovered via mDNS and has since changed its IP address,
+wait for the next mDNS announcement or restart Home Assistant to force a re-resolve.
 
-**The integration reports that a device "rejected the access token".** This means
-the device (or account) requires you to sign in again. Go to the integration's entry
-and follow the re-authentication prompt with your current password. If the device
-itself was re-paired with the Klyqa app (which rotates its token), remove and
-re-add it, or use **Add a device manually** with the new token.
+**A device rejects its access token.** This affects only that one device: it becomes
+unavailable and the log shows a warning naming it ("… rejects the access token from
+the Klyqa account; re-pair the device in the Klyqa app"). This does **not** trigger a
+re-authentication prompt — the integration first tries to recover by fetching a fresh
+token from the cloud, and only asks you to sign in again if that cloud login itself
+fails (see below). To fix a device stuck like this, either re-pair it in the Klyqa app
+so the cloud hands out a new token, or remove and re-add it with **Add a device
+manually** using its current token.
+
+**The integration asks you to re-authenticate.** This happens only when the Klyqa
+cloud itself rejects your account password (not when an individual device rejects its
+token). Go to the integration's entry and follow the re-authentication prompt with
+your current password.
 
 **Enable debug logging** to see the raw REST requests/responses:
 
