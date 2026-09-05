@@ -132,14 +132,16 @@ async def test_device_401_triggers_token_refresh(
     assert mock_config_entry.runtime_data.coordinators[WELLY_ID].last_update_success is True
 
 
-async def test_persistent_401_starts_reauth(
+async def test_persistent_401_marks_device_unavailable(
     hass: HomeAssistant,
     freezer: FrozenDateTimeFactory,
     mock_config_entry: MockConfigEntry,
     mock_cloud: MagicMock,
     mock_devices: dict,
     mock_welly: MagicMock,
+    caplog: pytest.LogCaptureFixture,
 ) -> None:
+    """A device that keeps rejecting its token must not force the whole account into reauth."""
     await setup_integration(hass, mock_config_entry)
     mock_welly.get_state.side_effect = KlyqaAuthError("401")
     # A coordinator only polls while an entity listens to it.
@@ -148,8 +150,42 @@ async def test_persistent_401_starts_reauth(
     freezer.tick(SCAN_INTERVAL + timedelta(seconds=1))
     async_fire_time_changed(hass)
     await hass.async_block_till_done()
+    freezer.tick(SCAN_INTERVAL + timedelta(seconds=1))
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done()
 
+    assert mock_config_entry.runtime_data.coordinators[WELLY_ID].last_update_success is False
     assert mock_config_entry.state is ConfigEntryState.LOADED
+    assert hass.config_entries.flow.async_progress(DOMAIN) == []
+    token_warnings = [
+        record
+        for record in caplog.records
+        if record.name == "custom_components.klyqa_pet.coordinator"
+        and record.levelname == "WARNING"
+        and "re-pair the device in the Klyqa app" in record.getMessage()
+    ]
+    assert len(token_warnings) == 1
+
+
+async def test_cloud_auth_error_during_recovery_starts_reauth(
+    hass: HomeAssistant,
+    freezer: FrozenDateTimeFactory,
+    mock_config_entry: MockConfigEntry,
+    mock_cloud: MagicMock,
+    mock_devices: dict,
+    mock_welly: MagicMock,
+) -> None:
+    """If the cloud login itself fails while recovering, the account must go to reauth."""
+    await setup_integration(hass, mock_config_entry)
+    mock_cloud.login.side_effect = KlyqaAuthError("bad")
+    mock_welly.get_state.side_effect = KlyqaAuthError("401")
+    # A coordinator only polls while an entity listens to it.
+    mock_config_entry.runtime_data.coordinators[WELLY_ID].async_add_listener(lambda: None)
+
+    freezer.tick(SCAN_INTERVAL + timedelta(seconds=1))
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done()
+
     flows = hass.config_entries.flow.async_progress(DOMAIN)
     assert flows and flows[0]["context"]["source"] == SOURCE_REAUTH
 

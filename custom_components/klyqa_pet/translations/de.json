@@ -54,7 +54,7 @@
   "exceptions": {
     "update_failed": { "message": "Aktualisierung von {device} fehlgeschlagen: {error}" },
     "token_refresh_failed": { "message": "{device} hat den Zugriffstoken abgelehnt und die Klyqa-Cloud war zum Erneuern nicht erreichbar" },
-    "device_auth_failed": { "message": "{device} hat den konfigurierten Zugriffstoken abgelehnt" },
+    "device_auth_failed": { "message": "{device} lehnt den Zugriffstoken des Klyqa-Kontos ab; das Gerät in der Klyqa-App neu koppeln" },
     "auth_failed": { "message": "{device} hat den Zugriffstoken abgelehnt" },
     "device_rejected": { "message": "{device} hat den Befehl abgelehnt: {error}" },
     "cannot_connect": { "message": "{device} ist nicht erreichbar" }

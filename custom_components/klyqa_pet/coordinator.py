@@ -137,6 +137,7 @@ class KlyqaDeviceCoordinator(DataUpdateCoordinator[KlyqaDeviceData]):
         # freezegun; monotonic() is untouched by freezegun and made the cache gate
         # untestable.
         self._system_info_time: datetime = datetime.min.replace(tzinfo=dt_util.UTC)
+        self._token_warned = False
 
     @property
     def welly_device(self) -> WellyDevice:
@@ -158,7 +159,7 @@ class KlyqaDeviceCoordinator(DataUpdateCoordinator[KlyqaDeviceData]):
 
     async def _async_update_data(self) -> KlyqaDeviceData:
         try:
-            return await self._async_fetch()
+            data = await self._async_fetch()
         except KlyqaAuthError as err:
             if self.is_manual:
                 raise UpdateFailed(
@@ -168,15 +169,30 @@ class KlyqaDeviceCoordinator(DataUpdateCoordinator[KlyqaDeviceData]):
                 ) from err
             await self._async_recover_token()
             try:
-                return await self._async_fetch()
+                data = await self._async_fetch()
             except KlyqaAuthError as retry_err:
-                raise ConfigEntryAuthFailed(
-                    f"Device {self.device_name} still rejects the refreshed token"
+                # The cloud login succeeded, so this is a per-device problem (e.g. the
+                # device was re-paired to a different account) and must not put the
+                # whole config entry into reauth.
+                if not self._token_warned:
+                    _LOGGER.warning(
+                        "Device %s (%s) rejects the access token from the Klyqa "
+                        "account; re-pair the device in the Klyqa app",
+                        self.device_name,
+                        self.local_device_id,
+                    )
+                    self._token_warned = True
+                raise UpdateFailed(
+                    translation_domain=DOMAIN,
+                    translation_key="device_auth_failed",
+                    translation_placeholders={"device": self.device_name},
                 ) from retry_err
             except (KlyqaConnectionError, KlyqaDeviceError) as retry_err:
                 raise self._update_failed(retry_err) from retry_err
         except (KlyqaConnectionError, KlyqaDeviceError) as err:
             raise self._update_failed(err) from err
+        self._token_warned = False
+        return data
 
     def _update_failed(self, err: Exception) -> UpdateFailed:
         return UpdateFailed(
