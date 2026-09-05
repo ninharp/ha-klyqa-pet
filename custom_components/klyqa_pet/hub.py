@@ -132,6 +132,20 @@ class KlyqaPetHub:
         """Return True if this entry has no cloud account (devices added by IP + token)."""
         return self.entry.data.get(CONF_ENVIRONMENT) == ENVIRONMENT_LOCAL
 
+    def _is_claimed_elsewhere(self, device_id: str) -> bool:
+        """Return True if another config entry manually claims this device.
+
+        A device claimed by a local entry (added there by IP + token) must never also
+        be polled with a cloud token by an account entry that happens to list the same
+        id - the manual entry's record is authoritative for it.
+        """
+        for entry in self.hass.config_entries.async_entries(DOMAIN):
+            if entry.entry_id == self.entry.entry_id:
+                continue
+            if device_id in entry.options.get(CONF_MANUAL_DEVICES, {}):
+                return True
+        return False
+
     async def async_setup(self) -> None:
         """Refresh tokens, create coordinators for known hosts and start mDNS browsing."""
         if not self.is_local:
@@ -144,7 +158,15 @@ class KlyqaPetHub:
                     raise ConfigEntryNotReady(f"Cannot reach the Klyqa cloud: {err}") from err
                 _LOGGER.warning("Klyqa cloud unreachable, using stored device tokens: %s", err)
 
-        records = {**self.cloud_devices, **self.manual_devices}
+        cloud_devices = {
+            device_id: record
+            for device_id, record in self.cloud_devices.items()
+            if not self._is_claimed_elsewhere(device_id)
+        }
+        for device_id in set(self.cloud_devices) - set(cloud_devices):
+            _LOGGER.debug("Skipping %s: claimed by another entry", device_id)
+
+        records = {**cloud_devices, **self.manual_devices}
         await asyncio.gather(
             *(
                 self._async_add_coordinator(device_id, record)
@@ -225,6 +247,11 @@ class KlyqaPetHub:
                 self.entry, data={**self.entry.data, CONF_DEVICES: merged}
             )
             for device_id, record in merged.items():
+                if self.is_manual(device_id):
+                    # A manually added device keeps the token it was given; the cloud
+                    # must never overwrite it even if the account happens to list the
+                    # same id.
+                    continue
                 if (coordinator := self.coordinators.get(device_id)) is not None:
                     coordinator.device.access_token = record[CONF_ACCESS_TOKEN]
             for device_id in removed:
@@ -290,6 +317,9 @@ class KlyqaPetHub:
                 discovered.product_id,
                 discovered.host,
             )
+            return
+        if not self.is_manual(device_id) and self._is_claimed_elsewhere(device_id):
+            _LOGGER.debug("Ignoring %s: claimed by another entry", device_id)
             return
         if (coordinator := self.coordinators.get(device_id)) is not None:
             host_changed = coordinator.device.host != discovered.host

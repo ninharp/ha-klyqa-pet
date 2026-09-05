@@ -354,6 +354,111 @@ def test_merge_fills_missing_product_id_from_cloud() -> None:
     assert merged[PURIFIER_ID][CONF_PRODUCT_NAME] == "Klyqa Air Purifier"
 
 
+async def test_refresh_tokens_does_not_overwrite_manual_token(
+    hass: HomeAssistant,
+    mock_config_entry: MockConfigEntry,
+    mock_cloud: MagicMock,
+    mock_devices: dict,
+    cloud_devices: list[CloudDevice],
+) -> None:
+    """A manual device sharing an id with a cloud-listed device keeps its own token.
+
+    This can happen for a re-flashed development board whose MAC-based id coincides
+    with an id the cloud account also happens to list.
+    """
+    mock_config_entry.add_to_hass(hass)
+    hass.config_entries.async_update_entry(
+        mock_config_entry,
+        options={
+            CONF_MANUAL_DEVICES: {
+                WELLY_ID: device_record("manual-token", "", "@klyqa.welly-dev", WELLY_HOST)
+            }
+        },
+    )
+    await hass.config_entries.async_setup(mock_config_entry.entry_id)
+    await hass.async_block_till_done()
+    hub = mock_config_entry.runtime_data
+    assert hub.coordinators[WELLY_ID].is_manual is True
+    assert hub.coordinators[WELLY_ID].device.access_token == "manual-token"
+
+    cloud_devices[0] = CloudDevice(
+        WELLY_ID, "cloud-token-2", "Kitchen fountain", "@klyqa.welly-dev", raw={}
+    )
+    await hub.async_refresh_tokens(force=True)
+    await hass.async_block_till_done()
+
+    # the cloud's fresh token landed in the stored cloud record...
+    assert mock_config_entry.data[CONF_DEVICES][WELLY_ID][CONF_ACCESS_TOKEN] == "cloud-token-2"
+    # ...but the manual device's coordinator never had its token replaced
+    assert hub.coordinators[WELLY_ID].device.access_token == "manual-token"
+
+
+async def test_setup_skips_device_claimed_by_local_entry(
+    hass: HomeAssistant,
+    mock_config_entry: MockConfigEntry,
+    mock_local_config_entry: MockConfigEntry,
+    mock_cloud: MagicMock,
+    mock_devices: dict,
+) -> None:
+    """A device claimed by a local entry must never also be set up by an account entry."""
+    mock_local_config_entry.add_to_hass(hass)
+    hass.config_entries.async_update_entry(
+        mock_local_config_entry,
+        options={
+            CONF_MANUAL_DEVICES: {
+                WELLY_ID: device_record("dev-token", "", "@klyqa.welly-dev", WELLY_HOST)
+            }
+        },
+    )
+    await hass.config_entries.async_setup(mock_local_config_entry.entry_id)
+    await hass.async_block_till_done()
+
+    await setup_integration(hass, mock_config_entry)
+    hub = mock_config_entry.runtime_data
+    assert WELLY_ID not in hub.coordinators
+    assert FOODY_ID in hub.coordinators
+    assert PURIFIER_ID in hub.coordinators
+
+
+async def test_discovery_skips_device_claimed_by_local_entry(
+    hass: HomeAssistant,
+    mock_config_entry: MockConfigEntry,
+    mock_local_config_entry: MockConfigEntry,
+    mock_cloud: MagicMock,
+    mock_devices: dict,
+) -> None:
+    """A cloud entry must never adopt a device that a local entry already claims."""
+    mock_config_entry.add_to_hass(hass)
+    devices = {
+        k: {kk: vv for kk, vv in v.items() if kk not in ("host", "port")}
+        for k, v in mock_config_entry.data[CONF_DEVICES].items()
+    }
+    hass.config_entries.async_update_entry(
+        mock_config_entry, data={**mock_config_entry.data, CONF_DEVICES: devices}
+    )
+
+    mock_local_config_entry.add_to_hass(hass)
+    hass.config_entries.async_update_entry(
+        mock_local_config_entry,
+        options={
+            CONF_MANUAL_DEVICES: {
+                WELLY_ID: device_record("dev-token", "", "@klyqa.welly-dev", WELLY_HOST)
+            }
+        },
+    )
+    # Both entries are already added to hass, so setting up the domain for the first
+    # time (via either entry_id) loads them together, exactly like a real HA startup
+    # with two config entries for this integration.
+    await hass.config_entries.async_setup(mock_local_config_entry.entry_id)
+    await hass.async_block_till_done()
+    hub = mock_config_entry.runtime_data
+    assert WELLY_ID not in hub.coordinators
+
+    await hub.async_device_discovered(_discovered(WELLY_ID, WELLY_HOST))
+    await hass.async_block_till_done()
+    assert WELLY_ID not in hub.coordinators
+
+
 async def test_manual_device_401_does_not_start_reauth(
     hass: HomeAssistant,
     freezer: FrozenDateTimeFactory,
