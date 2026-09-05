@@ -10,6 +10,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 from homeassistant.const import CONF_EMAIL, CONF_HOST, CONF_PASSWORD, CONF_PORT
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import entity_registry as er
 import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 from pytest_homeassistant_custom_component.syrupy import HomeAssistantSnapshotExtension
@@ -64,6 +65,21 @@ def make_system_info(product_id: str, device_id: str, product_name: str) -> Syst
 def auto_enable_custom_integrations(enable_custom_integrations: None) -> Generator[None]:
     """Enable loading custom integrations in all tests."""
     yield
+
+
+@pytest.fixture
+def entity_registry_enabled_by_default(
+    hass: HomeAssistant, entity_registry: er.EntityRegistry
+) -> Generator[None]:
+    """Enable all entities by default in entity registry."""
+    # Don't actually enable them here - instead, update the setup_integration
+    # to enable them after they're created.
+    yield
+
+    # Enable all entities that were created during setup
+    for entity in entity_registry.entities.values():
+        if entity.disabled_by == er.RegistryEntryDisabler.INTEGRATION:
+            entity_registry.async_update_entity(entity.entity_id, disabled_by=None)
 
 
 @pytest.fixture
@@ -218,8 +234,23 @@ def mock_config_entry() -> MockConfigEntry:
     )
 
 
-async def setup_integration(hass: HomeAssistant, entry: MockConfigEntry) -> None:
+async def setup_integration(
+    hass: HomeAssistant, entry: MockConfigEntry, entity_registry: er.EntityRegistry | None = None
+) -> None:
     """Add the entry to hass and set it up."""
     entry.add_to_hass(hass)
     await hass.config_entries.async_setup(entry.entry_id)
     await hass.async_block_till_done()
+
+    # Enable all entities if entity_registry is provided, and reload the entity platform
+    if entity_registry:
+        disabled_entities = []
+        for entity in entity_registry.entities.values():
+            if entity.disabled_by == er.RegistryEntryDisabler.INTEGRATION:
+                entity_registry.async_update_entity(entity.entity_id, disabled_by=None)
+                disabled_entities.append(entity.entity_id)
+
+        # Reload entity platforms to re-add disabled entities
+        if disabled_entities:
+            await hass.config_entries.async_reload(entry.entry_id)
+            await hass.async_block_till_done()

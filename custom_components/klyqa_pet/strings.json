@@ -79,5 +79,119 @@
     "auth_failed": { "message": "{device} rejected the access token" },
     "device_rejected": { "message": "{device} rejected the command: {error}" },
     "cannot_connect": { "message": "Could not reach {device}" }
+  },
+  "entity": {
+    "sensor": {
+      "wifi_rssi": { "name": "Wi-Fi signal" },
+      "firmware_version": { "name": "Firmware version" },
+      "sdk_version": { "name": "SDK version" },
+      "boot_reason": { "name": "Boot reason" },
+      "last_boot": { "name": "Last boot" },
+      "free_heap": { "name": "Free heap" },
+      "water_temperature": { "name": "Water temperature" },
+      "clean_tank_volume": { "name": "Clean tank volume" },
+      "sewage_tank_volume": { "name": "Sewage tank volume" },
+      "drinking_volume": { "name": "Drinking volume" },
+      "total_consumption": { "name": "Total consumption" },
+      "last_drinking": { "name": "Last drinking" },
+      "filter_life": { "name": "Filter life" },
+      "pump_status": {
+        "name": "Pump status",
+        "state": {
+          "normal": "Normal",
+          "low_water": "Low water",
+          "abnormal": "Abnormal",
+          "overweight": "Overweight",
+          "no_clean_water": "No clean water"
+        }
+      },
+      "power_status": {
+        "name": "Power status",
+        "state": { "off": "Off", "on": "On", "power_saving": "Power saving" }
+      },
+      "power_supply": {
+        "name": "Power supply",
+        "state": { "mains": "Mains", "battery": "Battery" }
+      },
+      "descaling_status": { "name": "Descaling status" },
+      "light_effect": { "name": "Light effect" },
+      "bowl_remaining": { "name": "Bowl remaining" },
+      "realtime_weight": { "name": "Real-time weight" },
+      "feeding_state": {
+        "name": "Feeding state",
+        "state": {
+          "idle": "Idle",
+          "dispensing": "Dispensing",
+          "pet_eating": "Pet eating",
+          "dispensing_wet_food": "Dispensing wet food"
+        }
+      },
+      "bowl_state": {
+        "name": "Bowl state",
+        "state": { "normal": "Normal", "overweight": "Overweight", "removed": "Removed" }
+      },
+      "food_bin_state": {
+        "name": "Food bin",
+        "state": { "low": "Low", "sufficient": "Sufficient" }
+      },
+      "error_state": {
+        "name": "Error state",
+        "state": {
+          "normal": "Normal",
+          "motor_stalled": "Motor stalled",
+          "below_threshold": "Dispensed amount below threshold",
+          "motor_position_abnormal": "Motor position abnormal"
+        }
+      },
+      "last_manual_feeding": {
+        "name": "Last manual feeding",
+        "state": {
+          "started": "Started",
+          "succeeded": "Succeeded",
+          "failed": "Failed",
+          "failed_wet_food": "Failed (wet food)"
+        }
+      },
+      "last_manual_portions": { "name": "Last manual portions" },
+      "last_scheduled_feeding": {
+        "name": "Last scheduled feeding",
+        "state": {
+          "started": "Started",
+          "succeeded": "Succeeded",
+          "failed": "Failed",
+          "slow_feed_updated": "Slow feed updated",
+          "terminated": "Terminated",
+          "abnormal_fresh_food": "Abnormal (fresh food mode)",
+          "failed_wet_food": "Failed (wet food)"
+        }
+      },
+      "last_scheduled_portions": { "name": "Last scheduled portions" },
+      "next_feed_time": { "name": "Next scheduled feeding" },
+      "mcu_firmware_version": { "name": "MCU firmware version" },
+      "air_quality": {
+        "name": "Air quality",
+        "state": {
+          "excellent": "Excellent",
+          "good": "Good",
+          "slightly_polluted": "Slightly polluted",
+          "heavily_polluted": "Heavily polluted"
+        }
+      },
+      "filter_remaining": { "name": "Filter remaining time" },
+      "total_run_time": { "name": "Total run time" },
+      "air_volume": { "name": "Cleaned air volume" },
+      "pet_mode_time": { "name": "Pet mode time" }
+    },
+    "binary_sensor": {
+      "water_tray_low": { "name": "Water tray low" },
+      "pump_problem": { "name": "Pump problem" },
+      "do_not_disturb": { "name": "Do not disturb" },
+      "power_adapter": { "name": "Power adapter" },
+      "food_low": { "name": "Food low" },
+      "bowl_removed": { "name": "Bowl removed" },
+      "tilted": { "name": "Tilted" },
+      "filter_removed": { "name": "Filter removed" },
+      "ionizer_active": { "name": "Ionizer active" }
+    }
   }
 }

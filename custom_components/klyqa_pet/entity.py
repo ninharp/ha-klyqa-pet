@@ -2,18 +2,25 @@
 
 from __future__ import annotations
 
-from collections.abc import Coroutine
-from typing import Any
+from collections.abc import Callable, Coroutine, Iterable
+from typing import TYPE_CHECKING, Any
 
+from homeassistant.core import callback
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity import EntityDescription
+from homeassistant.helpers.entity import Entity, EntityDescription
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from pyklyqa_pet import KlyqaAuthError, KlyqaConnectionError, KlyqaDeviceError
 
 from .const import DOMAIN, MANUFACTURER
 from .coordinator import KlyqaDeviceCoordinator
+
+if TYPE_CHECKING:
+    from homeassistant.config_entries import ConfigEntry
+    from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+
+    from .hub import KlyqaPetHub
 
 
 class KlyqaPetEntity(CoordinatorEntity[KlyqaDeviceCoordinator]):
@@ -62,3 +69,24 @@ class KlyqaPetEntity(CoordinatorEntity[KlyqaDeviceCoordinator]):
                 translation_placeholders={"device": device},
             ) from err
         await self.coordinator.async_request_refresh()
+
+
+def async_setup_platform_entities(
+    entry: ConfigEntry,
+    async_add_entities: AddConfigEntryEntitiesCallback,
+    factory: Callable[[KlyqaDeviceCoordinator], Iterable[Entity]],
+) -> None:
+    """Add entities for existing devices and for devices discovered later."""
+    hub: KlyqaPetHub = entry.runtime_data
+    added: set[str] = set()
+
+    @callback
+    def _add(coordinator: KlyqaDeviceCoordinator) -> None:
+        if coordinator.local_device_id in added:
+            return
+        added.add(coordinator.local_device_id)
+        async_add_entities(factory(coordinator))
+
+    entry.async_on_unload(hub.async_add_new_device_listener(_add))
+    for coordinator in list(hub.coordinators.values()):
+        _add(coordinator)
