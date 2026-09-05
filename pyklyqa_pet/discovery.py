@@ -18,7 +18,6 @@ _PRODUCT_ID_MAP: dict[str, DeviceType] = {
     "@pfriendly.foody-dev": DeviceType.FOODY,
     "@klyqa.airpurifier2": DeviceType.AIRPURIFIER,
     "@klyqa.airpurifier2-dev": DeviceType.AIRPURIFIER,
-    "@klyqa.cleaning.airpurifier1": DeviceType.AIRPURIFIER,
     "@pfriendly.airpurifier": DeviceType.AIRPURIFIER,
     "@pfriendly.airpurifier-dev": DeviceType.AIRPURIFIER,
 }

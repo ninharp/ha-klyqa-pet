@@ -88,7 +88,7 @@ def cloud_devices() -> list[CloudDevice]:
     return [
         CloudDevice(WELLY_ID, "welly-token", "Kitchen fountain", "@klyqa.welly-dev", raw={}),
         CloudDevice(FOODY_ID, "foody-token", "Feeder", "@klyqa.foody-dev", raw={}),
-        CloudDevice(PURIFIER_ID, "purifier-token", "", "@klyqa.cleaning.airpurifier1", raw={}),
+        CloudDevice(PURIFIER_ID, "purifier-token", "", "@klyqa.airpurifier2", raw={}),
     ]
 
 
@@ -132,9 +132,7 @@ def mock_foody() -> MagicMock:
 def mock_purifier() -> MagicMock:
     device = MagicMock(spec=AirPurifierDevice)
     device.get_system_info = AsyncMock(
-        return_value=make_system_info(
-            "@klyqa.cleaning.airpurifier1", PURIFIER_ID, "Klyqa airpurifier"
-        )
+        return_value=make_system_info("@klyqa.airpurifier2", PURIFIER_ID, "Klyqa airpurifier")
     )
     device.get_state = AsyncMock(
         return_value=AirPurifierState.from_dict(load_json("airpurifier_state.json"))
@@ -219,7 +217,7 @@ def mock_config_entry() -> MockConfigEntry:
                 PURIFIER_ID: device_record(
                     "purifier-token",
                     "",
-                    "@klyqa.cleaning.airpurifier1",
+                    "@klyqa.airpurifier2",
                     PURIFIER_HOST,
                     "Klyqa airpurifier",
                 ),

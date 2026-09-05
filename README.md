@@ -17,7 +17,6 @@ that the integration never depends on the cloud being reachable.
 | `@klyqa.foody-dev` | Foody feeder (development firmware) | Supported |
 | `@klyqa.airpurifier2` | Airpurifier (2nd generation) | Supported |
 | `@klyqa.airpurifier2-dev` | Airpurifier (2nd generation, development firmware) | Supported |
-| `@klyqa.cleaning.airpurifier1` | Airpurifier (1st generation) | Supported |
 | `@pfriendly.water-fountain` / `-dev` | Welly, rebranded product ID | Recognised, untested |
 | `@pfriendly.foody` / `-dev` | Foody, rebranded product ID | Recognised, untested |
 | `@pfriendly.airpurifier` / `-dev` | Airpurifier, rebranded product ID | Recognised, untested |
@@ -178,6 +177,8 @@ devices (Settings → Devices & services → Klyqa Pet → your device).
   updates) are intentionally left to the manufacturer's app.
 - The Airpurifier's LED brightness is read-only; the firmware provides no way to set
   it, only to read the current value and toggle between automatic and custom colour.
+- The first-generation Klyqa air purifier (`@klyqa.cleaning.airpurifier1`) uses a
+  different local API and is not supported.
 - On Foody units that run on mains power only, the battery sensor stays "unknown"
   because the device never reports a battery level.
 - Automatic discovery relies on mDNS (`_qcxrest._tcp`), which requires Home
