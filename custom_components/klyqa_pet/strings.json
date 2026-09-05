@@ -1,9 +1,33 @@
 {
   "config": {
+    "flow_title": "{name}",
     "step": {
       "user": {
         "title": "Connect to the Klyqa cloud",
-        "description": "Sign in with your Klyqa account. The devices themselves are controlled locally.",
+        "description": "Sign in with your Klyqa account to fetch the access tokens of your devices. The devices themselves are controlled locally on your network.",
+        "data": {
+          "environment": "Environment",
+          "email": "Email",
+          "password": "Password"
+        },
+        "data_description": {
+          "environment": "Use Production unless you have a Klyqa test account."
+        }
+      },
+      "discovery_confirm": {
+        "title": "Klyqa device found",
+        "description": "{name} ({product}) was found at {host}. To control it, sign in with the Klyqa account the device is paired with."
+      },
+      "reauth_confirm": {
+        "title": "Re-authenticate Klyqa account",
+        "description": "The Klyqa cloud rejected the password for {email}. Enter the current password.",
+        "data": {
+          "password": "Password"
+        }
+      },
+      "reconfigure": {
+        "title": "Reconfigure Klyqa account",
+        "description": "Change the environment or credentials of this account.",
         "data": {
           "environment": "Environment",
           "email": "Email",
@@ -12,32 +36,51 @@
       }
     },
     "error": {
-      "cannot_connect": "Failed to connect",
-      "invalid_auth": "Invalid authentication",
+      "cannot_connect": "Failed to connect to the Klyqa cloud",
+      "invalid_auth": "Invalid email or password",
       "unknown": "Unexpected error"
     },
     "abort": {
-      "already_configured": "Account is already configured"
+      "already_configured": "This account (or device) is already configured",
+      "already_in_progress": "Configuration flow is already in progress",
+      "not_supported": "This device is not supported by the Klyqa Pet integration",
+      "reauth_successful": "Re-authentication was successful",
+      "reconfigure_successful": "Re-configuration was successful",
+      "wrong_account": "You can only reconfigure the same account"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Add a device manually",
+        "description": "Add a Klyqa device by IP address and access token, for example a development device that is not paired with the cloud account.",
+        "data": {
+          "host": "IP address or hostname",
+          "port": "Port",
+          "access_token": "Device access token"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Failed to connect to the device",
+      "invalid_auth": "The device rejected the access token",
+      "not_supported": "This device is not supported by the Klyqa Pet integration"
+    }
+  },
+  "selector": {
+    "environment": {
+      "options": {
+        "prod": "Production",
+        "test": "Test"
+      }
     }
   },
   "exceptions": {
-    "update_failed": {
-      "message": "Updating {device} failed: {error}"
-    },
-    "token_refresh_failed": {
-      "message": "{device} rejected its access token and the Klyqa cloud could not be reached to refresh it"
-    },
-    "device_auth_failed": {
-      "message": "{device} rejected the configured access token"
-    },
-    "auth_failed": {
-      "message": "{device} rejected the access token"
-    },
-    "device_rejected": {
-      "message": "{device} rejected the command: {error}"
-    },
-    "cannot_connect": {
-      "message": "Could not reach {device}"
-    }
+    "update_failed": { "message": "Updating {device} failed: {error}" },
+    "token_refresh_failed": { "message": "{device} rejected its access token and the Klyqa cloud could not be reached to refresh it" },
+    "device_auth_failed": { "message": "{device} rejected the configured access token" },
+    "auth_failed": { "message": "{device} rejected the access token" },
+    "device_rejected": { "message": "{device} rejected the command: {error}" },
+    "cannot_connect": { "message": "Could not reach {device}" }
   }
 }
