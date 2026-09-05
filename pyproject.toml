@@ -31,7 +31,7 @@ dev = [
 packages = ["pyklyqa_pet"]
 
 [tool.hatch.build.targets.sdist]
-include = ["pyklyqa_pet/**", "tests_lib/**", "README.md", "pyproject.toml"]
+include = ["pyklyqa_pet/**", "tests_lib/**", "/README.md", "/pyproject.toml"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests", "tests_lib"]
