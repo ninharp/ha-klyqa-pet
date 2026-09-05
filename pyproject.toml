@@ -25,8 +25,6 @@ dev = [
   "mypy>=1.14",
   "ruff>=0.9",
   "pre-commit",
-  "pyyaml>=6",
-  "jsonschema>=4",
 ]
 
 [tool.hatch.build.targets.wheel]
