@@ -192,6 +192,63 @@
       "tilted": { "name": "Tilted" },
       "filter_removed": { "name": "Filter removed" },
       "ionizer_active": { "name": "Ionizer active" }
+    },
+    "switch": {
+      "heating": { "name": "Heating" },
+      "light_switch": { "name": "Light" },
+      "ambient_light_switch": { "name": "Ambient light" },
+      "sensor_mode_light": { "name": "Sensor mode light" },
+      "alert_clean_tank_low": { "name": "Clean tank low alert" },
+      "alert_dirty_tank_full": { "name": "Dirty tank full alert" },
+      "super_power_saving_mode": { "name": "Super power saving" },
+      "telemetry": { "name": "Telemetry" },
+      "app_led": { "name": "Indicator LED" },
+      "app_pet_lock": { "name": "Pet lock" },
+      "beep_switch": { "name": "Beep" },
+      "feed_audio_enable": { "name": "Feeding audio" },
+      "ionizer": { "name": "Ionizer" },
+      "child_lock": { "name": "Child lock" },
+      "key_tone": { "name": "Key tone" }
+    },
+    "number": {
+      "heating_temperature": { "name": "Heating temperature" },
+      "daily_drinking_goal": { "name": "Daily drinking goal" },
+      "radar_sensitivity": { "name": "Radar sensitivity" },
+      "circulation_pump_speed": { "name": "Circulation pump speed" },
+      "threshold_clean_tank_low": { "name": "Clean tank low threshold" },
+      "threshold_dirty_tank_full": { "name": "Dirty tank full threshold" },
+      "portions": { "name": "Portions" },
+      "feed_audio_volume": { "name": "Feed audio volume" }
+    },
+    "select": {
+      "mode": {
+        "name": "Mode",
+        "state": {
+          "sensing": "Sensing",
+          "fresh_water_24h": "24h fresh water",
+          "water_change": "Water change",
+          "self_wash": "Self-wash",
+          "drain": "Drain water"
+        }
+      },
+      "custom_button_function": {
+        "name": "Custom button function",
+        "state": {
+          "none": "None",
+          "indicator_light": "Toggle indicator light",
+          "alert_tone": "Toggle alert tone",
+          "privacy_mode": "Toggle privacy mode",
+          "play_audio": "Play audio"
+        }
+      },
+      "battery_work_mode": {
+        "name": "Battery mode",
+        "state": { "standard": "Standard", "power_save": "Power save" }
+      },
+      "charging_protection": {
+        "name": "Charging protection",
+        "state": { "stop_charging": "Stop charging", "continue_charging": "Continue charging" }
+      }
     }
   }
 }

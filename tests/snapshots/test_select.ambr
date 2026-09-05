@@ -1,0 +1,249 @@
+# serializer version: 1
+# name: test_selects[select.feeder_battery_mode-entry]
+  EntityRegistryEntrySnapshot({
+    'aliases': list([
+      None,
+    ]),
+    'area_id': None,
+    'capabilities': dict({
+      <SelectEntityCapabilityAttribute.OPTIONS: 'options'>: list([
+        'standard',
+        'power_save',
+      ]),
+    }),
+    'config_entry_id': <ANY>,
+    'config_subentry_id': <ANY>,
+    'device_class': None,
+    'device_id': <ANY>,
+    'disabled_by': None,
+    'domain': 'select',
+    'entity_category': <EntityCategory.CONFIG: 'config'>,
+    'entity_id': 'select.feeder_battery_mode',
+    'has_entity_name': True,
+    'hidden_by': None,
+    'icon': None,
+    'id': <ANY>,
+    'labels': set({
+    }),
+    'name': None,
+    'object_id_base': 'Battery mode',
+    'options': dict({
+    }),
+    'original_device_class': None,
+    'original_icon': None,
+    'original_name': 'Battery mode',
+    'platform': 'klyqa_pet',
+    'previous_unique_id': None,
+    'suggested_object_id': None,
+    'supported_features': 0,
+    'translation_key': 'battery_work_mode',
+    'unique_id': 'A0F26219DC34_battery_work_mode',
+    'unit_of_measurement': None,
+  })
+# ---
+# name: test_selects[select.feeder_battery_mode-state]
+  StateSnapshot({
+    'attributes': ReadOnlyDict({
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Feeder Battery mode',
+      <SelectEntityCapabilityAttribute.OPTIONS: 'options'>: list([
+        'standard',
+        'power_save',
+      ]),
+    }),
+    'context': <ANY>,
+    'entity_id': 'select.feeder_battery_mode',
+    'last_changed': <ANY>,
+    'last_reported': <ANY>,
+    'last_updated': <ANY>,
+    'state': 'standard',
+  })
+# ---
+# name: test_selects[select.feeder_charging_protection-entry]
+  EntityRegistryEntrySnapshot({
+    'aliases': list([
+      None,
+    ]),
+    'area_id': None,
+    'capabilities': dict({
+      <SelectEntityCapabilityAttribute.OPTIONS: 'options'>: list([
+        'stop_charging',
+        'continue_charging',
+      ]),
+    }),
+    'config_entry_id': <ANY>,
+    'config_subentry_id': <ANY>,
+    'device_class': None,
+    'device_id': <ANY>,
+    'disabled_by': None,
+    'domain': 'select',
+    'entity_category': <EntityCategory.CONFIG: 'config'>,
+    'entity_id': 'select.feeder_charging_protection',
+    'has_entity_name': True,
+    'hidden_by': None,
+    'icon': None,
+    'id': <ANY>,
+    'labels': set({
+    }),
+    'name': None,
+    'object_id_base': 'Charging protection',
+    'options': dict({
+    }),
+    'original_device_class': None,
+    'original_icon': None,
+    'original_name': 'Charging protection',
+    'platform': 'klyqa_pet',
+    'previous_unique_id': None,
+    'suggested_object_id': None,
+    'supported_features': 0,
+    'translation_key': 'charging_protection',
+    'unique_id': 'A0F26219DC34_charging_protection',
+    'unit_of_measurement': None,
+  })
+# ---
+# name: test_selects[select.feeder_charging_protection-state]
+  StateSnapshot({
+    'attributes': ReadOnlyDict({
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Feeder Charging protection',
+      <SelectEntityCapabilityAttribute.OPTIONS: 'options'>: list([
+        'stop_charging',
+        'continue_charging',
+      ]),
+    }),
+    'context': <ANY>,
+    'entity_id': 'select.feeder_charging_protection',
+    'last_changed': <ANY>,
+    'last_reported': <ANY>,
+    'last_updated': <ANY>,
+    'state': 'stop_charging',
+  })
+# ---
+# name: test_selects[select.feeder_custom_button_function-entry]
+  EntityRegistryEntrySnapshot({
+    'aliases': list([
+      None,
+    ]),
+    'area_id': None,
+    'capabilities': dict({
+      <SelectEntityCapabilityAttribute.OPTIONS: 'options'>: list([
+        'none',
+        'indicator_light',
+        'alert_tone',
+        'privacy_mode',
+        'play_audio',
+      ]),
+    }),
+    'config_entry_id': <ANY>,
+    'config_subentry_id': <ANY>,
+    'device_class': None,
+    'device_id': <ANY>,
+    'disabled_by': None,
+    'domain': 'select',
+    'entity_category': <EntityCategory.CONFIG: 'config'>,
+    'entity_id': 'select.feeder_custom_button_function',
+    'has_entity_name': True,
+    'hidden_by': None,
+    'icon': None,
+    'id': <ANY>,
+    'labels': set({
+    }),
+    'name': None,
+    'object_id_base': 'Custom button function',
+    'options': dict({
+    }),
+    'original_device_class': None,
+    'original_icon': None,
+    'original_name': 'Custom button function',
+    'platform': 'klyqa_pet',
+    'previous_unique_id': None,
+    'suggested_object_id': None,
+    'supported_features': 0,
+    'translation_key': 'custom_button_function',
+    'unique_id': 'A0F26219DC34_custom_button_function',
+    'unit_of_measurement': None,
+  })
+# ---
+# name: test_selects[select.feeder_custom_button_function-state]
+  StateSnapshot({
+    'attributes': ReadOnlyDict({
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Feeder Custom button function',
+      <SelectEntityCapabilityAttribute.OPTIONS: 'options'>: list([
+        'none',
+        'indicator_light',
+        'alert_tone',
+        'privacy_mode',
+        'play_audio',
+      ]),
+    }),
+    'context': <ANY>,
+    'entity_id': 'select.feeder_custom_button_function',
+    'last_changed': <ANY>,
+    'last_reported': <ANY>,
+    'last_updated': <ANY>,
+    'state': 'none',
+  })
+# ---
+# name: test_selects[select.kitchen_fountain_mode-entry]
+  EntityRegistryEntrySnapshot({
+    'aliases': list([
+      None,
+    ]),
+    'area_id': None,
+    'capabilities': dict({
+      <SelectEntityCapabilityAttribute.OPTIONS: 'options'>: list([
+        'sensing',
+        'fresh_water_24h',
+        'water_change',
+        'self_wash',
+        'drain',
+      ]),
+    }),
+    'config_entry_id': <ANY>,
+    'config_subentry_id': <ANY>,
+    'device_class': None,
+    'device_id': <ANY>,
+    'disabled_by': None,
+    'domain': 'select',
+    'entity_category': None,
+    'entity_id': 'select.kitchen_fountain_mode',
+    'has_entity_name': True,
+    'hidden_by': None,
+    'icon': None,
+    'id': <ANY>,
+    'labels': set({
+    }),
+    'name': None,
+    'object_id_base': 'Mode',
+    'options': dict({
+    }),
+    'original_device_class': None,
+    'original_icon': None,
+    'original_name': 'Mode',
+    'platform': 'klyqa_pet',
+    'previous_unique_id': None,
+    'suggested_object_id': None,
+    'supported_features': 0,
+    'translation_key': 'mode',
+    'unique_id': '188B0EAF2D7C_mode',
+    'unit_of_measurement': None,
+  })
+# ---
+# name: test_selects[select.kitchen_fountain_mode-state]
+  StateSnapshot({
+    'attributes': ReadOnlyDict({
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Kitchen fountain Mode',
+      <SelectEntityCapabilityAttribute.OPTIONS: 'options'>: list([
+        'sensing',
+        'fresh_water_24h',
+        'water_change',
+        'self_wash',
+        'drain',
+      ]),
+    }),
+    'context': <ANY>,
+    'entity_id': 'select.kitchen_fountain_mode',
+    'last_changed': <ANY>,
+    'last_reported': <ANY>,
+    'last_updated': <ANY>,
+    'state': 'fresh_water_24h',
+  })
+# ---
