@@ -177,6 +177,35 @@ async def test_local_flow_creates_entry(
     mock_setup_entry.assert_called_once()
 
 
+async def test_local_flow_create_releases_device_from_owning_account_entry(
+    hass: HomeAssistant,
+    mock_config_entry: MockConfigEntry,
+    mock_cloud: Any,
+    mock_devices: dict,
+    mock_manual_device: Any,
+) -> None:
+    """Creating a new local entry for a device already owned by an account entry.
+
+    A device is owned by exactly one config entry: manually adding it here must
+    schedule a reload of the loaded account entry that still lists it as a cloud
+    record, so that entry gives it up.
+    """
+    await setup_integration(hass, mock_config_entry)
+    mock_manual_device.get_system_info = AsyncMock(
+        return_value=make_system_info("@klyqa.welly-dev", WELLY_ID, "Klyqa Welly")
+    )
+    result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": SOURCE_USER})
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {"next_step_id": "local"}
+    )
+    with patch.object(hass.config_entries, "async_schedule_reload") as mock_reload:
+        result = await hass.config_entries.flow.async_configure(result["flow_id"], LOCAL_INPUT)
+        await hass.async_block_till_done()
+
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    mock_reload.assert_any_call(mock_config_entry.entry_id)
+
+
 async def test_local_flow_second_device_added_to_existing_entry(
     hass: HomeAssistant,
     mock_local_config_entry: MockConfigEntry,

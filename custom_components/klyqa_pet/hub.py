@@ -9,7 +9,7 @@ import logging
 from typing import Any, cast
 
 from homeassistant.components.zeroconf import async_get_async_instance
-from homeassistant.config_entries import SOURCE_ZEROCONF, ConfigEntry
+from homeassistant.config_entries import SOURCE_ZEROCONF, ConfigEntry, ConfigEntryState
 from homeassistant.const import CONF_EMAIL, CONF_HOST, CONF_PASSWORD, CONF_PORT
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
@@ -91,6 +91,35 @@ def merge_device_records(
     return merged
 
 
+def _async_remove_device_registry_entry(hass: HomeAssistant, device_id: str, entry_id: str) -> None:
+    """Remove one config entry's device-registry entry for a device, if any."""
+    registry = dr.async_get(hass)
+    device = registry.async_get_device_by_identifier((DOMAIN, device_id), entry_id)
+    if device is not None:
+        registry.async_remove_device(device.id)
+
+
+async def async_release_device_from_other_entries(
+    hass: HomeAssistant, device_id: str, except_entry_id: str
+) -> None:
+    """Make every other loaded klyqa_pet entry give up a device it owns as a cloud record.
+
+    A device must be owned by exactly one config entry. When it is claimed elsewhere
+    (typically: added manually to a local entry), every other loaded entry that still
+    lists it as a cloud record must drop its device-registry entry for it and reload,
+    so its own `_is_claimed_elsewhere` check keeps the device out from then on.
+    """
+    for entry in hass.config_entries.async_entries(DOMAIN):
+        if entry.entry_id == except_entry_id:
+            continue
+        if entry.state is not ConfigEntryState.LOADED:
+            continue
+        if device_id not in entry.data.get(CONF_DEVICES, {}):
+            continue
+        _async_remove_device_registry_entry(hass, device_id, entry.entry_id)
+        hass.config_entries.async_schedule_reload(entry.entry_id)
+
+
 class KlyqaPetHub:
     """Runtime object of one config entry."""
 
@@ -165,6 +194,10 @@ class KlyqaPetHub:
         }
         for device_id in set(self.cloud_devices) - set(cloud_devices):
             _LOGGER.debug("Skipping %s: claimed by another entry", device_id)
+            # A device claimed elsewhere must never leave a stale device-registry entry
+            # under this entry (e.g. an orphaned device card after a manual add moved
+            # ownership away from this account entry).
+            _async_remove_device_registry_entry(self.hass, device_id, self.entry.entry_id)
 
         records = {**cloud_devices, **self.manual_devices}
         await asyncio.gather(
@@ -272,10 +305,7 @@ class KlyqaPetHub:
     async def _async_remove_stale_device(self, device_id: str) -> None:
         if (coordinator := self.coordinators.pop(device_id, None)) is not None:
             await coordinator.async_shutdown()
-        registry = dr.async_get(self.hass)
-        device = registry.async_get_device_by_identifier((DOMAIN, device_id), self.entry.entry_id)
-        if device is not None:
-            registry.async_remove_device(device.id)
+        _async_remove_device_registry_entry(self.hass, device_id, self.entry.entry_id)
         _LOGGER.info("Removed device %s that is no longer part of the Klyqa account", device_id)
 
     @callback
@@ -340,6 +370,7 @@ class KlyqaPetHub:
         self._async_abort_discovery_flow(device_id)
         if not self.is_manual(device_id) and self._is_claimed_elsewhere(device_id):
             _LOGGER.debug("Ignoring %s: claimed by another entry", device_id)
+            _async_remove_device_registry_entry(self.hass, device_id, self.entry.entry_id)
             return
         if (coordinator := self.coordinators.get(device_id)) is not None:
             host_changed = coordinator.device.host != discovered.host

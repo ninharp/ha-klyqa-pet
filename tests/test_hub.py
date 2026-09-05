@@ -27,7 +27,10 @@ from custom_components.klyqa_pet.const import (
     SYSTEM_INFO_INTERVAL,
     TOKEN_RECOVERY_BACKOFF,
 )
-from custom_components.klyqa_pet.hub import merge_device_records
+from custom_components.klyqa_pet.hub import (
+    async_release_device_from_other_entries,
+    merge_device_records,
+)
 from pyklyqa_pet import (
     CloudDevice,
     DeviceType,
@@ -512,6 +515,97 @@ async def test_discovery_skips_device_claimed_by_local_entry(
     await hub.async_device_discovered(_discovered(WELLY_ID, WELLY_HOST))
     await hass.async_block_till_done()
     assert WELLY_ID not in hub.coordinators
+
+
+async def test_release_device_from_other_entries_removes_coordinator_and_device(
+    hass: HomeAssistant,
+    mock_config_entry: MockConfigEntry,
+    mock_local_config_entry: MockConfigEntry,
+    mock_cloud: MagicMock,
+    mock_devices: dict,
+    device_registry: dr.DeviceRegistry,
+) -> None:
+    """A device claimed manually elsewhere must be dropped by the account entry that ran it.
+
+    Real-world scenario: an account entry already runs a coordinator for a cloud
+    device; the user then adds the same device manually to a local entry. The account
+    entry must give up the device (coordinator and device-registry entry) once it is
+    reloaded, and must never adopt it again afterwards.
+    """
+    await setup_integration(hass, mock_config_entry)
+    assert WELLY_ID in mock_config_entry.runtime_data.coordinators
+    assert (
+        device_registry.async_get_device_by_identifier(
+            (DOMAIN, WELLY_ID), mock_config_entry.entry_id
+        )
+        is not None
+    )
+
+    mock_local_config_entry.add_to_hass(hass)
+    hass.config_entries.async_update_entry(
+        mock_local_config_entry,
+        options={
+            CONF_MANUAL_DEVICES: {
+                WELLY_ID: device_record("dev-token", "", "@klyqa.welly-dev", WELLY_HOST)
+            }
+        },
+    )
+    await hass.config_entries.async_setup(mock_local_config_entry.entry_id)
+    await hass.async_block_till_done()
+
+    await async_release_device_from_other_entries(hass, WELLY_ID, mock_local_config_entry.entry_id)
+    await hass.async_block_till_done()
+
+    assert WELLY_ID not in mock_config_entry.runtime_data.coordinators
+    assert (
+        device_registry.async_get_device_by_identifier(
+            (DOMAIN, WELLY_ID), mock_config_entry.entry_id
+        )
+        is None
+    )
+
+
+async def test_setup_removes_stale_device_registry_entry_for_claimed_device(
+    hass: HomeAssistant,
+    mock_config_entry: MockConfigEntry,
+    mock_local_config_entry: MockConfigEntry,
+    mock_cloud: MagicMock,
+    mock_devices: dict,
+    device_registry: dr.DeviceRegistry,
+) -> None:
+    """An orphaned device card under the account entry must not linger after setup.
+
+    If a device is already claimed by a local entry by the time the account entry is
+    (re)loaded, `_is_claimed_elsewhere` already keeps it out of the coordinators - but
+    a device-registry entry left over from before (e.g. from before the device was
+    claimed elsewhere) must also be cleaned up, or it lingers as an orphaned device.
+    """
+    mock_local_config_entry.add_to_hass(hass)
+    hass.config_entries.async_update_entry(
+        mock_local_config_entry,
+        options={
+            CONF_MANUAL_DEVICES: {
+                WELLY_ID: device_record("dev-token", "", "@klyqa.welly-dev", WELLY_HOST)
+            }
+        },
+    )
+    await hass.config_entries.async_setup(mock_local_config_entry.entry_id)
+    await hass.async_block_till_done()
+
+    mock_config_entry.add_to_hass(hass)
+    device_registry.async_get_or_create(
+        config_entry_id=mock_config_entry.entry_id, identifiers={(DOMAIN, WELLY_ID)}
+    )
+    await hass.config_entries.async_setup(mock_config_entry.entry_id)
+    await hass.async_block_till_done()
+
+    assert WELLY_ID not in mock_config_entry.runtime_data.coordinators
+    assert (
+        device_registry.async_get_device_by_identifier(
+            (DOMAIN, WELLY_ID), mock_config_entry.entry_id
+        )
+        is None
+    )
 
 
 async def test_manual_device_401_does_not_start_reauth(

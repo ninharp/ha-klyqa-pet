@@ -54,7 +54,12 @@ from .const import (
     ENVIRONMENT_LOCAL,
     LOCAL_ENTRY_UNIQUE_ID,
 )
-from .hub import DeviceRecord, async_fetch_cloud_devices, merge_device_records
+from .hub import (
+    DeviceRecord,
+    async_fetch_cloud_devices,
+    async_release_device_from_other_entries,
+    merge_device_records,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -194,6 +199,15 @@ class KlyqaPetConfigFlow(ConfigFlow, domain=DOMAIN):
                     await self.async_set_unique_id(LOCAL_ENTRY_UNIQUE_ID, raise_on_progress=False)
                     self._async_abort_stale_discoveries([info.device_id])
                     existing = self._existing_local_entry()
+                    # A device now claimed here must be released from every account entry
+                    # that still lists it as a cloud record - a device is owned by exactly
+                    # one entry. The entry being created/updated here is excluded by id (it
+                    # does not exist yet on the create path, so nothing to exclude there).
+                    await async_release_device_from_other_entries(
+                        self.hass,
+                        info.device_id,
+                        except_entry_id=existing.entry_id if existing is not None else "",
+                    )
                     if existing is not None:
                         manual = {
                             **existing.options.get(CONF_MANUAL_DEVICES, {}),
@@ -389,6 +403,13 @@ class KlyqaPetOptionsFlow(OptionsFlowWithReload):
                         CONF_PRODUCT_NAME: info.product_name,
                         CONF_DEVICE_NAME: "",
                     }
+                    # A device is owned by exactly one entry: claiming it here (this
+                    # entry, which is `OptionsFlowWithReload` and thus reloads itself)
+                    # must release it from every other loaded entry that still lists it
+                    # as a cloud record.
+                    await async_release_device_from_other_entries(
+                        self.hass, info.device_id, except_entry_id=self.config_entry.entry_id
+                    )
                     return self.async_create_entry(
                         data={**self.config_entry.options, CONF_MANUAL_DEVICES: manual}
                     )
