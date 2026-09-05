@@ -166,7 +166,16 @@ async def test_zeroconf_new_device_leads_to_login(
     )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "discovery_confirm"
-    assert result["description_placeholders"]["host"] == WELLY_HOST
+    assert result["description_placeholders"] == {
+        "name": "Kitchen fountain",
+        "host": WELLY_HOST,
+        "product": "Klyqa Welly",
+    }
+    flows = hass.config_entries.flow.async_progress(DOMAIN)
+    assert flows[0]["context"]["title_placeholders"] == {
+        "product": "Klyqa Welly",
+        "name": "Kitchen fountain",
+    }
 
     # a second announcement of the same device must not open a second flow
     duplicate = await hass.config_entries.flow.async_init(

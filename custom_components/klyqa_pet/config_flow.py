@@ -162,7 +162,10 @@ class KlyqaPetConfigFlow(ConfigFlow, domain=DOMAIN):
                 return self.async_abort(reason="already_configured")
         await self.async_set_unique_id(f"discovered:{discovered.local_device_id}")
         self._discovered = discovered
-        self.context["title_placeholders"] = {"name": self._discovered_name(discovered)}
+        self.context["title_placeholders"] = {
+            "product": discovered.product_name or discovered.product_id,
+            "name": discovered.device_name or discovered.local_device_id,
+        }
         return await self.async_step_discovery_confirm()
 
     @staticmethod

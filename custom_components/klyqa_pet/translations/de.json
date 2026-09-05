@@ -1,6 +1,6 @@
 {
   "config": {
-    "flow_title": "{name}",
+    "flow_title": "{product} ({name})",
     "step": {
       "user": {
         "title": "Mit der Klyqa-Cloud verbinden",
@@ -10,7 +10,7 @@
       },
       "discovery_confirm": {
         "title": "Klyqa-Gerät gefunden",
-        "description": "{name} ({product}) wurde unter {host} gefunden. Melde dich mit dem Klyqa-Konto an, mit dem das Gerät gekoppelt ist."
+        "description": "{product} „{name}“ wurde unter {host} gefunden. Melde dich mit dem Klyqa-Konto an, mit dem das Gerät gekoppelt ist."
       },
       "reauth_confirm": {
         "title": "Klyqa-Konto erneut anmelden",

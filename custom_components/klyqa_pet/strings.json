@@ -1,6 +1,6 @@
 {
   "config": {
-    "flow_title": "{name}",
+    "flow_title": "{product} ({name})",
     "step": {
       "user": {
         "title": "Connect to the Klyqa cloud",
@@ -16,7 +16,7 @@
       },
       "discovery_confirm": {
         "title": "Klyqa device found",
-        "description": "{name} ({product}) was found at {host}. To control it, sign in with the Klyqa account the device is paired with."
+        "description": "{product} \"{name}\" was found at {host}. To control it, sign in with the Klyqa account the device is paired with."
       },
       "reauth_confirm": {
         "title": "Re-authenticate Klyqa account",
