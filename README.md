@@ -201,6 +201,24 @@ automation:
 Replace the entity IDs above with the ones Home Assistant assigned to your own
 devices (Settings → Devices & services → Klyqa Pet → your device).
 
+## Dashboard cards
+
+Ready-to-paste Lovelace card templates, one per device type, using only built-in
+cards (no custom cards required):
+
+- [`dashboards/welly.yaml`](dashboards/welly.yaml) — mode, heating, daily drinking goal,
+  water/tank sensors and descaling buttons.
+- [`dashboards/foody.yaml`](dashboards/foody.yaml) — portions and dispense button, bowl
+  and feeding sensors.
+- [`dashboards/airpurifier.yaml`](dashboards/airpurifier.yaml) — fan speed/preset
+  modes, LED, PM2.5/air quality, ionizer and child lock.
+
+Each file's header comment explains that the entity ids depend on your device's name
+and Home Assistant's language, and need adjusting to match your own device. To use one:
+open the dashboard you want to add it to, choose **Edit dashboard → Add card**, scroll
+to the bottom of the card picker and choose **Manual**, then paste the file's contents
+and adjust the entity ids (or use the visual card editor's entity picker instead).
+
 ## Known limitations
 
 - Feeding schedules/timers, pet tags, scale calibration, firmware updates and

@@ -1,0 +1,48 @@
+# Klyqa Pet - Foody (feeder) dashboard card
+#
+# Entity ids depend on the device's name in Home Assistant and the active language;
+# the ids below match a freshly added device named "Klyqa Foody" (device id ending in
+# d4e5f6) with the UI language set to English. Replace `klyqa_foody_d4e5f6` below with
+# your own device's slug (Settings -> Devices & services -> Klyqa Pet -> your device ->
+# check the entity ids), or use the visual card editor's entity picker instead of
+# pasting this as-is.
+#
+# How to use: go to your dashboard -> Edit dashboard -> Add card -> scroll to the
+# bottom and choose "Manual" -> paste the YAML below -> Save.
+
+type: vertical-stack
+cards:
+  - type: tile
+    entity: number.klyqa_foody_d4e5f6_portions
+    name: Portions
+    features:
+      - type: numeric-input
+  - type: tile
+    entity: button.klyqa_foody_d4e5f6_dispense_food
+    name: Dispense food
+  - type: tile
+    entity: sensor.klyqa_foody_d4e5f6_bowl_remaining
+    name: Bowl remaining
+  - type: tile
+    entity: sensor.klyqa_foody_d4e5f6_feeding_state
+    name: Feeding state
+  - type: entities
+    title: Foody details
+    entities:
+      - entity: sensor.klyqa_foody_d4e5f6_real_time_weight
+      - entity: sensor.klyqa_foody_d4e5f6_bowl_state
+      - entity: sensor.klyqa_foody_d4e5f6_food_bin
+      - entity: sensor.klyqa_foody_d4e5f6_error_state
+      - entity: sensor.klyqa_foody_d4e5f6_last_manual_feeding
+      - entity: sensor.klyqa_foody_d4e5f6_last_manual_portions
+      - entity: sensor.klyqa_foody_d4e5f6_last_scheduled_feeding
+      - entity: sensor.klyqa_foody_d4e5f6_last_scheduled_portions
+      - entity: sensor.klyqa_foody_d4e5f6_next_scheduled_feeding
+      - entity: binary_sensor.klyqa_foody_d4e5f6_power
+      - entity: binary_sensor.klyqa_foody_d4e5f6_power_adapter
+      - entity: binary_sensor.klyqa_foody_d4e5f6_problem
+      - entity: binary_sensor.klyqa_foody_d4e5f6_food_low
+      - entity: binary_sensor.klyqa_foody_d4e5f6_bowl_removed
+      - entity: sensor.klyqa_foody_d4e5f6_battery
+      - entity: button.klyqa_foody_d4e5f6_play_voice_recording
+      - entity: button.klyqa_foody_d4e5f6_query_bowl_weight

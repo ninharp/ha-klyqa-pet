@@ -1,0 +1,47 @@
+# Klyqa Pet - Airpurifier dashboard card
+#
+# Entity ids depend on the device's name in Home Assistant and the active language;
+# the ids below match a freshly added device named "Klyqa Airpurifier" (device id
+# ending in 1a2b3c) with the UI language set to English. Replace
+# `klyqa_airpurifier_1a2b3c` below with your own device's slug (Settings -> Devices &
+# services -> Klyqa Pet -> your device -> check the entity ids), or use the visual card
+# editor's entity picker instead of pasting this as-is.
+#
+# How to use: go to your dashboard -> Edit dashboard -> Add card -> scroll to the
+# bottom and choose "Manual" -> paste the YAML below -> Save.
+
+type: vertical-stack
+cards:
+  - type: tile
+    entity: fan.klyqa_airpurifier_1a2b3c
+    name: Air purifier
+    features:
+      - type: fan-speed
+      - type: fan-preset-modes
+  - type: tile
+    entity: light.klyqa_airpurifier_1a2b3c_led
+    name: LED
+  - type: tile
+    entity: sensor.klyqa_airpurifier_1a2b3c_pm2_5
+    name: PM2.5
+  - type: tile
+    entity: sensor.klyqa_airpurifier_1a2b3c_air_quality
+    name: Air quality
+  - type: tile
+    entity: switch.klyqa_airpurifier_1a2b3c_ionizer
+    name: Ionizer
+  - type: tile
+    entity: switch.klyqa_airpurifier_1a2b3c_child_lock
+    name: Child lock
+  - type: entities
+    title: Airpurifier details
+    entities:
+      - entity: sensor.klyqa_airpurifier_1a2b3c_filter_remaining_time
+      - entity: sensor.klyqa_airpurifier_1a2b3c_filter_life
+      - entity: sensor.klyqa_airpurifier_1a2b3c_total_run_time
+      - entity: sensor.klyqa_airpurifier_1a2b3c_cleaned_air_volume
+      - entity: sensor.klyqa_airpurifier_1a2b3c_pet_mode_time
+      - entity: binary_sensor.klyqa_airpurifier_1a2b3c_tilted
+      - entity: binary_sensor.klyqa_airpurifier_1a2b3c_filter_removed
+      - entity: binary_sensor.klyqa_airpurifier_1a2b3c_ionizer_active
+      - entity: switch.klyqa_airpurifier_1a2b3c_key_tone

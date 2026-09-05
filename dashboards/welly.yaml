@@ -1,0 +1,46 @@
+# Klyqa Pet - Welly (water fountain) dashboard card
+#
+# Entity ids depend on the device's name in Home Assistant and the active language;
+# the ids below match a freshly added device named "Klyqa Welly" (device id ending in
+# 3868c0) with the UI language set to English. Replace `klyqa_welly_3868c0` below with
+# your own device's slug (Settings -> Devices & services -> Klyqa Pet -> your device ->
+# check the entity ids), or use the visual card editor's entity picker instead of
+# pasting this as-is.
+#
+# How to use: go to your dashboard -> Edit dashboard -> Add card -> scroll to the
+# bottom and choose "Manual" -> paste the YAML below -> Save.
+
+type: vertical-stack
+cards:
+  - type: tile
+    entity: select.klyqa_welly_3868c0_mode
+    name: Mode
+    features:
+      - type: select-options
+  - type: tile
+    entity: switch.klyqa_welly_3868c0_heating
+    name: Heating
+  - type: tile
+    entity: number.klyqa_welly_3868c0_daily_drinking_goal
+    name: Daily drinking goal
+    features:
+      - type: numeric-input
+  - type: entities
+    title: Welly details
+    entities:
+      - entity: sensor.klyqa_welly_3868c0_water_temperature
+      - entity: sensor.klyqa_welly_3868c0_drinking_volume
+      - entity: sensor.klyqa_welly_3868c0_total_consumption
+      - entity: sensor.klyqa_welly_3868c0_clean_tank_volume
+      - entity: sensor.klyqa_welly_3868c0_sewage_tank_volume
+      - entity: sensor.klyqa_welly_3868c0_filter_life
+      - entity: sensor.klyqa_welly_3868c0_last_drinking
+      - entity: binary_sensor.klyqa_welly_3868c0_water_tray_low
+      - entity: binary_sensor.klyqa_welly_3868c0_pump_problem
+      - entity: binary_sensor.klyqa_welly_3868c0_do_not_disturb
+      - entity: binary_sensor.klyqa_welly_3868c0_charging
+      - entity: sensor.klyqa_welly_3868c0_pump_status
+      - entity: sensor.klyqa_welly_3868c0_power_status
+      - entity: sensor.klyqa_welly_3868c0_battery
+      - entity: button.klyqa_welly_3868c0_start_descaling
+      - entity: button.klyqa_welly_3868c0_stop_descaling
