@@ -1,0 +1,184 @@
+{
+  "config": {
+    "flow_title": "{name}",
+    "step": {
+      "user": {
+        "title": "Mit der Klyqa-Cloud verbinden",
+        "description": "Melde dich mit deinem Klyqa-Konto an, um die Zugriffstoken deiner Geräte abzurufen. Die Geräte selbst werden lokal im Netzwerk gesteuert.",
+        "data": { "environment": "Umgebung", "email": "E-Mail", "password": "Passwort" },
+        "data_description": { "environment": "Verwende Produktion, sofern du kein Klyqa-Testkonto hast." }
+      },
+      "discovery_confirm": {
+        "title": "Klyqa-Gerät gefunden",
+        "description": "{name} ({product}) wurde unter {host} gefunden. Melde dich mit dem Klyqa-Konto an, mit dem das Gerät gekoppelt ist."
+      },
+      "reauth_confirm": {
+        "title": "Klyqa-Konto erneut anmelden",
+        "description": "Die Klyqa-Cloud hat das Passwort für {email} abgelehnt. Gib das aktuelle Passwort ein.",
+        "data": { "password": "Passwort" }
+      },
+      "reconfigure": {
+        "title": "Klyqa-Konto neu konfigurieren",
+        "description": "Passwort für {email} aktualisieren.",
+        "data": { "password": "Passwort" }
+      }
+    },
+    "error": {
+      "cannot_connect": "Verbindung zur Klyqa-Cloud fehlgeschlagen",
+      "invalid_auth": "E-Mail oder Passwort ungültig",
+      "unknown": "Unerwarteter Fehler"
+    },
+    "abort": {
+      "already_configured": "Dieses Konto (oder Gerät) ist bereits eingerichtet",
+      "already_in_progress": "Die Einrichtung läuft bereits",
+      "not_supported": "Dieses Gerät wird von der Klyqa-Pet-Integration nicht unterstützt",
+      "reauth_successful": "Erneute Anmeldung erfolgreich",
+      "reconfigure_successful": "Neukonfiguration erfolgreich"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Gerät manuell hinzufügen",
+        "description": "Ein Klyqa-Gerät per IP-Adresse und Zugriffstoken hinzufügen, z. B. ein Entwicklungsgerät, das nicht mit dem Cloud-Konto gekoppelt ist.",
+        "data": { "host": "IP-Adresse oder Hostname", "port": "Port", "access_token": "Geräte-Zugriffstoken" }
+      }
+    },
+    "error": {
+      "cannot_connect": "Verbindung zum Gerät fehlgeschlagen",
+      "invalid_auth": "Das Gerät hat den Zugriffstoken abgelehnt",
+      "not_supported": "Dieses Gerät wird von der Klyqa-Pet-Integration nicht unterstützt"
+    }
+  },
+  "selector": { "environment": { "options": { "prod": "Produktion", "test": "Test" } } },
+  "exceptions": {
+    "update_failed": { "message": "Aktualisierung von {device} fehlgeschlagen: {error}" },
+    "token_refresh_failed": { "message": "{device} hat den Zugriffstoken abgelehnt und die Klyqa-Cloud war zum Erneuern nicht erreichbar" },
+    "device_auth_failed": { "message": "{device} hat den konfigurierten Zugriffstoken abgelehnt" },
+    "auth_failed": { "message": "{device} hat den Zugriffstoken abgelehnt" },
+    "device_rejected": { "message": "{device} hat den Befehl abgelehnt: {error}" },
+    "cannot_connect": { "message": "{device} ist nicht erreichbar" }
+  },
+  "entity": {
+    "sensor": {
+      "wifi_rssi": { "name": "WLAN-Signal" },
+      "firmware_version": { "name": "Firmware-Version" },
+      "sdk_version": { "name": "SDK-Version" },
+      "boot_reason": { "name": "Startgrund" },
+      "last_boot": { "name": "Letzter Start" },
+      "free_heap": { "name": "Freier Heap" },
+      "water_temperature": { "name": "Wassertemperatur" },
+      "clean_tank_volume": { "name": "Frischwassertank" },
+      "sewage_tank_volume": { "name": "Abwassertank" },
+      "drinking_volume": { "name": "Trinkmenge" },
+      "total_consumption": { "name": "Gesamtverbrauch" },
+      "last_drinking": { "name": "Zuletzt getrunken" },
+      "filter_life": { "name": "Filterlebensdauer" },
+      "pump_status": {
+        "name": "Pumpenstatus",
+        "state": { "normal": "Normal", "low_water": "Wenig Wasser", "abnormal": "Störung", "overweight": "Übergewicht", "no_clean_water": "Kein Frischwasser" }
+      },
+      "power_status": { "name": "Betriebszustand", "state": { "off": "Aus", "on": "An", "power_saving": "Energiesparen" } },
+      "power_supply": { "name": "Stromversorgung", "state": { "mains": "Netz", "battery": "Akku" } },
+      "descaling_status": { "name": "Entkalkungsstatus" },
+      "light_effect": { "name": "Lichteffekt" },
+      "bowl_remaining": { "name": "Restmenge im Napf" },
+      "realtime_weight": { "name": "Aktuelles Gewicht" },
+      "feeding_state": {
+        "name": "Fütterungsstatus",
+        "state": { "idle": "Bereit", "dispensing": "Gibt aus", "pet_eating": "Tier frisst", "dispensing_wet_food": "Gibt Nassfutter aus" }
+      },
+      "bowl_state": { "name": "Napfstatus", "state": { "normal": "Normal", "overweight": "Übergewicht", "removed": "Entfernt" } },
+      "food_bin_state": { "name": "Futterbehälter", "state": { "low": "Wenig", "sufficient": "Ausreichend" } },
+      "error_state": {
+        "name": "Fehlerstatus",
+        "state": { "normal": "Normal", "motor_stalled": "Motor blockiert", "below_threshold": "Ausgabemenge unter Schwelle", "motor_position_abnormal": "Motorposition fehlerhaft" }
+      },
+      "last_manual_feeding": {
+        "name": "Letzte manuelle Fütterung",
+        "state": { "started": "Gestartet", "succeeded": "Erfolgreich", "failed": "Fehlgeschlagen", "failed_wet_food": "Fehlgeschlagen (Nassfutter)" }
+      },
+      "last_manual_portions": { "name": "Portionen letzte manuelle Fütterung" },
+      "last_scheduled_feeding": {
+        "name": "Letzte geplante Fütterung",
+        "state": { "started": "Gestartet", "succeeded": "Erfolgreich", "failed": "Fehlgeschlagen", "slow_feed_updated": "Langsamfütterung aktualisiert", "terminated": "Abgebrochen", "abnormal_fresh_food": "Störung (Frischfutter-Modus)", "failed_wet_food": "Fehlgeschlagen (Nassfutter)" }
+      },
+      "last_scheduled_portions": { "name": "Portionen letzte geplante Fütterung" },
+      "next_feed_time": { "name": "Nächste geplante Fütterung" },
+      "mcu_firmware_version": { "name": "MCU-Firmware-Version" },
+      "air_quality": {
+        "name": "Luftqualität",
+        "state": { "excellent": "Ausgezeichnet", "good": "Gut", "slightly_polluted": "Leicht belastet", "heavily_polluted": "Stark belastet" }
+      },
+      "filter_remaining": { "name": "Filter-Restlaufzeit" },
+      "total_run_time": { "name": "Gesamtlaufzeit" },
+      "air_volume": { "name": "Gereinigtes Luftvolumen" },
+      "pet_mode_time": { "name": "Zeit im Haustiermodus" }
+    },
+    "binary_sensor": {
+      "water_tray_low": { "name": "Wasserschale leer" },
+      "pump_problem": { "name": "Pumpenproblem" },
+      "do_not_disturb": { "name": "Nicht stören" },
+      "power_adapter": { "name": "Netzteil" },
+      "food_low": { "name": "Futter knapp" },
+      "bowl_removed": { "name": "Napf entfernt" },
+      "tilted": { "name": "Gekippt" },
+      "filter_removed": { "name": "Filter entfernt" },
+      "ionizer_active": { "name": "Ionisator aktiv" }
+    },
+    "switch": {
+      "heating": { "name": "Heizung" },
+      "light_switch": { "name": "Licht" },
+      "ambient_light_switch": { "name": "Ambientelicht" },
+      "sensor_mode_light": { "name": "Licht im Sensormodus" },
+      "alert_clean_tank_low": { "name": "Warnung Frischwasser niedrig" },
+      "alert_dirty_tank_full": { "name": "Warnung Abwassertank voll" },
+      "super_power_saving_mode": { "name": "Super-Energiesparmodus" },
+      "telemetry": { "name": "Telemetrie" },
+      "app_led": { "name": "Anzeige-LED" },
+      "app_pet_lock": { "name": "Tiersperre" },
+      "beep_switch": { "name": "Signalton" },
+      "feed_audio_enable": { "name": "Fütterungs-Audio" },
+      "ionizer": { "name": "Ionisator" },
+      "child_lock": { "name": "Kindersicherung" },
+      "key_tone": { "name": "Tastenton" }
+    },
+    "number": {
+      "heating_temperature": { "name": "Heiztemperatur" },
+      "daily_drinking_goal": { "name": "Tägliches Trinkziel" },
+      "radar_sensitivity": { "name": "Radar-Empfindlichkeit" },
+      "circulation_pump_speed": { "name": "Umwälzpumpen-Leistung" },
+      "threshold_clean_tank_low": { "name": "Schwelle Frischwasser niedrig" },
+      "threshold_dirty_tank_full": { "name": "Schwelle Abwassertank voll" },
+      "portions": { "name": "Portionen" },
+      "feed_audio_volume": { "name": "Lautstärke Fütterungs-Audio" }
+    },
+    "select": {
+      "mode": {
+        "name": "Modus",
+        "state": { "sensing": "Sensormodus", "fresh_water_24h": "24h Frischwasser", "water_change": "Wasserwechsel", "self_wash": "Selbstreinigung", "drain": "Wasser ablassen" }
+      },
+      "custom_button_function": {
+        "name": "Funktion der Zusatztaste",
+        "state": { "none": "Keine", "indicator_light": "Anzeige-LED umschalten", "alert_tone": "Hinweiston umschalten", "privacy_mode": "Privatmodus umschalten", "play_audio": "Audio abspielen" }
+      },
+      "battery_work_mode": { "name": "Akkumodus", "state": { "standard": "Standard", "power_save": "Energiesparen" } },
+      "charging_protection": { "name": "Ladeschutz", "state": { "stop_charging": "Laden stoppen", "continue_charging": "Weiterladen" } }
+    },
+    "button": {
+      "start_descaling": { "name": "Entkalkung starten" },
+      "stop_descaling": { "name": "Entkalkung stoppen" },
+      "dispense_food": { "name": "Futter ausgeben" },
+      "play_voice_recording": { "name": "Sprachaufnahme abspielen" },
+      "query_bowl_weight": { "name": "Napfgewicht abfragen" }
+    },
+    "fan": {
+      "air_purifier": {
+        "state_attributes": {
+          "preset_mode": { "state": { "standalone": "Manuell", "auto": "Automatik", "night": "Nacht", "pet": "Haustier" } }
+        }
+      }
+    },
+    "light": { "led": { "name": "LED" } }
+  }
+}

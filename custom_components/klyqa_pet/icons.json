@@ -1,0 +1,95 @@
+{
+  "entity": {
+    "sensor": {
+      "water_temperature": { "default": "mdi:thermometer-water" },
+      "clean_tank_volume": { "default": "mdi:water" },
+      "sewage_tank_volume": { "default": "mdi:water-off" },
+      "drinking_volume": { "default": "mdi:cup-water" },
+      "total_consumption": { "default": "mdi:water-pump" },
+      "last_drinking": { "default": "mdi:clock-outline" },
+      "filter_life": { "default": "mdi:air-filter" },
+      "pump_status": { "default": "mdi:pump" },
+      "power_status": { "default": "mdi:power" },
+      "power_supply": { "default": "mdi:power-plug" },
+      "descaling_status": { "default": "mdi:water-remove" },
+      "light_effect": { "default": "mdi:led-variant-on" },
+      "bowl_remaining": { "default": "mdi:bowl" },
+      "realtime_weight": { "default": "mdi:scale" },
+      "feeding_state": { "default": "mdi:food-drumstick" },
+      "bowl_state": { "default": "mdi:bowl-outline" },
+      "food_bin_state": { "default": "mdi:silo" },
+      "error_state": { "default": "mdi:alert-circle-outline" },
+      "last_manual_feeding": { "default": "mdi:hand-back-right" },
+      "last_manual_portions": { "default": "mdi:counter" },
+      "last_scheduled_feeding": { "default": "mdi:calendar-clock" },
+      "last_scheduled_portions": { "default": "mdi:counter" },
+      "next_feed_time": { "default": "mdi:timer-sand" },
+      "mcu_firmware_version": { "default": "mdi:chip" },
+      "firmware_version": { "default": "mdi:chip" },
+      "sdk_version": { "default": "mdi:package-variant" },
+      "boot_reason": { "default": "mdi:restart" },
+      "last_boot": { "default": "mdi:clock-start" },
+      "free_heap": { "default": "mdi:memory" },
+      "wifi_rssi": { "default": "mdi:wifi" },
+      "air_quality": { "default": "mdi:air-filter" },
+      "filter_remaining": { "default": "mdi:air-filter" },
+      "total_run_time": { "default": "mdi:timer" },
+      "air_volume": { "default": "mdi:weather-windy" },
+      "pet_mode_time": { "default": "mdi:paw" }
+    },
+    "binary_sensor": {
+      "water_tray_low": { "default": "mdi:water-alert" },
+      "pump_problem": { "default": "mdi:pump" },
+      "do_not_disturb": { "default": "mdi:sleep", "state": { "off": "mdi:sleep-off" } },
+      "power_adapter": { "default": "mdi:power-plug", "state": { "off": "mdi:power-plug-off" } },
+      "food_low": { "default": "mdi:silo" },
+      "bowl_removed": { "default": "mdi:bowl-outline" },
+      "tilted": { "default": "mdi:rotate-3d-variant" },
+      "filter_removed": { "default": "mdi:air-filter" },
+      "ionizer_active": { "default": "mdi:atom" }
+    },
+    "switch": {
+      "heating": { "default": "mdi:radiator" },
+      "light_switch": { "default": "mdi:lightbulb" },
+      "ambient_light_switch": { "default": "mdi:lightbulb-night" },
+      "sensor_mode_light": { "default": "mdi:motion-sensor" },
+      "alert_clean_tank_low": { "default": "mdi:water-alert" },
+      "alert_dirty_tank_full": { "default": "mdi:water-alert" },
+      "super_power_saving_mode": { "default": "mdi:leaf" },
+      "telemetry": { "default": "mdi:cloud-upload" },
+      "app_led": { "default": "mdi:led-on" },
+      "app_pet_lock": { "default": "mdi:paw" },
+      "beep_switch": { "default": "mdi:volume-high" },
+      "feed_audio_enable": { "default": "mdi:account-voice" },
+      "ionizer": { "default": "mdi:atom" },
+      "child_lock": { "default": "mdi:lock" },
+      "key_tone": { "default": "mdi:volume-high" }
+    },
+    "number": {
+      "heating_temperature": { "default": "mdi:thermometer" },
+      "daily_drinking_goal": { "default": "mdi:target" },
+      "radar_sensitivity": { "default": "mdi:radar" },
+      "circulation_pump_speed": { "default": "mdi:pump" },
+      "threshold_clean_tank_low": { "default": "mdi:water-minus" },
+      "threshold_dirty_tank_full": { "default": "mdi:water-plus" },
+      "portions": { "default": "mdi:counter" },
+      "feed_audio_volume": { "default": "mdi:volume-medium" }
+    },
+    "select": {
+      "mode": { "default": "mdi:water-sync" },
+      "custom_button_function": { "default": "mdi:gesture-tap-button" },
+      "battery_work_mode": { "default": "mdi:battery-heart-variant" },
+      "charging_protection": { "default": "mdi:battery-charging-wireless" }
+    },
+    "button": {
+      "start_descaling": { "default": "mdi:water-remove" },
+      "stop_descaling": { "default": "mdi:water-check" },
+      "dispense_food": { "default": "mdi:food-drumstick" },
+      "play_voice_recording": { "default": "mdi:account-voice" },
+      "query_bowl_weight": { "default": "mdi:scale" }
+    },
+    "light": {
+      "led": { "default": "mdi:led-strip-variant" }
+    }
+  }
+}
