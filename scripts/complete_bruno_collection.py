@@ -2,8 +2,25 @@
 
 Usage: .venv/bin/python scripts/complete_bruno_collection.py "<input.yml>" "<output.yml>"
 
-Adds missing requests, fixes stale URLs, attaches docs and response examples built from the
-library fixtures (which mirror real device responses).
+Adds missing requests, drops developer-only debug endpoints, and attaches docs and response
+examples built from the library fixtures (which mirror real device responses).
+
+Sanity check after regenerating (expect no `device/test`, no `device/debug`, `_health` present):
+
+    .venv/bin/python - <<'PY'
+    import yaml
+    doc = yaml.safe_load(open("docs/bruno/Klyqa Pet.yml"))
+    def walk(items):
+        for i in items:
+            yield i
+            yield from walk(i.get("items", []))
+    reqs = [i for i in walk(doc["items"]) if "http" in i]
+    print(len(reqs), "requests")
+    endpoints = sorted({i["http"]["url"].split("/api/v1/")[-1] for i in reqs})
+    print(endpoints)
+    assert not any("device/test" in e or "device/debug" in e for e in endpoints)
+    assert "_health" in endpoints
+    PY
 """
 
 from __future__ import annotations
@@ -97,21 +114,24 @@ def walk(items: list[dict[str, Any]]) -> Any:
             yield from walk(item["items"])
 
 
+def remove_item(items: list[dict[str, Any]], name: str) -> None:
+    """Drop one item (folder or request) by name from a list of items, in place."""
+    items[:] = [item for item in items if item.get("info", {}).get("name") != name]
+
+
 def main() -> None:
     """Complete the Bruno collection given as argv[1] and write it to argv[2]."""
     src, dst = Path(sys.argv[1]), Path(sys.argv[2])
     collection = yaml.safe_load(src.read_text())
     items = collection["items"]
 
-    # 1. Fix stale URLs: device/test -> device/debug (Welly), mark purifier Pet Tag folder.
-    for item in walk(items):
-        url = item.get("http", {}).get("url", "")
-        if url.endswith("/device/test"):
-            item["http"]["url"] = url.replace("/device/test", "/device/debug")
-            item["docs"] = (
-                "Pass-through to the MCU (development builds). The firmware registers this at "
-                "`POST device/debug`; `device/test` no longer exists.\n\n" + item.get("docs", "")
-            )
+    # 1. Drop developer-only requests: raw MCU pass-throughs and log-level tuning have
+    # no place in a collection meant for day-to-day use of the device's REST API.
+    remove_item(find_folder(items, "Klyqa Welly")["items"], "Debug")
+    remove_item(find_folder(items, "Klyqa Welly")["items"], "Send Test")
+    remove_item(find_folder(items, "Klyqa General")["items"], "Debugging")
+
+    # 2. Mark the purifier's unsupported Pet Tag folder as reference-only.
     purifier_tags = find_folder(items, "Klyqa Airpurifier", "Pet Tag")
     purifier_tags["docs"] = (
         "Not available on fw-klyqa-airpurifier: the purifier firmware only registers "
@@ -121,7 +141,7 @@ def main() -> None:
     control_light["http"]["body"]["data"] = '{\n  "type": "request",\n  "pl_switch": 1\n}'
     control_light["docs"] = "Switches the control-panel light (`pl_switch`, 0/1)."
 
-    # 2. Add missing requests.
+    # 3. Add missing requests.
     purifier_state = find_folder(items, "Klyqa Airpurifier", "State")["items"]
     purifier_state += [
         request_item(
@@ -180,36 +200,6 @@ def main() -> None:
         "minutes, `tilt_status`, `fremoval_status`, `wifi_parameters{rssi,security,channel}`."
     )
 
-    welly = find_folder(items, "Klyqa Welly")["items"]
-    welly.append(
-        request_item(
-            "Get Debug Info",
-            "GET",
-            "device/debug",
-            20,
-            None,
-            "Heap statistics and internal counters (development builds only).",
-        )
-    )
-    foody = find_folder(items, "Klyqa Foody")["items"]
-    foody += [
-        request_item(
-            "Get Debug Info",
-            "GET",
-            "device/debug",
-            20,
-            None,
-            "Heap statistics and internal counters (development builds only).",
-        ),
-        request_item(
-            "Send Raw MCU Command",
-            "POST",
-            "device/debug",
-            21,
-            '{\n  "cmd": 4,\n  "data_hex": "0105"\n}',
-            "Development builds: send a raw feeder protocol packet (`cmd` id, payload as hex).",
-        ),
-    ]
     general = find_folder(items, "Klyqa General")["items"]
     general.append(
         request_item(
@@ -228,7 +218,7 @@ def main() -> None:
     )
     reboot["examples"] = [example("Success", 200, SUCCESS, "PUT", "system/command")]
 
-    # 3. Response examples for GET requests from the fixtures.
+    # 4. Response examples for GET requests from the fixtures.
     get_examples = {
         ("Klyqa Welly", "State", "Get State"): fixture("welly_state.json"),
         ("Klyqa Welly", "Settings", "Get Settings"): fixture("welly_settings.json"),
@@ -239,7 +229,7 @@ def main() -> None:
     for path, body in get_examples.items():
         find_folder(items, *path)["examples"] = [example("Example response", 200, body)]
 
-    # 4. Representative error example on every POST/PUT that has none.
+    # 5. Representative error example on every POST/PUT that has none.
     for item in walk(items):
         method = item.get("http", {}).get("method")
         if method in ("POST", "PUT") and "examples" not in item:
