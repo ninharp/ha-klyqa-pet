@@ -31,6 +31,13 @@ PLATFORMS: Final = [
 SCAN_INTERVAL: Final = timedelta(seconds=15)
 SYSTEM_INFO_INTERVAL: Final = timedelta(seconds=300)
 
+# How long a device that still rejects its token after a cloud token recovery is left
+# alone before another recovery is attempted for it.
+TOKEN_RECOVERY_BACKOFF: Final = timedelta(minutes=15)
+# How long a successful cloud token refresh is reused before another one is allowed, so
+# several devices failing in the same poll cycle coalesce into a single cloud login.
+TOKEN_REFRESH_COALESCE: Final = timedelta(seconds=60)
+
 # Device value -> translation option key
 WELLY_MODES: Final[dict[int, str]] = {
     0: "sensing",

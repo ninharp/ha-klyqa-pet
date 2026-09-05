@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Callable, Mapping
+from datetime import datetime
 import logging
 from typing import Any, cast
 
@@ -14,6 +15,7 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from homeassistant.util import dt as dt_util
 from zeroconf import IPVersion, ServiceStateChange, Zeroconf
 from zeroconf.asyncio import AsyncServiceBrowser, AsyncServiceInfo
 
@@ -39,6 +41,7 @@ from .const import (
     CONF_PRODUCT_ID,
     CONF_PRODUCT_NAME,
     DOMAIN,
+    TOKEN_REFRESH_COALESCE,
 )
 from .coordinator import KlyqaDeviceCoordinator
 
@@ -101,6 +104,7 @@ class KlyqaPetHub:
         self._resolve_tasks: set[asyncio.Task[None]] = set()
         self._pending: set[str] = set()
         self._token_lock = asyncio.Lock()
+        self._last_token_refresh: datetime | None = None
 
     @property
     def cloud_devices(self) -> dict[str, DeviceRecord]:
@@ -125,7 +129,7 @@ class KlyqaPetHub:
     async def async_setup(self) -> None:
         """Refresh tokens, create coordinators for known hosts and start mDNS browsing."""
         try:
-            await self.async_refresh_tokens()
+            await self.async_refresh_tokens(force=True)
         except KlyqaAuthError as err:
             raise ConfigEntryAuthFailed("Klyqa cloud login failed") from err
         except KlyqaConnectionError as err:
@@ -168,18 +172,35 @@ class KlyqaPetHub:
 
         return _remove
 
-    async def async_refresh_tokens(self) -> None:
+    async def async_refresh_tokens(self, force: bool = False) -> None:
         """Log in again and store fresh per-device tokens.
+
+        Several devices rejecting their token in the same poll cycle must not each
+        trigger their own cloud login: unless `force` is set, a refresh that happened
+        less than TOKEN_REFRESH_COALESCE ago is skipped and the stored tokens are kept
+        as they are. Setup uses `force=True` because it needs a guaranteed fresh login;
+        a forced refresh does not itself start the coalescing window, so a coordinator
+        that genuinely needs a fresh token shortly after setup (e.g. a device whose
+        token was rotated) is never blocked by the setup login.
 
         Raises KlyqaAuthError or KlyqaConnectionError.
         """
         async with self._token_lock:
+            now = dt_util.utcnow()
+            if (
+                not force
+                and self._last_token_refresh is not None
+                and now - self._last_token_refresh < TOKEN_REFRESH_COALESCE
+            ):
+                return
             fresh = await async_fetch_cloud_devices(
                 self.hass,
                 self.entry.data[CONF_ENVIRONMENT],
                 self.entry.data[CONF_EMAIL],
                 self.entry.data[CONF_PASSWORD],
             )
+            if not force:
+                self._last_token_refresh = dt_util.utcnow()
             if not fresh and self.cloud_devices:
                 # A transient empty response (e.g. a cloud hiccup) must never be read as
                 # "the account lost all its devices" - keep everything as it is.

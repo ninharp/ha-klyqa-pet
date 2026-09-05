@@ -24,6 +24,7 @@ from custom_components.klyqa_pet.const import (
     DOMAIN,
     SCAN_INTERVAL,
     SYSTEM_INFO_INTERVAL,
+    TOKEN_RECOVERY_BACKOFF,
 )
 from custom_components.klyqa_pet.hub import merge_device_records
 from pyklyqa_pet import (
@@ -172,6 +173,64 @@ async def test_persistent_401_marks_device_unavailable(
     assert len(token_warnings) == 1
 
 
+async def test_concurrent_401s_coalesce_into_one_login(
+    hass: HomeAssistant,
+    freezer: FrozenDateTimeFactory,
+    mock_config_entry: MockConfigEntry,
+    mock_cloud: MagicMock,
+    mock_devices: dict,
+    mock_welly: MagicMock,
+    mock_foody: MagicMock,
+) -> None:
+    """Two devices rejecting their token in the same poll cycle must coalesce into one login."""
+    await setup_integration(hass, mock_config_entry)
+    mock_cloud.login.reset_mock()
+    mock_welly.get_state.side_effect = KlyqaAuthError("401")
+    mock_foody.get_state.side_effect = KlyqaAuthError("401")
+    # A coordinator only polls while an entity listens to it.
+    mock_config_entry.runtime_data.coordinators[WELLY_ID].async_add_listener(lambda: None)
+    mock_config_entry.runtime_data.coordinators[FOODY_ID].async_add_listener(lambda: None)
+
+    freezer.tick(SCAN_INTERVAL + timedelta(seconds=1))
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done()
+
+    mock_cloud.login.assert_awaited_once()
+
+
+async def test_recovery_backoff_limits_repeated_logins(
+    hass: HomeAssistant,
+    freezer: FrozenDateTimeFactory,
+    mock_config_entry: MockConfigEntry,
+    mock_cloud: MagicMock,
+    mock_devices: dict,
+    mock_welly: MagicMock,
+) -> None:
+    """A device that still rejects its token after recovery must back off further recoveries."""
+    await setup_integration(hass, mock_config_entry)
+    mock_cloud.login.reset_mock()
+    mock_welly.get_state.side_effect = KlyqaAuthError("401")
+    # A coordinator only polls while an entity listens to it.
+    mock_config_entry.runtime_data.coordinators[WELLY_ID].async_add_listener(lambda: None)
+
+    freezer.tick(SCAN_INTERVAL + timedelta(seconds=1))
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done()
+    assert mock_cloud.login.await_count == 1
+
+    # Still well inside the backoff window: no further login attempt for this device.
+    freezer.tick(SCAN_INTERVAL + timedelta(seconds=1))
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done()
+    assert mock_cloud.login.await_count == 1
+
+    # After the backoff window elapses, a recovery is attempted again.
+    freezer.tick(TOKEN_RECOVERY_BACKOFF + timedelta(seconds=1))
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done()
+    assert mock_cloud.login.await_count == 2
+
+
 async def test_cloud_auth_error_during_recovery_starts_reauth(
     hass: HomeAssistant,
     freezer: FrozenDateTimeFactory,
@@ -209,7 +268,7 @@ async def test_stale_device_is_removed(
         config_entry_id=mock_config_entry.entry_id, identifiers={(DOMAIN, FOODY_ID)}
     )
     del cloud_devices[1]  # Foody disappeared from the account
-    await hub.async_refresh_tokens()
+    await hub.async_refresh_tokens(force=True)
     await hass.async_block_till_done()
     assert FOODY_ID not in hub.coordinators
     assert FOODY_ID not in mock_config_entry.data[CONF_DEVICES]
@@ -232,7 +291,7 @@ async def test_empty_cloud_list_keeps_devices(
     await setup_integration(hass, mock_config_entry)
     hub = mock_config_entry.runtime_data
     cloud_devices.clear()
-    await hub.async_refresh_tokens()
+    await hub.async_refresh_tokens(force=True)
     await hass.async_block_till_done()
     assert set(hub.coordinators) == {WELLY_ID, FOODY_ID, PURIFIER_ID}
     assert set(mock_config_entry.data[CONF_DEVICES]) == {WELLY_ID, FOODY_ID, PURIFIER_ID}

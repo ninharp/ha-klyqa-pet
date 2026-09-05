@@ -38,6 +38,7 @@ from .const import (
     DOMAIN,
     SCAN_INTERVAL,
     SYSTEM_INFO_INTERVAL,
+    TOKEN_RECOVERY_BACKOFF,
 )
 
 if TYPE_CHECKING:
@@ -138,6 +139,10 @@ class KlyqaDeviceCoordinator(DataUpdateCoordinator[KlyqaDeviceData]):
         # untestable.
         self._system_info_time: datetime = datetime.min.replace(tzinfo=dt_util.UTC)
         self._token_warned = False
+        # Set after a cloud token recovery still leaves the device rejecting its token;
+        # until this passes, a 401 fails the update directly without asking the hub for
+        # another cloud login (see async_refresh_tokens coalescing on the hub side too).
+        self._next_token_recovery: datetime | None = None
 
     @property
     def welly_device(self) -> WellyDevice:
@@ -167,13 +172,27 @@ class KlyqaDeviceCoordinator(DataUpdateCoordinator[KlyqaDeviceData]):
                     translation_key="device_auth_failed",
                     translation_placeholders={"device": self.device_name},
                 ) from err
+            if (
+                self._next_token_recovery is not None
+                and dt_util.utcnow() < self._next_token_recovery
+            ):
+                # Still backed off from the last failed recovery: fail this poll
+                # directly, without asking the hub for another cloud login.
+                raise UpdateFailed(
+                    translation_domain=DOMAIN,
+                    translation_key="device_auth_failed",
+                    translation_placeholders={"device": self.device_name},
+                ) from err
             await self._async_recover_token()
             try:
                 data = await self._async_fetch()
             except KlyqaAuthError as retry_err:
                 # The cloud login succeeded, so this is a per-device problem (e.g. the
                 # device was re-paired to a different account) and must not put the
-                # whole config entry into reauth.
+                # whole config entry into reauth. Back off further recoveries for this
+                # device so a persistently rejecting device does not trigger a fresh
+                # cloud login on every poll cycle.
+                self._next_token_recovery = dt_util.utcnow() + TOKEN_RECOVERY_BACKOFF
                 if not self._token_warned:
                     _LOGGER.warning(
                         "Device %s (%s) rejects the access token from the Klyqa "
@@ -192,6 +211,7 @@ class KlyqaDeviceCoordinator(DataUpdateCoordinator[KlyqaDeviceData]):
         except (KlyqaConnectionError, KlyqaDeviceError) as err:
             raise self._update_failed(err) from err
         self._token_warned = False
+        self._next_token_recovery = None
         return data
 
     def _update_failed(self, err: Exception) -> UpdateFailed:
