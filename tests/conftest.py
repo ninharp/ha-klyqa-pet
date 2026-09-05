@@ -6,7 +6,7 @@ from collections.abc import Generator
 import json
 from pathlib import Path
 from typing import Any
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, PropertyMock, patch
 
 from homeassistant.const import CONF_EMAIL, CONF_HOST, CONF_PASSWORD, CONF_PORT
 from homeassistant.core import HomeAssistant
@@ -68,18 +68,14 @@ def auto_enable_custom_integrations(enable_custom_integrations: None) -> Generat
 
 
 @pytest.fixture
-def entity_registry_enabled_by_default(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
-) -> Generator[None]:
-    """Enable all entities by default in entity registry."""
-    # Don't actually enable them here - instead, update the setup_integration
-    # to enable them after they're created.
-    yield
-
-    # Enable all entities that were created during setup
-    for entity in entity_registry.entities.values():
-        if entity.disabled_by == er.RegistryEntryDisabler.INTEGRATION:
-            entity_registry.async_update_entity(entity.entity_id, disabled_by=None)
+def entity_registry_enabled_by_default() -> Generator[None]:
+    """Test fixture that ensures all entities are enabled in the registry."""
+    with patch(
+        "homeassistant.helpers.entity.Entity.entity_registry_enabled_default",
+        return_value=True,
+        new_callable=PropertyMock,
+    ):
+        yield
 
 
 @pytest.fixture
@@ -234,23 +230,8 @@ def mock_config_entry() -> MockConfigEntry:
     )
 
 
-async def setup_integration(
-    hass: HomeAssistant, entry: MockConfigEntry, entity_registry: er.EntityRegistry | None = None
-) -> None:
+async def setup_integration(hass: HomeAssistant, entry: MockConfigEntry) -> None:
     """Add the entry to hass and set it up."""
     entry.add_to_hass(hass)
     await hass.config_entries.async_setup(entry.entry_id)
     await hass.async_block_till_done()
-
-    # Enable all entities if entity_registry is provided, and reload the entity platform
-    if entity_registry:
-        disabled_entities = []
-        for entity in entity_registry.entities.values():
-            if entity.disabled_by == er.RegistryEntryDisabler.INTEGRATION:
-                entity_registry.async_update_entity(entity.entity_id, disabled_by=None)
-                disabled_entities.append(entity.entity_id)
-
-        # Reload entity platforms to re-add disabled entities
-        if disabled_entities:
-            await hass.config_entries.async_reload(entry.entry_id)
-            await hass.async_block_till_done()

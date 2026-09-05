@@ -22,7 +22,7 @@ async def test_sensors(
     snapshot: SnapshotAssertion,
 ) -> None:
     with patch("custom_components.klyqa_pet.PLATFORMS", [Platform.SENSOR]):
-        await setup_integration(hass, mock_config_entry, entity_registry)
+        await setup_integration(hass, mock_config_entry)
     await snapshot_platform(hass, entity_registry, snapshot, mock_config_entry.entry_id)
 
 
