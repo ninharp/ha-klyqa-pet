@@ -441,5 +441,6 @@
       'options': dict({
       }),
     }),
+    'entry_state': 'loaded',
   })
 # ---

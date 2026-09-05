@@ -192,9 +192,21 @@ async def test_reauth_flow(
     mock_cloud: Any,
     mock_devices: dict,
 ) -> None:
-    # start with a stale token so the assertion below proves a fresh one was fetched
-    mock_config_entry.data[CONF_DEVICES][WELLY_ID]["access_token"] = "old-token"
     await setup_integration(hass, mock_config_entry)
+    # Stamp a stale token onto the already-loaded entry, after setup ran its own token
+    # refresh, so the assertion below proves reauth (not setup) is what fetches the
+    # fresh token.
+    data = mock_config_entry.data
+    hass.config_entries.async_update_entry(
+        mock_config_entry,
+        data={
+            **data,
+            CONF_DEVICES: {
+                **data[CONF_DEVICES],
+                WELLY_ID: {**data[CONF_DEVICES][WELLY_ID], "access_token": "old-token"},
+            },
+        },
+    )
     result = await mock_config_entry.start_reauth_flow(hass)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"

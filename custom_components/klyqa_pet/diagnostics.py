@@ -13,7 +13,7 @@ from . import KlyqaPetConfigEntry
 from .const import CONF_ACCESS_TOKEN, DOMAIN
 from .coordinator import KlyqaDeviceCoordinator
 
-TO_REDACT = {CONF_EMAIL, CONF_PASSWORD, CONF_ACCESS_TOKEN, "accountToken"}
+TO_REDACT = {CONF_EMAIL, CONF_PASSWORD, CONF_ACCESS_TOKEN}
 
 
 def _coordinator_diagnostics(coordinator: KlyqaDeviceCoordinator) -> dict[str, Any]:
@@ -37,21 +37,23 @@ async def async_get_config_entry_diagnostics(
     hass: HomeAssistant, entry: KlyqaPetConfigEntry
 ) -> dict[str, Any]:
     """Return diagnostics for the config entry."""
-    hub = entry.runtime_data
-    return {
-        "entry": async_redact_data(
-            {"data": dict(entry.data), "options": dict(entry.options)}, TO_REDACT
-        ),
-        "devices": [_coordinator_diagnostics(c) for c in hub.coordinators.values()],
+    hub = getattr(entry, "runtime_data", None)
+    result: dict[str, Any] = {
+        "entry": {"data": dict(entry.data), "options": dict(entry.options)},
+        "entry_state": entry.state.value,
+        "devices": [_coordinator_diagnostics(c) for c in hub.coordinators.values()] if hub else [],
     }
+    return async_redact_data(result, TO_REDACT)
 
 
 async def async_get_device_diagnostics(
     hass: HomeAssistant, entry: KlyqaPetConfigEntry, device: DeviceEntry
 ) -> dict[str, Any]:
     """Return diagnostics for one device."""
-    hub = entry.runtime_data
+    hub = getattr(entry, "runtime_data", None)
+    if hub is None:
+        return {"error": "entry_not_loaded"}
     for domain, device_id in device.identifiers:
         if domain == DOMAIN and (coordinator := hub.coordinators.get(device_id)) is not None:
-            return _coordinator_diagnostics(coordinator)
+            return async_redact_data(_coordinator_diagnostics(coordinator), TO_REDACT)
     return {"error": "device_not_found"}
