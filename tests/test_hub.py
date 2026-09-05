@@ -15,12 +15,17 @@ from pytest_homeassistant_custom_component.common import (
 from zeroconf import ServiceStateChange
 
 from custom_components.klyqa_pet.const import (
+    CONF_ACCESS_TOKEN,
+    CONF_DEVICE_NAME,
     CONF_DEVICES,
     CONF_MANUAL_DEVICES,
+    CONF_PRODUCT_ID,
+    CONF_PRODUCT_NAME,
     DOMAIN,
     SCAN_INTERVAL,
     SYSTEM_INFO_INTERVAL,
 )
+from custom_components.klyqa_pet.hub import merge_device_records
 from pyklyqa_pet import (
     CloudDevice,
     DeviceType,
@@ -232,6 +237,55 @@ async def test_empty_cloud_list_keeps_devices(
     assert set(hub.coordinators) == {WELLY_ID, FOODY_ID, PURIFIER_ID}
     assert set(mock_config_entry.data[CONF_DEVICES]) == {WELLY_ID, FOODY_ID, PURIFIER_ID}
     assert "returned no devices" in caplog.text
+
+
+def test_merge_keeps_announced_product_id() -> None:
+    """The cloud's product id/name must not override what the device announced via mDNS.
+
+    A real-world case: the device announces `@pfriendly.airpurifier-dev` over mDNS, but
+    the cloud lists the same device under `@klyqa.cleaning.airpurifier1`. Overwriting the
+    stored (mDNS-derived) product id with the cloud's on every token refresh made the
+    coordinator get skipped as "unsupported" on the next startup.
+    """
+    old = {
+        PURIFIER_ID: device_record(
+            "old-token",
+            "Air Purifier",
+            "@pfriendly.airpurifier-dev",
+            WELLY_HOST,
+            product_name="Air Purifier (mDNS)",
+        )
+    }
+    new = {
+        PURIFIER_ID: {
+            CONF_ACCESS_TOKEN: "new-token",
+            CONF_DEVICE_NAME: "Air Purifier",
+            CONF_PRODUCT_ID: "@klyqa.cleaning.airpurifier1",
+            CONF_PRODUCT_NAME: "Klyqa Air Purifier",
+        }
+    }
+    merged = merge_device_records(old, new)
+    # Non-empty stored product id/name survive the cloud's overlay.
+    assert merged[PURIFIER_ID][CONF_PRODUCT_ID] == "@pfriendly.airpurifier-dev"
+    assert merged[PURIFIER_ID][CONF_PRODUCT_NAME] == "Air Purifier (mDNS)"
+    # Every other key still follows the normal overlay semantics.
+    assert merged[PURIFIER_ID][CONF_ACCESS_TOKEN] == "new-token"
+
+
+def test_merge_fills_missing_product_id_from_cloud() -> None:
+    """When nothing is stored yet, the cloud's product id/name are used to fill the gap."""
+    old: dict[str, dict] = {PURIFIER_ID: device_record("old-token", "Air Purifier", "", WELLY_HOST)}
+    new = {
+        PURIFIER_ID: {
+            CONF_ACCESS_TOKEN: "new-token",
+            CONF_DEVICE_NAME: "Air Purifier",
+            CONF_PRODUCT_ID: "@klyqa.cleaning.airpurifier1",
+            CONF_PRODUCT_NAME: "Klyqa Air Purifier",
+        }
+    }
+    merged = merge_device_records(old, new)
+    assert merged[PURIFIER_ID][CONF_PRODUCT_ID] == "@klyqa.cleaning.airpurifier1"
+    assert merged[PURIFIER_ID][CONF_PRODUCT_NAME] == "Klyqa Air Purifier"
 
 
 async def test_manual_device_401_does_not_start_reauth(

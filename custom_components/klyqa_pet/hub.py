@@ -69,13 +69,22 @@ def merge_device_records(
 ) -> dict[str, DeviceRecord]:
     """Overlay fresh cloud records on stored ones and drop devices the cloud no longer lists.
 
-    Stored host/port/product information survives; empty cloud values never overwrite
-    stored values.
+    Stored host/port information survives; empty cloud values never overwrite stored
+    values. The product id/name are facts the device itself announces over mDNS, and the
+    cloud's product catalogue entry for a device can disagree with that (e.g. a device
+    reporting `@pfriendly.airpurifier-dev` while the cloud lists it under a different
+    internal product id) - once a non-empty stored value exists, the cloud only fills the
+    gap, it never overrides it.
     """
-    return {
-        device_id: {**old.get(device_id, {}), **{k: v for k, v in record.items() if v}}
-        for device_id, record in new.items()
-    }
+    merged: dict[str, DeviceRecord] = {}
+    for device_id, record in new.items():
+        stored = old.get(device_id, {})
+        result = {**stored, **{k: v for k, v in record.items() if v}}
+        for key in (CONF_PRODUCT_ID, CONF_PRODUCT_NAME):
+            if stored.get(key):
+                result[key] = stored[key]
+        merged[device_id] = result
+    return merged
 
 
 class KlyqaPetHub:
