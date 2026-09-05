@@ -1,0 +1,12 @@
+{
+  "type": "settings",
+  "app_led": true,
+  "app_pet_lock": false,
+  "custom_button_function": 0,
+  "beep_switch": true,
+  "feed_audio_enable": true,
+  "battery_work_mode": 0,
+  "charging_protection": 1,
+  "telemetry": true,
+  "feed_audio_volume": 50
+}
