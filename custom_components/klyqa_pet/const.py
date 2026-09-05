@@ -8,6 +8,14 @@ from homeassistant.const import Platform
 DOMAIN: Final = "klyqa_pet"
 MANUFACTURER: Final = "Klyqa"
 
+# A local-only entry (devices added by IP + token, no cloud account) is recognised by
+# entry.data[CONF_ENVIRONMENT] == ENVIRONMENT_LOCAL. It is not a value pyklyqa_pet's
+# Environment enum knows about - it never reaches KlyqaCloudClient/Environment(...).
+ENVIRONMENT_LOCAL: Final = "local"
+# A config entry is a per-account singleton; a local entry is likewise a singleton per
+# HA instance, so it always gets this fixed unique id.
+LOCAL_ENTRY_UNIQUE_ID: Final = "local"
+
 CONF_ENVIRONMENT: Final = "environment"
 CONF_DEVICES: Final = "devices"
 CONF_MANUAL_DEVICES: Final = "manual_devices"

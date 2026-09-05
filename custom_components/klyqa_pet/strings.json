@@ -3,6 +3,12 @@
     "flow_title": "{product} ({name})",
     "step": {
       "user": {
+        "menu_options": {
+          "cloud": "Sign in with a Klyqa account",
+          "local": "Add a local device (no account)"
+        }
+      },
+      "cloud": {
         "title": "Connect to the Klyqa cloud",
         "description": "Sign in with your Klyqa account to fetch the access tokens of your devices. The devices themselves are controlled locally on your network.",
         "data": {
@@ -14,9 +20,22 @@
           "environment": "Use Production unless you have a Klyqa test account."
         }
       },
+      "local": {
+        "title": "Add a local device",
+        "description": "Enter the device address and its access token. Development firmware accepts the development token.",
+        "data": {
+          "host": "IP address or hostname",
+          "port": "Port",
+          "access_token": "Device access token"
+        }
+      },
       "discovery_confirm": {
         "title": "Klyqa device found",
-        "description": "{product} \"{name}\" was found at {host}. To control it, sign in with the Klyqa account the device is paired with."
+        "description": "{product} \"{name}\" was found at {host}.",
+        "menu_options": {
+          "cloud": "Sign in with a Klyqa account",
+          "local": "Add a local device (no account)"
+        }
       },
       "reauth_confirm": {
         "title": "Re-authenticate Klyqa account",
@@ -36,12 +55,15 @@
     "error": {
       "cannot_connect": "Failed to connect to the Klyqa cloud",
       "invalid_auth": "Invalid email or password",
+      "not_supported": "This device is not supported by the Klyqa Pet integration",
       "unknown": "Unexpected error"
     },
     "abort": {
       "already_configured": "This account (or device) is already configured",
       "already_in_progress": "Configuration flow is already in progress",
       "not_supported": "This device is not supported by the Klyqa Pet integration",
+      "not_supported_local": "A local entry has no account to reconfigure; use Configure to add devices",
+      "device_added": "Device added to the local Klyqa Pet entry",
       "reauth_successful": "Re-authentication was successful",
       "reconfigure_successful": "Re-configuration was successful"
     }

@@ -20,9 +20,12 @@ from custom_components.klyqa_pet.const import (
     CONF_DEVICE_NAME,
     CONF_DEVICES,
     CONF_ENVIRONMENT,
+    CONF_MANUAL_DEVICES,
     CONF_PRODUCT_ID,
     CONF_PRODUCT_NAME,
     DOMAIN,
+    ENVIRONMENT_LOCAL,
+    LOCAL_ENTRY_UNIQUE_ID,
 )
 from pyklyqa_pet import (
     AirPurifierDevice,
@@ -224,6 +227,28 @@ def mock_config_entry() -> MockConfigEntry:
             },
         },
         options={},
+    )
+
+
+MANUAL_ID = "AABBCCDDEE01"
+MANUAL_HOST = "192.168.2.99"
+
+
+@pytest.fixture
+def mock_local_config_entry() -> MockConfigEntry:
+    """A local-only entry (no cloud account) with one manually added Welly."""
+    return MockConfigEntry(
+        domain=DOMAIN,
+        title="Klyqa Pet (local)",
+        unique_id=LOCAL_ENTRY_UNIQUE_ID,
+        data={CONF_ENVIRONMENT: ENVIRONMENT_LOCAL, CONF_DEVICES: {}},
+        options={
+            CONF_MANUAL_DEVICES: {
+                MANUAL_ID: device_record(
+                    "aabbccddeeff0011223344", "", "@klyqa.welly-dev", MANUAL_HOST
+                )
+            }
+        },
     )
 
 

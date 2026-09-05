@@ -41,6 +41,7 @@ from .const import (
     CONF_PRODUCT_ID,
     CONF_PRODUCT_NAME,
     DOMAIN,
+    ENVIRONMENT_LOCAL,
     TOKEN_REFRESH_COALESCE,
 )
 from .coordinator import KlyqaDeviceCoordinator
@@ -126,16 +127,22 @@ class KlyqaPetHub:
         """Return True if the device was added manually."""
         return local_device_id in self.manual_devices
 
+    @property
+    def is_local(self) -> bool:
+        """Return True if this entry has no cloud account (devices added by IP + token)."""
+        return self.entry.data.get(CONF_ENVIRONMENT) == ENVIRONMENT_LOCAL
+
     async def async_setup(self) -> None:
         """Refresh tokens, create coordinators for known hosts and start mDNS browsing."""
-        try:
-            await self.async_refresh_tokens(force=True)
-        except KlyqaAuthError as err:
-            raise ConfigEntryAuthFailed("Klyqa cloud login failed") from err
-        except KlyqaConnectionError as err:
-            if not self.cloud_devices and not self.manual_devices:
-                raise ConfigEntryNotReady(f"Cannot reach the Klyqa cloud: {err}") from err
-            _LOGGER.warning("Klyqa cloud unreachable, using stored device tokens: %s", err)
+        if not self.is_local:
+            try:
+                await self.async_refresh_tokens(force=True)
+            except KlyqaAuthError as err:
+                raise ConfigEntryAuthFailed("Klyqa cloud login failed") from err
+            except KlyqaConnectionError as err:
+                if not self.cloud_devices and not self.manual_devices:
+                    raise ConfigEntryNotReady(f"Cannot reach the Klyqa cloud: {err}") from err
+                _LOGGER.warning("Klyqa cloud unreachable, using stored device tokens: %s", err)
 
         records = {**self.cloud_devices, **self.manual_devices}
         await asyncio.gather(
@@ -185,6 +192,10 @@ class KlyqaPetHub:
 
         Raises KlyqaAuthError or KlyqaConnectionError.
         """
+        if self.is_local:
+            # A local entry has no cloud account to refresh tokens from; its devices
+            # keep the token they were added with.
+            return
         async with self._token_lock:
             now = dt_util.utcnow()
             if (
@@ -320,10 +331,26 @@ class KlyqaPetHub:
 
     @callback
     def _persist_discovery(self, discovered: DiscoveredDevice) -> None:
-        """Store host and product info of a cloud device so it comes up after a restart."""
+        """Store host and product info of a device so it comes up after a restart."""
         device_id = discovered.local_device_id
+        if device_id in self.manual_devices:
+            current_manual = self.manual_devices[device_id]
+            updated_manual = {
+                **current_manual,
+                CONF_HOST: discovered.host,
+                CONF_PORT: discovered.port,
+            }
+            if updated_manual != current_manual:
+                self.hass.config_entries.async_update_entry(
+                    self.entry,
+                    options={
+                        **self.entry.options,
+                        CONF_MANUAL_DEVICES: {**self.manual_devices, device_id: updated_manual},
+                    },
+                )
+            return
         if device_id not in self.cloud_devices:
-            return  # manual devices carry their own host in the options
+            return
         current = self.cloud_devices[device_id]
         updated = {
             **current,

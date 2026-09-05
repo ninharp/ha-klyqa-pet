@@ -3,14 +3,29 @@
     "flow_title": "{product} ({name})",
     "step": {
       "user": {
+        "menu_options": {
+          "cloud": "Mit Klyqa-Konto anmelden",
+          "local": "Lokales Gerät hinzufügen (ohne Konto)"
+        }
+      },
+      "cloud": {
         "title": "Mit der Klyqa-Cloud verbinden",
         "description": "Melde dich mit deinem Klyqa-Konto an, um die Zugriffstoken deiner Geräte abzurufen. Die Geräte selbst werden lokal im Netzwerk gesteuert.",
         "data": { "environment": "Umgebung", "email": "E-Mail", "password": "Passwort" },
         "data_description": { "environment": "Verwende Produktion, sofern du kein Klyqa-Testkonto hast." }
       },
+      "local": {
+        "title": "Lokales Gerät hinzufügen",
+        "description": "Adresse des Geräts und seinen Zugriffstoken eingeben. Entwicklungs-Firmware akzeptiert den Entwicklungstoken.",
+        "data": { "host": "IP-Adresse oder Hostname", "port": "Port", "access_token": "Geräte-Zugriffstoken" }
+      },
       "discovery_confirm": {
         "title": "Klyqa-Gerät gefunden",
-        "description": "{product} „{name}“ wurde unter {host} gefunden. Melde dich mit dem Klyqa-Konto an, mit dem das Gerät gekoppelt ist."
+        "description": "{product} „{name}“ wurde unter {host} gefunden.",
+        "menu_options": {
+          "cloud": "Mit Klyqa-Konto anmelden",
+          "local": "Lokales Gerät hinzufügen (ohne Konto)"
+        }
       },
       "reauth_confirm": {
         "title": "Klyqa-Konto erneut anmelden",
@@ -26,12 +41,15 @@
     "error": {
       "cannot_connect": "Verbindung zur Klyqa-Cloud fehlgeschlagen",
       "invalid_auth": "E-Mail oder Passwort ungültig",
+      "not_supported": "Dieses Gerät wird von der Klyqa-Pet-Integration nicht unterstützt",
       "unknown": "Unerwarteter Fehler"
     },
     "abort": {
       "already_configured": "Dieses Konto (oder Gerät) ist bereits eingerichtet",
       "already_in_progress": "Die Einrichtung läuft bereits",
       "not_supported": "Dieses Gerät wird von der Klyqa-Pet-Integration nicht unterstützt",
+      "not_supported_local": "Ein lokaler Eintrag hat kein Konto zum Neukonfigurieren; über „Konfigurieren“ Geräte hinzufügen",
+      "device_added": "Gerät zum lokalen Klyqa-Pet-Eintrag hinzugefügt",
       "reauth_successful": "Erneute Anmeldung erfolgreich",
       "reconfigure_successful": "Neukonfiguration erfolgreich"
     }

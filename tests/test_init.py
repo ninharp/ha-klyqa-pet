@@ -9,7 +9,7 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry
 from custom_components.klyqa_pet.const import CONF_ACCESS_TOKEN, CONF_DEVICES, DOMAIN
 from pyklyqa_pet import CloudDevice, KlyqaAuthError, KlyqaConnectionError
 
-from .conftest import FOODY_ID, PURIFIER_ID, WELLY_ID, setup_integration
+from .conftest import FOODY_ID, MANUAL_ID, PURIFIER_ID, WELLY_ID, setup_integration
 
 
 async def test_setup_and_unload(
@@ -31,6 +31,21 @@ async def test_setup_and_unload(
     await hass.async_block_till_done()
     assert mock_config_entry.state is ConfigEntryState.NOT_LOADED
     mock_zeroconf_browser.return_value.async_cancel.assert_awaited_once()
+
+
+async def test_local_entry_sets_up_without_cloud_call(
+    hass: HomeAssistant,
+    mock_local_config_entry: MockConfigEntry,
+    mock_cloud: MagicMock,
+    mock_devices: dict,
+) -> None:
+    await setup_integration(hass, mock_local_config_entry)
+    assert mock_local_config_entry.state is ConfigEntryState.LOADED
+    mock_cloud.login.assert_not_called()
+    hub = mock_local_config_entry.runtime_data
+    assert hub.is_local is True
+    assert MANUAL_ID in hub.coordinators
+    assert hub.coordinators[MANUAL_ID].is_manual is True
 
 
 async def test_setup_refreshes_tokens(

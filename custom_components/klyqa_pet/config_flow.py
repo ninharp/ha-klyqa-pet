@@ -50,6 +50,8 @@ from .const import (
     CONF_PRODUCT_ID,
     CONF_PRODUCT_NAME,
     DOMAIN,
+    ENVIRONMENT_LOCAL,
+    LOCAL_ENTRY_UNIQUE_ID,
 )
 from .hub import DeviceRecord, async_fetch_cloud_devices, merge_device_records
 
@@ -117,6 +119,10 @@ class KlyqaPetConfigFlow(ConfigFlow, domain=DOMAIN):
         return None
 
     async def async_step_user(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        """Let the user choose between a cloud account and a local-only device."""
+        return self.async_show_menu(step_id="user", menu_options=["cloud", "local"])
+
+    async def async_step_cloud(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Ask for environment and credentials."""
         errors: dict[str, str] = {}
         if user_input is not None:
@@ -142,8 +148,71 @@ class KlyqaPetConfigFlow(ConfigFlow, domain=DOMAIN):
                     },
                 )
         return self.async_show_form(
-            step_id="user",
+            step_id="cloud",
             data_schema=self.add_suggested_values_to_schema(STEP_USER_SCHEMA, user_input),
+            errors=errors,
+        )
+
+    def _existing_local_entry(self) -> ConfigEntry | None:
+        """Return the single local-only entry, if one exists."""
+        for entry in self._async_current_entries(include_ignore=False):
+            if entry.unique_id == LOCAL_ENTRY_UNIQUE_ID:
+                return entry
+        return None
+
+    async def async_step_local(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        """Add a device by IP and access token, without any cloud account."""
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            host = user_input[CONF_HOST].strip()
+            port = int(user_input[CONF_PORT])
+            token = user_input[CONF_ACCESS_TOKEN]
+            device = KlyqaDevice(async_get_clientsession(self.hass), host, token, port)
+            try:
+                info = await device.get_system_info()
+            except KlyqaAuthError:
+                errors["base"] = "invalid_auth"
+            except (KlyqaConnectionError, KlyqaDeviceError):
+                errors["base"] = "cannot_connect"
+            except Exception:
+                _LOGGER.exception("Unexpected error while adding a local device")
+                errors["base"] = "unknown"
+            else:
+                if device_type_from_product_id(info.product_id) is None:
+                    errors["base"] = "not_supported"
+                else:
+                    record = {
+                        CONF_HOST: host,
+                        CONF_PORT: port,
+                        CONF_ACCESS_TOKEN: token,
+                        CONF_PRODUCT_ID: info.product_id,
+                        CONF_PRODUCT_NAME: info.product_name,
+                        CONF_DEVICE_NAME: "",
+                    }
+                    await self.async_set_unique_id(LOCAL_ENTRY_UNIQUE_ID, raise_on_progress=False)
+                    existing = self._existing_local_entry()
+                    if existing is not None:
+                        manual = {
+                            **existing.options.get(CONF_MANUAL_DEVICES, {}),
+                            info.device_id: record,
+                        }
+                        self.hass.config_entries.async_update_entry(
+                            existing,
+                            options={**existing.options, CONF_MANUAL_DEVICES: manual},
+                        )
+                        self.hass.config_entries.async_schedule_reload(existing.entry_id)
+                        return self.async_abort(reason="device_added")
+                    return self.async_create_entry(
+                        title="Klyqa Pet (local)",
+                        data={CONF_ENVIRONMENT: ENVIRONMENT_LOCAL, CONF_DEVICES: {}},
+                        options={CONF_MANUAL_DEVICES: {info.device_id: record}},
+                    )
+        suggested = user_input
+        if suggested is None and self._discovered is not None:
+            suggested = {CONF_HOST: self._discovered.host, CONF_PORT: self._discovered.port}
+        return self.async_show_form(
+            step_id="local",
+            data_schema=self.add_suggested_values_to_schema(STEP_MANUAL_SCHEMA, suggested),
             errors=errors,
         )
 
@@ -176,12 +245,11 @@ class KlyqaPetConfigFlow(ConfigFlow, domain=DOMAIN):
     async def async_step_discovery_confirm(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
-        """Confirm that the user wants to set up the account for the discovered device."""
+        """Let the user choose how to set up the discovered device."""
         assert self._discovered is not None
-        if user_input is not None:
-            return await self.async_step_user()
-        return self.async_show_form(
+        return self.async_show_menu(
             step_id="discovery_confirm",
+            menu_options=["cloud", "local"],
             description_placeholders={
                 "name": self._discovered_name(self._discovered),
                 "host": self._discovered.host,
@@ -198,6 +266,10 @@ class KlyqaPetConfigFlow(ConfigFlow, domain=DOMAIN):
     ) -> ConfigFlowResult:
         """Ask for a new password."""
         entry = self._get_reauth_entry()
+        if entry.data.get(CONF_ENVIRONMENT) == ENVIRONMENT_LOCAL:
+            # A local entry has no cloud account and is never put into reauth by the
+            # hub, but guard here too in case something else triggers it.
+            return self.async_abort(reason="not_supported_local")
         errors: dict[str, str] = {}
         if user_input is not None:
             devices = await self._async_try_login(
@@ -228,6 +300,8 @@ class KlyqaPetConfigFlow(ConfigFlow, domain=DOMAIN):
     ) -> ConfigFlowResult:
         """Update the password of the same account."""
         entry = self._get_reconfigure_entry()
+        if entry.data.get(CONF_ENVIRONMENT) == ENVIRONMENT_LOCAL:
+            return self.async_abort(reason="not_supported_local")
         errors: dict[str, str] = {}
         if user_input is not None:
             devices = await self._async_try_login(

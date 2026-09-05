@@ -35,7 +35,14 @@ from pyklyqa_pet import (
     KlyqaConnectionError,
 )
 
-from .conftest import FOODY_ID, PURIFIER_ID, WELLY_HOST, WELLY_ID, device_record, setup_integration
+from .conftest import (
+    FOODY_ID,
+    PURIFIER_ID,
+    WELLY_HOST,
+    WELLY_ID,
+    device_record,
+    setup_integration,
+)
 
 MANUAL_ID = "AABBCCDDEE01"
 
