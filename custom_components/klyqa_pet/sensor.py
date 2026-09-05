@@ -17,7 +17,6 @@ from homeassistant.const import (
     PERCENTAGE,
     SIGNAL_STRENGTH_DECIBELS_MILLIWATT,
     EntityCategory,
-    UnitOfInformation,
     UnitOfMass,
     UnitOfTemperature,
     UnitOfTime,
@@ -110,29 +109,12 @@ COMMON_SENSORS: tuple[KlyqaSensorEntityDescription, ...] = (
         value_fn=lambda data: data.system_info.sdk_version or None,
     ),
     KlyqaSensorEntityDescription(
-        key="boot_reason",
-        translation_key="boot_reason",
-        entity_category=EntityCategory.DIAGNOSTIC,
-        entity_registry_enabled_default=False,
-        value_fn=lambda data: data.system_info.boot_reason,
-    ),
-    KlyqaSensorEntityDescription(
         key="last_boot",
         translation_key="last_boot",
         device_class=SensorDeviceClass.TIMESTAMP,
         entity_category=EntityCategory.DIAGNOSTIC,
         entity_registry_enabled_default=False,
         value_fn=lambda data: _timestamp(data.system_info.boot_time),
-    ),
-    KlyqaSensorEntityDescription(
-        key="free_heap",
-        translation_key="free_heap",
-        device_class=SensorDeviceClass.DATA_SIZE,
-        native_unit_of_measurement=UnitOfInformation.BYTES,
-        state_class=SensorStateClass.MEASUREMENT,
-        entity_category=EntityCategory.DIAGNOSTIC,
-        entity_registry_enabled_default=False,
-        value_fn=lambda data: data.system_info.free_heap,
     ),
 )
 

@@ -78,7 +78,7 @@ except where noted):
 
 | Platform | Entity | Notes |
 |---|---|---|
-| sensor | Wi-Fi signal, Firmware version, SDK version, Boot reason, Last boot, Free heap | Diagnostic, disabled by default |
+| sensor | Wi-Fi signal, Firmware version, SDK version, Last boot | Diagnostic, disabled by default |
 | button | Restart | Diagnostic, disabled by default; generic SDK reboot command |
 
 ### Welly (water fountain)
@@ -125,7 +125,7 @@ mains power, since the device never reports a battery level in that configuratio
 Each device is polled independently through its own `DataUpdateCoordinator`:
 
 - Device state and settings are refreshed every **15 seconds**.
-- System information (firmware/SDK version, boot reason, etc.) is refreshed every
+- System information (firmware/SDK version, last boot, etc.) is refreshed every
   **5 minutes**, since it changes far less often.
 - Devices are also discovered passively via mDNS (`_qcxrest._tcp`). If a known
   device's IP address changes, the mDNS listener picks up the new address

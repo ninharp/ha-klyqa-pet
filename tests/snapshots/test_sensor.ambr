@@ -54,56 +54,6 @@
     'state': 'unknown',
   })
 # ---
-# name: test_sensors[sensor.feeder_boot_reason-entry]
-  EntityRegistryEntrySnapshot({
-    'aliases': list([
-      None,
-    ]),
-    'area_id': None,
-    'capabilities': None,
-    'config_entry_id': <ANY>,
-    'config_subentry_id': <ANY>,
-    'device_class': None,
-    'device_id': <ANY>,
-    'disabled_by': None,
-    'domain': 'sensor',
-    'entity_category': <EntityCategory.DIAGNOSTIC: 'diagnostic'>,
-    'entity_id': 'sensor.feeder_boot_reason',
-    'has_entity_name': True,
-    'hidden_by': None,
-    'icon': None,
-    'id': <ANY>,
-    'labels': set({
-    }),
-    'name': None,
-    'object_id_base': 'Boot reason',
-    'options': dict({
-    }),
-    'original_device_class': None,
-    'original_icon': None,
-    'original_name': 'Boot reason',
-    'platform': 'klyqa_pet',
-    'previous_unique_id': None,
-    'suggested_object_id': None,
-    'supported_features': 0,
-    'translation_key': 'boot_reason',
-    'unique_id': 'A0F26219DC34_boot_reason',
-    'unit_of_measurement': None,
-  })
-# ---
-# name: test_sensors[sensor.feeder_boot_reason-state]
-  StateSnapshot({
-    'attributes': ReadOnlyDict({
-      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Feeder Boot reason',
-    }),
-    'context': <ANY>,
-    'entity_id': 'sensor.feeder_boot_reason',
-    'last_changed': <ANY>,
-    'last_reported': <ANY>,
-    'last_updated': <ANY>,
-    'state': '1',
-  })
-# ---
 # name: test_sensors[sensor.feeder_bowl_remaining-entry]
   EntityRegistryEntrySnapshot({
     'aliases': list([
@@ -460,64 +410,6 @@
     'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': 'sufficient',
-  })
-# ---
-# name: test_sensors[sensor.feeder_free_heap-entry]
-  EntityRegistryEntrySnapshot({
-    'aliases': list([
-      None,
-    ]),
-    'area_id': None,
-    'capabilities': dict({
-      <SensorEntityCapabilityAttribute.STATE_CLASS: 'state_class'>: <SensorStateClass.MEASUREMENT: 'measurement'>,
-    }),
-    'config_entry_id': <ANY>,
-    'config_subentry_id': <ANY>,
-    'device_class': None,
-    'device_id': <ANY>,
-    'disabled_by': None,
-    'domain': 'sensor',
-    'entity_category': <EntityCategory.DIAGNOSTIC: 'diagnostic'>,
-    'entity_id': 'sensor.feeder_free_heap',
-    'has_entity_name': True,
-    'hidden_by': None,
-    'icon': None,
-    'id': <ANY>,
-    'labels': set({
-    }),
-    'name': None,
-    'object_id_base': 'Free heap',
-    'options': dict({
-      'sensor': dict({
-        'suggested_display_precision': 0,
-      }),
-    }),
-    'original_device_class': <SensorDeviceClass.DATA_SIZE: 'data_size'>,
-    'original_icon': None,
-    'original_name': 'Free heap',
-    'platform': 'klyqa_pet',
-    'previous_unique_id': None,
-    'suggested_object_id': None,
-    'supported_features': 0,
-    'translation_key': 'free_heap',
-    'unique_id': 'A0F26219DC34_free_heap',
-    'unit_of_measurement': <UnitOfInformation.BYTES: 'B'>,
-  })
-# ---
-# name: test_sensors[sensor.feeder_free_heap-state]
-  StateSnapshot({
-    'attributes': ReadOnlyDict({
-      <EntityStateAttribute.DEVICE_CLASS: 'device_class'>: 'data_size',
-      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Feeder Free heap',
-      <SensorEntityCapabilityAttribute.STATE_CLASS: 'state_class'>: <SensorStateClass.MEASUREMENT: 'measurement'>,
-      <EntityStateAttribute.UNIT_OF_MEASUREMENT: 'unit_of_measurement'>: <UnitOfInformation.BYTES: 'B'>,
-    }),
-    'context': <ANY>,
-    'entity_id': 'sensor.feeder_free_heap',
-    'last_changed': <ANY>,
-    'last_reported': <ANY>,
-    'last_updated': <ANY>,
-    'state': '123456',
   })
 # ---
 # name: test_sensors[sensor.feeder_last_boot-entry]
@@ -1134,56 +1026,6 @@
     'state': '95',
   })
 # ---
-# name: test_sensors[sensor.kitchen_fountain_boot_reason-entry]
-  EntityRegistryEntrySnapshot({
-    'aliases': list([
-      None,
-    ]),
-    'area_id': None,
-    'capabilities': None,
-    'config_entry_id': <ANY>,
-    'config_subentry_id': <ANY>,
-    'device_class': None,
-    'device_id': <ANY>,
-    'disabled_by': None,
-    'domain': 'sensor',
-    'entity_category': <EntityCategory.DIAGNOSTIC: 'diagnostic'>,
-    'entity_id': 'sensor.kitchen_fountain_boot_reason',
-    'has_entity_name': True,
-    'hidden_by': None,
-    'icon': None,
-    'id': <ANY>,
-    'labels': set({
-    }),
-    'name': None,
-    'object_id_base': 'Boot reason',
-    'options': dict({
-    }),
-    'original_device_class': None,
-    'original_icon': None,
-    'original_name': 'Boot reason',
-    'platform': 'klyqa_pet',
-    'previous_unique_id': None,
-    'suggested_object_id': None,
-    'supported_features': 0,
-    'translation_key': 'boot_reason',
-    'unique_id': '188B0EAF2D7C_boot_reason',
-    'unit_of_measurement': None,
-  })
-# ---
-# name: test_sensors[sensor.kitchen_fountain_boot_reason-state]
-  StateSnapshot({
-    'attributes': ReadOnlyDict({
-      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Kitchen fountain Boot reason',
-    }),
-    'context': <ANY>,
-    'entity_id': 'sensor.kitchen_fountain_boot_reason',
-    'last_changed': <ANY>,
-    'last_reported': <ANY>,
-    'last_updated': <ANY>,
-    'state': '1',
-  })
-# ---
 # name: test_sensors[sensor.kitchen_fountain_clean_tank_volume-entry]
   EntityRegistryEntrySnapshot({
     'aliases': list([
@@ -1452,64 +1294,6 @@
     'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': '1.4.2',
-  })
-# ---
-# name: test_sensors[sensor.kitchen_fountain_free_heap-entry]
-  EntityRegistryEntrySnapshot({
-    'aliases': list([
-      None,
-    ]),
-    'area_id': None,
-    'capabilities': dict({
-      <SensorEntityCapabilityAttribute.STATE_CLASS: 'state_class'>: <SensorStateClass.MEASUREMENT: 'measurement'>,
-    }),
-    'config_entry_id': <ANY>,
-    'config_subentry_id': <ANY>,
-    'device_class': None,
-    'device_id': <ANY>,
-    'disabled_by': None,
-    'domain': 'sensor',
-    'entity_category': <EntityCategory.DIAGNOSTIC: 'diagnostic'>,
-    'entity_id': 'sensor.kitchen_fountain_free_heap',
-    'has_entity_name': True,
-    'hidden_by': None,
-    'icon': None,
-    'id': <ANY>,
-    'labels': set({
-    }),
-    'name': None,
-    'object_id_base': 'Free heap',
-    'options': dict({
-      'sensor': dict({
-        'suggested_display_precision': 0,
-      }),
-    }),
-    'original_device_class': <SensorDeviceClass.DATA_SIZE: 'data_size'>,
-    'original_icon': None,
-    'original_name': 'Free heap',
-    'platform': 'klyqa_pet',
-    'previous_unique_id': None,
-    'suggested_object_id': None,
-    'supported_features': 0,
-    'translation_key': 'free_heap',
-    'unique_id': '188B0EAF2D7C_free_heap',
-    'unit_of_measurement': <UnitOfInformation.BYTES: 'B'>,
-  })
-# ---
-# name: test_sensors[sensor.kitchen_fountain_free_heap-state]
-  StateSnapshot({
-    'attributes': ReadOnlyDict({
-      <EntityStateAttribute.DEVICE_CLASS: 'device_class'>: 'data_size',
-      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Kitchen fountain Free heap',
-      <SensorEntityCapabilityAttribute.STATE_CLASS: 'state_class'>: <SensorStateClass.MEASUREMENT: 'measurement'>,
-      <EntityStateAttribute.UNIT_OF_MEASUREMENT: 'unit_of_measurement'>: <UnitOfInformation.BYTES: 'B'>,
-    }),
-    'context': <ANY>,
-    'entity_id': 'sensor.kitchen_fountain_free_heap',
-    'last_changed': <ANY>,
-    'last_reported': <ANY>,
-    'last_updated': <ANY>,
-    'state': '123456',
   })
 # ---
 # name: test_sensors[sensor.kitchen_fountain_last_boot-entry]
@@ -2195,56 +1979,6 @@
     'state': 'good',
   })
 # ---
-# name: test_sensors[sensor.klyqa_airpurifier_e85dfc_boot_reason-entry]
-  EntityRegistryEntrySnapshot({
-    'aliases': list([
-      None,
-    ]),
-    'area_id': None,
-    'capabilities': None,
-    'config_entry_id': <ANY>,
-    'config_subentry_id': <ANY>,
-    'device_class': None,
-    'device_id': <ANY>,
-    'disabled_by': None,
-    'domain': 'sensor',
-    'entity_category': <EntityCategory.DIAGNOSTIC: 'diagnostic'>,
-    'entity_id': 'sensor.klyqa_airpurifier_e85dfc_boot_reason',
-    'has_entity_name': True,
-    'hidden_by': None,
-    'icon': None,
-    'id': <ANY>,
-    'labels': set({
-    }),
-    'name': None,
-    'object_id_base': 'Boot reason',
-    'options': dict({
-    }),
-    'original_device_class': None,
-    'original_icon': None,
-    'original_name': 'Boot reason',
-    'platform': 'klyqa_pet',
-    'previous_unique_id': None,
-    'suggested_object_id': None,
-    'supported_features': 0,
-    'translation_key': 'boot_reason',
-    'unique_id': 'D83BDAE85DFC_boot_reason',
-    'unit_of_measurement': None,
-  })
-# ---
-# name: test_sensors[sensor.klyqa_airpurifier_e85dfc_boot_reason-state]
-  StateSnapshot({
-    'attributes': ReadOnlyDict({
-      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Klyqa airpurifier E85DFC Boot reason',
-    }),
-    'context': <ANY>,
-    'entity_id': 'sensor.klyqa_airpurifier_e85dfc_boot_reason',
-    'last_changed': <ANY>,
-    'last_reported': <ANY>,
-    'last_updated': <ANY>,
-    'state': '1',
-  })
-# ---
 # name: test_sensors[sensor.klyqa_airpurifier_e85dfc_cleaned_air_volume-entry]
   EntityRegistryEntrySnapshot({
     'aliases': list([
@@ -2466,64 +2200,6 @@
     'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': '1.4.2',
-  })
-# ---
-# name: test_sensors[sensor.klyqa_airpurifier_e85dfc_free_heap-entry]
-  EntityRegistryEntrySnapshot({
-    'aliases': list([
-      None,
-    ]),
-    'area_id': None,
-    'capabilities': dict({
-      <SensorEntityCapabilityAttribute.STATE_CLASS: 'state_class'>: <SensorStateClass.MEASUREMENT: 'measurement'>,
-    }),
-    'config_entry_id': <ANY>,
-    'config_subentry_id': <ANY>,
-    'device_class': None,
-    'device_id': <ANY>,
-    'disabled_by': None,
-    'domain': 'sensor',
-    'entity_category': <EntityCategory.DIAGNOSTIC: 'diagnostic'>,
-    'entity_id': 'sensor.klyqa_airpurifier_e85dfc_free_heap',
-    'has_entity_name': True,
-    'hidden_by': None,
-    'icon': None,
-    'id': <ANY>,
-    'labels': set({
-    }),
-    'name': None,
-    'object_id_base': 'Free heap',
-    'options': dict({
-      'sensor': dict({
-        'suggested_display_precision': 0,
-      }),
-    }),
-    'original_device_class': <SensorDeviceClass.DATA_SIZE: 'data_size'>,
-    'original_icon': None,
-    'original_name': 'Free heap',
-    'platform': 'klyqa_pet',
-    'previous_unique_id': None,
-    'suggested_object_id': None,
-    'supported_features': 0,
-    'translation_key': 'free_heap',
-    'unique_id': 'D83BDAE85DFC_free_heap',
-    'unit_of_measurement': <UnitOfInformation.BYTES: 'B'>,
-  })
-# ---
-# name: test_sensors[sensor.klyqa_airpurifier_e85dfc_free_heap-state]
-  StateSnapshot({
-    'attributes': ReadOnlyDict({
-      <EntityStateAttribute.DEVICE_CLASS: 'device_class'>: 'data_size',
-      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Klyqa airpurifier E85DFC Free heap',
-      <SensorEntityCapabilityAttribute.STATE_CLASS: 'state_class'>: <SensorStateClass.MEASUREMENT: 'measurement'>,
-      <EntityStateAttribute.UNIT_OF_MEASUREMENT: 'unit_of_measurement'>: <UnitOfInformation.BYTES: 'B'>,
-    }),
-    'context': <ANY>,
-    'entity_id': 'sensor.klyqa_airpurifier_e85dfc_free_heap',
-    'last_changed': <ANY>,
-    'last_reported': <ANY>,
-    'last_updated': <ANY>,
-    'state': '123456',
   })
 # ---
 # name: test_sensors[sensor.klyqa_airpurifier_e85dfc_last_boot-entry]
