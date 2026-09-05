@@ -245,6 +245,10 @@ pytest
   behaviour outside of Home Assistant.
 - `brands/klyqa_pet/` contains the icon and logo assets prepared for submission
   to [home-assistant/brands](https://github.com/home-assistant/brands).
+- The integration implements the Home Assistant Bronze through Platinum quality
+  scale rules (see `custom_components/klyqa_pet/quality_scale.yaml`), except for the
+  `brands` rule: the assets above still need to be submitted and merged upstream
+  before that rule — and the manifest's `quality_scale` claim — can be marked done.
 
 Pull requests are welcome at
 [github.com/ninharp/ha-klyqa-pet](https://github.com/ninharp/ha-klyqa-pet).

@@ -9,7 +9,6 @@
   "iot_class": "local_polling",
   "issue_tracker": "https://github.com/ninharp/ha-klyqa-pet/issues",
   "loggers": ["pyklyqa_pet"],
-  "quality_scale": "platinum",
   "requirements": ["pyklyqa-pet==0.1.0"],
   "version": "0.1.0",
   "zeroconf": [{ "type": "_qcxrest._tcp.local." }]
