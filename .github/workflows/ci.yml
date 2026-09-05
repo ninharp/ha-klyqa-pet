@@ -13,6 +13,7 @@ jobs:
         with:
           cache-dependency-glob: "pyproject.toml"
       - run: uv venv --python 3.14 .venv && uv pip install --python .venv/bin/python -e ".[dev]"
+      - run: python3 scripts/check_versions.py
       - run: .venv/bin/ruff check . && .venv/bin/ruff format --check .
       - run: .venv/bin/mypy
       - run: .venv/bin/pytest -q --cov --cov-report=term-missing
