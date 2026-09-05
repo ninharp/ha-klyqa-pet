@@ -7,6 +7,8 @@ talks directly to the device's local QConnex REST API over your LAN. The Klyqa c
 is only used once, during setup, to look up the access token each device needs; after
 that the integration never depends on the cloud being reachable.
 
+[![Open this repository in the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=ninharp&repository=ha-klyqa-pet&category=integration)
+
 ## Supported devices
 
 | Product ID | Device | Status |
