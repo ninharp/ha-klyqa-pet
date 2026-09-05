@@ -222,41 +222,31 @@ class KlyqaPetConfigFlow(ConfigFlow, domain=DOMAIN):
     async def async_step_reconfigure(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
-        """Change environment or credentials of the same account."""
+        """Update the password of the same account."""
         entry = self._get_reconfigure_entry()
         errors: dict[str, str] = {}
         if user_input is not None:
             devices = await self._async_try_login(
-                user_input[CONF_ENVIRONMENT],
-                user_input[CONF_EMAIL],
+                entry.data[CONF_ENVIRONMENT],
+                entry.data[CONF_EMAIL],
                 user_input[CONF_PASSWORD],
                 errors,
             )
             if devices is not None:
-                await self.async_set_unique_id(
-                    _account_unique_id(user_input[CONF_ENVIRONMENT], user_input[CONF_EMAIL])
-                )
-                self._abort_if_unique_id_mismatch(reason="wrong_account")
                 return self.async_update_reload_and_abort(
                     entry,
-                    title=f"{user_input[CONF_EMAIL]} ({user_input[CONF_ENVIRONMENT]})",
                     data_updates={
-                        CONF_ENVIRONMENT: user_input[CONF_ENVIRONMENT],
-                        CONF_EMAIL: user_input[CONF_EMAIL],
                         CONF_PASSWORD: user_input[CONF_PASSWORD],
                         CONF_DEVICES: merge_device_records(
                             entry.data.get(CONF_DEVICES, {}), devices
                         ),
                     },
                 )
-        suggested = user_input or {
-            CONF_ENVIRONMENT: entry.data[CONF_ENVIRONMENT],
-            CONF_EMAIL: entry.data[CONF_EMAIL],
-        }
         return self.async_show_form(
             step_id="reconfigure",
-            data_schema=self.add_suggested_values_to_schema(STEP_USER_SCHEMA, suggested),
+            data_schema=STEP_REAUTH_SCHEMA,
             errors=errors,
+            description_placeholders={"email": entry.data[CONF_EMAIL]},
         )
 
 

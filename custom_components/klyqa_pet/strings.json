@@ -27,10 +27,8 @@
       },
       "reconfigure": {
         "title": "Reconfigure Klyqa account",
-        "description": "Change the environment or credentials of this account.",
+        "description": "Update the password for {email}.",
         "data": {
-          "environment": "Environment",
-          "email": "Email",
           "password": "Password"
         }
       }
@@ -45,8 +43,7 @@
       "already_in_progress": "Configuration flow is already in progress",
       "not_supported": "This device is not supported by the Klyqa Pet integration",
       "reauth_successful": "Re-authentication was successful",
-      "reconfigure_successful": "Re-configuration was successful",
-      "wrong_account": "You can only reconfigure the same account"
+      "reconfigure_successful": "Re-configuration was successful"
     }
   },
   "options": {

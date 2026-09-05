@@ -12,7 +12,12 @@ from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
 import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from custom_components.klyqa_pet.const import CONF_DEVICES, CONF_ENVIRONMENT, DOMAIN
+from custom_components.klyqa_pet.const import (
+    CONF_DEVICES,
+    CONF_ENVIRONMENT,
+    CONF_MANUAL_DEVICES,
+    DOMAIN,
+)
 from pyklyqa_pet import KlyqaAuthError, KlyqaConnectionError
 
 from .conftest import WELLY_HOST, WELLY_ID, device_record, setup_integration
@@ -133,6 +138,26 @@ async def test_zeroconf_known_device_aborts(
     assert result["reason"] == "already_configured"
 
 
+async def test_zeroconf_known_manual_device_aborts(hass: HomeAssistant) -> None:
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        title="user@example.com (test)",
+        unique_id="test:user@example.com",
+        data={CONF_ENVIRONMENT: "test", CONF_EMAIL: "user@example.com", CONF_PASSWORD: "secret"},
+        options={
+            CONF_MANUAL_DEVICES: {
+                WELLY_ID: device_record("welly-token", "", "@klyqa.welly-dev", WELLY_HOST)
+            }
+        },
+    )
+    entry.add_to_hass(hass)
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN, context={"source": SOURCE_ZEROCONF}, data=zeroconf_info()
+    )
+    assert result["type"] is FlowResultType.ABORT
+    assert result["reason"] == "already_configured"
+
+
 async def test_zeroconf_new_device_leads_to_login(
     hass: HomeAssistant, mock_fetch: AsyncMock, mock_setup_entry: Any
 ) -> None:
@@ -167,6 +192,8 @@ async def test_reauth_flow(
     mock_cloud: Any,
     mock_devices: dict,
 ) -> None:
+    # start with a stale token so the assertion below proves a fresh one was fetched
+    mock_config_entry.data[CONF_DEVICES][WELLY_ID]["access_token"] = "old-token"
     await setup_integration(hass, mock_config_entry)
     result = await mock_config_entry.start_reauth_flow(hass)
     assert result["type"] is FlowResultType.FORM
@@ -189,6 +216,11 @@ async def test_reauth_flow(
     assert mock_config_entry.data[CONF_PASSWORD] == "new-secret"
     # stored host survives the token refresh
     assert mock_config_entry.data[CONF_DEVICES][WELLY_ID]["host"] == WELLY_HOST
+    # the fresh access token from the cloud landed in the stored device record
+    assert (
+        mock_config_entry.data[CONF_DEVICES][WELLY_ID]["access_token"]
+        == CLOUD_DEVICES[WELLY_ID]["access_token"]
+    )
 
 
 async def test_reconfigure_flow(
@@ -198,22 +230,19 @@ async def test_reconfigure_flow(
     mock_cloud: Any,
     mock_devices: dict,
 ) -> None:
+    original_title = mock_config_entry.title
     await setup_integration(hass, mock_config_entry)
     result = await mock_config_entry.start_reconfigure_flow(hass)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reconfigure"
 
     result = await hass.config_entries.flow.async_configure(
-        result["flow_id"], {**USER_INPUT, CONF_EMAIL: "other@example.com"}
-    )
-    assert result["type"] is FlowResultType.ABORT
-    assert result["reason"] == "wrong_account"
-
-    result = await mock_config_entry.start_reconfigure_flow(hass)
-    result = await hass.config_entries.flow.async_configure(
-        result["flow_id"], {**USER_INPUT, CONF_PASSWORD: "changed"}
+        result["flow_id"], {CONF_PASSWORD: "changed"}
     )
     await hass.async_block_till_done()
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "reconfigure_successful"
     assert mock_config_entry.data[CONF_PASSWORD] == "changed"
+    assert mock_config_entry.title == original_title
+    # stored host survives the merge
+    assert mock_config_entry.data[CONF_DEVICES][WELLY_ID]["host"] == WELLY_HOST
