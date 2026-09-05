@@ -1,0 +1,404 @@
+# serializer version: 1
+# name: test_buttons[button.feeder_dispense_food-entry]
+  EntityRegistryEntrySnapshot({
+    'aliases': list([
+      None,
+    ]),
+    'area_id': None,
+    'capabilities': None,
+    'config_entry_id': <ANY>,
+    'config_subentry_id': <ANY>,
+    'device_class': None,
+    'device_id': <ANY>,
+    'disabled_by': None,
+    'domain': 'button',
+    'entity_category': None,
+    'entity_id': 'button.feeder_dispense_food',
+    'has_entity_name': True,
+    'hidden_by': None,
+    'icon': None,
+    'id': <ANY>,
+    'labels': set({
+    }),
+    'name': None,
+    'object_id_base': 'Dispense food',
+    'options': dict({
+    }),
+    'original_device_class': None,
+    'original_icon': None,
+    'original_name': 'Dispense food',
+    'platform': 'klyqa_pet',
+    'previous_unique_id': None,
+    'suggested_object_id': None,
+    'supported_features': 0,
+    'translation_key': 'dispense_food',
+    'unique_id': 'A0F26219DC34_dispense_food',
+    'unit_of_measurement': None,
+  })
+# ---
+# name: test_buttons[button.feeder_dispense_food-state]
+  StateSnapshot({
+    'attributes': ReadOnlyDict({
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Feeder Dispense food',
+    }),
+    'context': <ANY>,
+    'entity_id': 'button.feeder_dispense_food',
+    'last_changed': <ANY>,
+    'last_reported': <ANY>,
+    'last_updated': <ANY>,
+    'state': 'unknown',
+  })
+# ---
+# name: test_buttons[button.feeder_play_voice_recording-entry]
+  EntityRegistryEntrySnapshot({
+    'aliases': list([
+      None,
+    ]),
+    'area_id': None,
+    'capabilities': None,
+    'config_entry_id': <ANY>,
+    'config_subentry_id': <ANY>,
+    'device_class': None,
+    'device_id': <ANY>,
+    'disabled_by': None,
+    'domain': 'button',
+    'entity_category': None,
+    'entity_id': 'button.feeder_play_voice_recording',
+    'has_entity_name': True,
+    'hidden_by': None,
+    'icon': None,
+    'id': <ANY>,
+    'labels': set({
+    }),
+    'name': None,
+    'object_id_base': 'Play voice recording',
+    'options': dict({
+    }),
+    'original_device_class': None,
+    'original_icon': None,
+    'original_name': 'Play voice recording',
+    'platform': 'klyqa_pet',
+    'previous_unique_id': None,
+    'suggested_object_id': None,
+    'supported_features': 0,
+    'translation_key': 'play_voice_recording',
+    'unique_id': 'A0F26219DC34_play_voice_recording',
+    'unit_of_measurement': None,
+  })
+# ---
+# name: test_buttons[button.feeder_play_voice_recording-state]
+  StateSnapshot({
+    'attributes': ReadOnlyDict({
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Feeder Play voice recording',
+    }),
+    'context': <ANY>,
+    'entity_id': 'button.feeder_play_voice_recording',
+    'last_changed': <ANY>,
+    'last_reported': <ANY>,
+    'last_updated': <ANY>,
+    'state': 'unknown',
+  })
+# ---
+# name: test_buttons[button.feeder_query_bowl_weight-entry]
+  EntityRegistryEntrySnapshot({
+    'aliases': list([
+      None,
+    ]),
+    'area_id': None,
+    'capabilities': None,
+    'config_entry_id': <ANY>,
+    'config_subentry_id': <ANY>,
+    'device_class': None,
+    'device_id': <ANY>,
+    'disabled_by': None,
+    'domain': 'button',
+    'entity_category': None,
+    'entity_id': 'button.feeder_query_bowl_weight',
+    'has_entity_name': True,
+    'hidden_by': None,
+    'icon': None,
+    'id': <ANY>,
+    'labels': set({
+    }),
+    'name': None,
+    'object_id_base': 'Query bowl weight',
+    'options': dict({
+    }),
+    'original_device_class': None,
+    'original_icon': None,
+    'original_name': 'Query bowl weight',
+    'platform': 'klyqa_pet',
+    'previous_unique_id': None,
+    'suggested_object_id': None,
+    'supported_features': 0,
+    'translation_key': 'query_bowl_weight',
+    'unique_id': 'A0F26219DC34_query_bowl_weight',
+    'unit_of_measurement': None,
+  })
+# ---
+# name: test_buttons[button.feeder_query_bowl_weight-state]
+  StateSnapshot({
+    'attributes': ReadOnlyDict({
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Feeder Query bowl weight',
+    }),
+    'context': <ANY>,
+    'entity_id': 'button.feeder_query_bowl_weight',
+    'last_changed': <ANY>,
+    'last_reported': <ANY>,
+    'last_updated': <ANY>,
+    'state': 'unknown',
+  })
+# ---
+# name: test_buttons[button.feeder_restart-entry]
+  EntityRegistryEntrySnapshot({
+    'aliases': list([
+      None,
+    ]),
+    'area_id': None,
+    'capabilities': None,
+    'config_entry_id': <ANY>,
+    'config_subentry_id': <ANY>,
+    'device_class': None,
+    'device_id': <ANY>,
+    'disabled_by': None,
+    'domain': 'button',
+    'entity_category': <EntityCategory.DIAGNOSTIC: 'diagnostic'>,
+    'entity_id': 'button.feeder_restart',
+    'has_entity_name': True,
+    'hidden_by': None,
+    'icon': None,
+    'id': <ANY>,
+    'labels': set({
+    }),
+    'name': None,
+    'object_id_base': 'Restart',
+    'options': dict({
+    }),
+    'original_device_class': <ButtonDeviceClass.RESTART: 'restart'>,
+    'original_icon': None,
+    'original_name': 'Restart',
+    'platform': 'klyqa_pet',
+    'previous_unique_id': None,
+    'suggested_object_id': None,
+    'supported_features': 0,
+    'translation_key': None,
+    'unique_id': 'A0F26219DC34_restart',
+    'unit_of_measurement': None,
+  })
+# ---
+# name: test_buttons[button.feeder_restart-state]
+  StateSnapshot({
+    'attributes': ReadOnlyDict({
+      <EntityStateAttribute.DEVICE_CLASS: 'device_class'>: 'restart',
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Feeder Restart',
+    }),
+    'context': <ANY>,
+    'entity_id': 'button.feeder_restart',
+    'last_changed': <ANY>,
+    'last_reported': <ANY>,
+    'last_updated': <ANY>,
+    'state': 'unknown',
+  })
+# ---
+# name: test_buttons[button.kitchen_fountain_restart-entry]
+  EntityRegistryEntrySnapshot({
+    'aliases': list([
+      None,
+    ]),
+    'area_id': None,
+    'capabilities': None,
+    'config_entry_id': <ANY>,
+    'config_subentry_id': <ANY>,
+    'device_class': None,
+    'device_id': <ANY>,
+    'disabled_by': None,
+    'domain': 'button',
+    'entity_category': <EntityCategory.DIAGNOSTIC: 'diagnostic'>,
+    'entity_id': 'button.kitchen_fountain_restart',
+    'has_entity_name': True,
+    'hidden_by': None,
+    'icon': None,
+    'id': <ANY>,
+    'labels': set({
+    }),
+    'name': None,
+    'object_id_base': 'Restart',
+    'options': dict({
+    }),
+    'original_device_class': <ButtonDeviceClass.RESTART: 'restart'>,
+    'original_icon': None,
+    'original_name': 'Restart',
+    'platform': 'klyqa_pet',
+    'previous_unique_id': None,
+    'suggested_object_id': None,
+    'supported_features': 0,
+    'translation_key': None,
+    'unique_id': '188B0EAF2D7C_restart',
+    'unit_of_measurement': None,
+  })
+# ---
+# name: test_buttons[button.kitchen_fountain_restart-state]
+  StateSnapshot({
+    'attributes': ReadOnlyDict({
+      <EntityStateAttribute.DEVICE_CLASS: 'device_class'>: 'restart',
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Kitchen fountain Restart',
+    }),
+    'context': <ANY>,
+    'entity_id': 'button.kitchen_fountain_restart',
+    'last_changed': <ANY>,
+    'last_reported': <ANY>,
+    'last_updated': <ANY>,
+    'state': 'unknown',
+  })
+# ---
+# name: test_buttons[button.kitchen_fountain_start_descaling-entry]
+  EntityRegistryEntrySnapshot({
+    'aliases': list([
+      None,
+    ]),
+    'area_id': None,
+    'capabilities': None,
+    'config_entry_id': <ANY>,
+    'config_subentry_id': <ANY>,
+    'device_class': None,
+    'device_id': <ANY>,
+    'disabled_by': None,
+    'domain': 'button',
+    'entity_category': None,
+    'entity_id': 'button.kitchen_fountain_start_descaling',
+    'has_entity_name': True,
+    'hidden_by': None,
+    'icon': None,
+    'id': <ANY>,
+    'labels': set({
+    }),
+    'name': None,
+    'object_id_base': 'Start descaling',
+    'options': dict({
+    }),
+    'original_device_class': None,
+    'original_icon': None,
+    'original_name': 'Start descaling',
+    'platform': 'klyqa_pet',
+    'previous_unique_id': None,
+    'suggested_object_id': None,
+    'supported_features': 0,
+    'translation_key': 'start_descaling',
+    'unique_id': '188B0EAF2D7C_start_descaling',
+    'unit_of_measurement': None,
+  })
+# ---
+# name: test_buttons[button.kitchen_fountain_start_descaling-state]
+  StateSnapshot({
+    'attributes': ReadOnlyDict({
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Kitchen fountain Start descaling',
+    }),
+    'context': <ANY>,
+    'entity_id': 'button.kitchen_fountain_start_descaling',
+    'last_changed': <ANY>,
+    'last_reported': <ANY>,
+    'last_updated': <ANY>,
+    'state': 'unknown',
+  })
+# ---
+# name: test_buttons[button.kitchen_fountain_stop_descaling-entry]
+  EntityRegistryEntrySnapshot({
+    'aliases': list([
+      None,
+    ]),
+    'area_id': None,
+    'capabilities': None,
+    'config_entry_id': <ANY>,
+    'config_subentry_id': <ANY>,
+    'device_class': None,
+    'device_id': <ANY>,
+    'disabled_by': None,
+    'domain': 'button',
+    'entity_category': None,
+    'entity_id': 'button.kitchen_fountain_stop_descaling',
+    'has_entity_name': True,
+    'hidden_by': None,
+    'icon': None,
+    'id': <ANY>,
+    'labels': set({
+    }),
+    'name': None,
+    'object_id_base': 'Stop descaling',
+    'options': dict({
+    }),
+    'original_device_class': None,
+    'original_icon': None,
+    'original_name': 'Stop descaling',
+    'platform': 'klyqa_pet',
+    'previous_unique_id': None,
+    'suggested_object_id': None,
+    'supported_features': 0,
+    'translation_key': 'stop_descaling',
+    'unique_id': '188B0EAF2D7C_stop_descaling',
+    'unit_of_measurement': None,
+  })
+# ---
+# name: test_buttons[button.kitchen_fountain_stop_descaling-state]
+  StateSnapshot({
+    'attributes': ReadOnlyDict({
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Kitchen fountain Stop descaling',
+    }),
+    'context': <ANY>,
+    'entity_id': 'button.kitchen_fountain_stop_descaling',
+    'last_changed': <ANY>,
+    'last_reported': <ANY>,
+    'last_updated': <ANY>,
+    'state': 'unknown',
+  })
+# ---
+# name: test_buttons[button.klyqa_airpurifier_e85dfc_restart-entry]
+  EntityRegistryEntrySnapshot({
+    'aliases': list([
+      None,
+    ]),
+    'area_id': None,
+    'capabilities': None,
+    'config_entry_id': <ANY>,
+    'config_subentry_id': <ANY>,
+    'device_class': None,
+    'device_id': <ANY>,
+    'disabled_by': None,
+    'domain': 'button',
+    'entity_category': <EntityCategory.DIAGNOSTIC: 'diagnostic'>,
+    'entity_id': 'button.klyqa_airpurifier_e85dfc_restart',
+    'has_entity_name': True,
+    'hidden_by': None,
+    'icon': None,
+    'id': <ANY>,
+    'labels': set({
+    }),
+    'name': None,
+    'object_id_base': 'Restart',
+    'options': dict({
+    }),
+    'original_device_class': <ButtonDeviceClass.RESTART: 'restart'>,
+    'original_icon': None,
+    'original_name': 'Restart',
+    'platform': 'klyqa_pet',
+    'previous_unique_id': None,
+    'suggested_object_id': None,
+    'supported_features': 0,
+    'translation_key': None,
+    'unique_id': 'D83BDAE85DFC_restart',
+    'unit_of_measurement': None,
+  })
+# ---
+# name: test_buttons[button.klyqa_airpurifier_e85dfc_restart-state]
+  StateSnapshot({
+    'attributes': ReadOnlyDict({
+      <EntityStateAttribute.DEVICE_CLASS: 'device_class'>: 'restart',
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Klyqa airpurifier E85DFC Restart',
+    }),
+    'context': <ANY>,
+    'entity_id': 'button.klyqa_airpurifier_e85dfc_restart',
+    'last_changed': <ANY>,
+    'last_reported': <ANY>,
+    'last_updated': <ANY>,
+    'state': 'unknown',
+  })
+# ---

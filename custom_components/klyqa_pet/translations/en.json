@@ -249,6 +249,30 @@
         "name": "Charging protection",
         "state": { "stop_charging": "Stop charging", "continue_charging": "Continue charging" }
       }
+    },
+    "button": {
+      "start_descaling": { "name": "Start descaling" },
+      "stop_descaling": { "name": "Stop descaling" },
+      "dispense_food": { "name": "Dispense food" },
+      "play_voice_recording": { "name": "Play voice recording" },
+      "query_bowl_weight": { "name": "Query bowl weight" }
+    },
+    "fan": {
+      "air_purifier": {
+        "state_attributes": {
+          "preset_mode": {
+            "state": {
+              "standalone": "Standalone",
+              "auto": "Auto",
+              "night": "Night",
+              "pet": "Pet"
+            }
+          }
+        }
+      }
+    },
+    "light": {
+      "led": { "name": "LED" }
     }
   }
 }
