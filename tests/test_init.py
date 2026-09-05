@@ -1,6 +1,6 @@
 """Tests for entry setup and unload."""
 
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from homeassistant.config_entries import SOURCE_REAUTH, ConfigEntryState
 from homeassistant.core import HomeAssistant
@@ -103,3 +103,20 @@ async def test_offline_device_does_not_block_setup(
     hub = mock_config_entry.runtime_data
     assert hub.coordinators[WELLY_ID].last_update_success is False
     assert hub.coordinators[FOODY_ID].last_update_success is True
+
+
+async def test_platform_forward_failure_shuts_down_hub(
+    hass: HomeAssistant,
+    mock_config_entry: MockConfigEntry,
+    mock_cloud: MagicMock,
+    mock_devices: dict,
+    mock_zeroconf_browser: MagicMock,
+) -> None:
+    with patch(
+        "homeassistant.config_entries.ConfigEntries.async_forward_entry_setups",
+        AsyncMock(side_effect=RuntimeError("boom")),
+    ):
+        await setup_integration(hass, mock_config_entry)
+
+    assert mock_config_entry.state is ConfigEntryState.SETUP_ERROR
+    mock_zeroconf_browser.return_value.async_cancel.assert_awaited_once()

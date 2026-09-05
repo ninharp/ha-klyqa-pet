@@ -1,21 +1,37 @@
 """Tests for discovery handling and token recovery in the hub."""
 
 from datetime import timedelta
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from freezegun.api import FrozenDateTimeFactory
 from homeassistant.config_entries import SOURCE_REAUTH, ConfigEntryState
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
+import pytest
 from pytest_homeassistant_custom_component.common import (
     MockConfigEntry,
     async_fire_time_changed,
 )
+from zeroconf import ServiceStateChange
 
-from custom_components.klyqa_pet.const import CONF_DEVICES, DOMAIN, SCAN_INTERVAL
-from pyklyqa_pet import CloudDevice, DeviceType, DiscoveredDevice, KlyqaAuthError
+from custom_components.klyqa_pet.const import (
+    CONF_DEVICES,
+    CONF_MANUAL_DEVICES,
+    DOMAIN,
+    SCAN_INTERVAL,
+    SYSTEM_INFO_INTERVAL,
+)
+from pyklyqa_pet import (
+    CloudDevice,
+    DeviceType,
+    DiscoveredDevice,
+    KlyqaAuthError,
+    KlyqaConnectionError,
+)
 
-from .conftest import FOODY_ID, WELLY_HOST, WELLY_ID, setup_integration
+from .conftest import FOODY_ID, PURIFIER_ID, WELLY_HOST, WELLY_ID, device_record, setup_integration
+
+MANUAL_ID = "AABBCCDDEE01"
 
 
 def _discovered(
@@ -162,3 +178,167 @@ async def test_stale_device_is_removed(
         )
         is None
     )
+
+
+async def test_empty_cloud_list_keeps_devices(
+    hass: HomeAssistant,
+    mock_config_entry: MockConfigEntry,
+    mock_cloud: MagicMock,
+    mock_devices: dict,
+    cloud_devices: list[CloudDevice],
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    await setup_integration(hass, mock_config_entry)
+    hub = mock_config_entry.runtime_data
+    cloud_devices.clear()
+    await hub.async_refresh_tokens()
+    await hass.async_block_till_done()
+    assert set(hub.coordinators) == {WELLY_ID, FOODY_ID, PURIFIER_ID}
+    assert set(mock_config_entry.data[CONF_DEVICES]) == {WELLY_ID, FOODY_ID, PURIFIER_ID}
+    assert "returned no devices" in caplog.text
+
+
+async def test_manual_device_401_does_not_start_reauth(
+    hass: HomeAssistant,
+    freezer: FrozenDateTimeFactory,
+    mock_config_entry: MockConfigEntry,
+    mock_cloud: MagicMock,
+    mock_devices: dict,
+    mock_welly: MagicMock,
+) -> None:
+    """A manual device that rejects its token must fail its coordinator, never start reauth."""
+    mock_config_entry.add_to_hass(hass)
+    # Drop the cloud Welly so the manual device is the only one using mock_welly.
+    devices = {k: v for k, v in mock_config_entry.data[CONF_DEVICES].items() if k != WELLY_ID}
+    hass.config_entries.async_update_entry(
+        mock_config_entry,
+        data={**mock_config_entry.data, CONF_DEVICES: devices},
+        options={
+            CONF_MANUAL_DEVICES: {
+                MANUAL_ID: device_record(
+                    "aabbccddeeff0011223344", "", "@klyqa.welly-dev", "192.168.2.99"
+                )
+            }
+        },
+    )
+    await hass.config_entries.async_setup(mock_config_entry.entry_id)
+    await hass.async_block_till_done()
+    hub = mock_config_entry.runtime_data
+    mock_cloud.login.reset_mock()
+
+    mock_welly.get_state.side_effect = KlyqaAuthError("401")
+    # A coordinator only polls while an entity listens to it.
+    hub.coordinators[MANUAL_ID].async_add_listener(lambda: None)
+
+    freezer.tick(SCAN_INTERVAL + timedelta(seconds=1))
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done()
+
+    assert hub.coordinators[MANUAL_ID].last_update_success is False
+    assert hass.config_entries.flow.async_progress(DOMAIN) == []
+    mock_cloud.login.assert_not_awaited()
+
+
+async def test_401_recovery_cloud_unreachable_fails_update(
+    hass: HomeAssistant,
+    freezer: FrozenDateTimeFactory,
+    mock_config_entry: MockConfigEntry,
+    mock_cloud: MagicMock,
+    mock_devices: dict,
+    mock_welly: MagicMock,
+) -> None:
+    await setup_integration(hass, mock_config_entry)
+    mock_cloud.login.side_effect = KlyqaConnectionError("down")
+    mock_welly.get_state.side_effect = KlyqaAuthError("401")
+    # A coordinator only polls while an entity listens to it.
+    mock_config_entry.runtime_data.coordinators[WELLY_ID].async_add_listener(lambda: None)
+
+    freezer.tick(SCAN_INTERVAL + timedelta(seconds=1))
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done()
+
+    assert mock_config_entry.runtime_data.coordinators[WELLY_ID].last_update_success is False
+    assert hass.config_entries.flow.async_progress(DOMAIN) == []
+    assert mock_config_entry.state is ConfigEntryState.LOADED
+
+
+async def test_system_info_cached_between_polls(
+    hass: HomeAssistant,
+    freezer: FrozenDateTimeFactory,
+    mock_config_entry: MockConfigEntry,
+    mock_cloud: MagicMock,
+    mock_devices: dict,
+    mock_welly: MagicMock,
+) -> None:
+    await setup_integration(hass, mock_config_entry)
+    assert mock_welly.get_system_info.await_count == 1
+    hub = mock_config_entry.runtime_data
+    # A coordinator only polls while an entity listens to it.
+    hub.coordinators[WELLY_ID].async_add_listener(lambda: None)
+
+    freezer.tick(SCAN_INTERVAL + timedelta(seconds=1))
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done()
+    assert mock_welly.get_system_info.await_count == 1
+
+    freezer.tick(SYSTEM_INFO_INTERVAL + timedelta(seconds=1))
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done()
+    assert mock_welly.get_system_info.await_count == 2
+
+
+async def test_service_browser_resolves_and_adds_device(
+    hass: HomeAssistant,
+    mock_config_entry: MockConfigEntry,
+    mock_cloud: MagicMock,
+    mock_devices: dict,
+    mock_zeroconf_browser: MagicMock,
+) -> None:
+    mock_config_entry.add_to_hass(hass)
+    devices = {
+        k: ({kk: vv for kk, vv in v.items() if kk not in ("host", "port")} if k == WELLY_ID else v)
+        for k, v in mock_config_entry.data[CONF_DEVICES].items()
+    }
+    hass.config_entries.async_update_entry(
+        mock_config_entry, data={**mock_config_entry.data, CONF_DEVICES: devices}
+    )
+
+    with patch("custom_components.klyqa_pet.hub.AsyncServiceInfo") as mock_info_cls:
+        info = mock_info_cls.return_value
+        info.async_request = AsyncMock(return_value=True)
+        info.parsed_addresses = MagicMock(return_value=["192.168.2.148"])
+        info.port = 3333
+        info.properties = {
+            b"productId": b"@klyqa.welly-dev",
+            b"localDeviceId": b"188B0EAF2D7C",
+            b"productName": b"Klyqa Welly",
+            b"deviceName": b"Kitchen fountain",
+        }
+
+        await hass.config_entries.async_setup(mock_config_entry.entry_id)
+        await hass.async_block_till_done()
+
+        hub = mock_config_entry.runtime_data
+        assert WELLY_ID not in hub.coordinators
+
+        handler = mock_zeroconf_browser.call_args.kwargs["handlers"][0]
+        handler(
+            zeroconf=MagicMock(),
+            service_type="_qcxrest._tcp.local.",
+            name="klyqa.welly-dev-188B0EAF2D7C._qcxrest._tcp.local.",
+            state_change=ServiceStateChange.Added,
+        )
+        await hass.async_block_till_done()
+
+        assert WELLY_ID in hub.coordinators
+        assert mock_config_entry.data[CONF_DEVICES][WELLY_ID]["host"] == "192.168.2.148"
+
+        before = set(hub.coordinators)
+        handler(
+            zeroconf=MagicMock(),
+            service_type="_qcxrest._tcp.local.",
+            name="klyqa.unknown-device-000000000000._qcxrest._tcp.local.",
+            state_change=ServiceStateChange.Removed,
+        )
+        await hass.async_block_till_done()
+        assert set(hub.coordinators) == before

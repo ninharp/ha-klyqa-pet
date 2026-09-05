@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime
 import logging
-from time import monotonic
 from typing import TYPE_CHECKING, Any
 
 from homeassistant.config_entries import ConfigEntry
@@ -12,6 +12,7 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from homeassistant.util import dt as dt_util
 
 from pyklyqa_pet import (
     AirPurifierDevice,
@@ -132,7 +133,10 @@ class KlyqaDeviceCoordinator(DataUpdateCoordinator[KlyqaDeviceData]):
         )
         self.dispense_portions: int = 1
         self._system_info: SystemInfo | None = None
-        self._system_info_time = 0.0
+        # dt_util.utcnow() (not time.monotonic()) so tests can control this clock with
+        # freezegun; monotonic() is untouched by freezegun and made the cache gate
+        # untestable.
+        self._system_info_time: datetime = datetime.min.replace(tzinfo=dt_util.UTC)
 
     @property
     def welly_device(self) -> WellyDevice:
@@ -200,11 +204,8 @@ class KlyqaDeviceCoordinator(DataUpdateCoordinator[KlyqaDeviceData]):
             ) from err
 
     async def _async_fetch(self) -> KlyqaDeviceData:
-        now = monotonic()
-        if (
-            self._system_info is None
-            or now - self._system_info_time >= SYSTEM_INFO_INTERVAL.total_seconds()
-        ):
+        now = dt_util.utcnow()
+        if self._system_info is None or now - self._system_info_time >= SYSTEM_INFO_INTERVAL:
             self._system_info = await self.device.get_system_info()
             self._system_info_time = now
             self._async_update_device_registry(self._system_info)

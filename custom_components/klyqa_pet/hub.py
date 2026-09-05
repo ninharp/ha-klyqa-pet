@@ -171,6 +171,13 @@ class KlyqaPetHub:
                 self.entry.data[CONF_EMAIL],
                 self.entry.data[CONF_PASSWORD],
             )
+            if not fresh and self.cloud_devices:
+                # A transient empty response (e.g. a cloud hiccup) must never be read as
+                # "the account lost all its devices" - keep everything as it is.
+                _LOGGER.warning(
+                    "Klyqa cloud returned no devices for this account, keeping the stored devices"
+                )
+                return
             merged = merge_device_records(self.cloud_devices, fresh)
             removed = set(self.cloud_devices) - set(merged)
             self.hass.config_entries.async_update_entry(
@@ -235,11 +242,25 @@ class KlyqaPetHub:
             )
             return
         if (coordinator := self.coordinators.get(device_id)) is not None:
-            if coordinator.device.host != discovered.host:
+            host_changed = coordinator.device.host != discovered.host
+            # KlyqaDevice.port has no setter (it is fixed at construction time in the
+            # library), so a changed port cannot be applied to the live device object.
+            # Persisting it below still keeps the config entry accurate; it only takes
+            # effect after the next restart, when the coordinator is recreated from the
+            # stored record.
+            port_changed = discovered.port != coordinator.device.port
+            if host_changed or port_changed:
+                self._persist_discovery(discovered)
+            if host_changed:
                 _LOGGER.info("Device %s changed address to %s", device_id, discovered.host)
                 coordinator.device.host = discovered.host
-                self._persist_discovery(discovered)
                 await coordinator.async_request_refresh()
+            if port_changed:
+                _LOGGER.info(
+                    "Device %s changed port to %s; this applies after the next restart",
+                    device_id,
+                    discovered.port,
+                )
             return
         if device_id in self._pending:
             return

@@ -16,7 +16,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: KlyqaPetConfigEntry) -> 
     hub = KlyqaPetHub(hass, entry)
     await hub.async_setup()
     entry.runtime_data = hub
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    try:
+        await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    except Exception:
+        # Platform forwarding failed partway through: don't leak the hub's mDNS
+        # browser and coordinators, they would otherwise keep running with nothing
+        # ever calling async_unload_entry to clean them up.
+        await hub.async_shutdown()
+        raise
     return True
 
 
