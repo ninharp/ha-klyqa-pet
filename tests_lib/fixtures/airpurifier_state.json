@@ -26,6 +26,7 @@
   "active_scene": "",
   "color": {"red": 160, "green": 40, "blue": 240},
   "brightness": {"percentage": 80},
+  "external": {"port": 65501, "channel": 1, "universe": 1, "autoreset": 5000, "mode": "EXT_OFF"},
   "anion_switch": 1,
   "anion_state": 1,
   "tilt_status": 0,

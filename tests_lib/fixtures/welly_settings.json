@@ -13,6 +13,5 @@
   "threshold_dirty_tank_full": 600,
   "super_power_saving_mode": false,
   "circulation_pump_speed": 80,
-  "telemetry_interval": 60,
-  "telemetry_enabled": true
+  "telemetry": true
 }
