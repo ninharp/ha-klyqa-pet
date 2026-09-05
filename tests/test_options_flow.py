@@ -9,7 +9,7 @@ import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.klyqa_pet.const import CONF_MANUAL_DEVICES
-from pyklyqa_pet import KlyqaAuthError, KlyqaConnectionError
+from pyklyqa_pet import KlyqaAuthError, KlyqaConnectionError, KlyqaDeviceError
 
 from .conftest import make_system_info, setup_integration
 
@@ -53,6 +53,8 @@ async def test_add_manual_device(
     [
         (KlyqaAuthError("401"), "@klyqa.welly-dev", "invalid_auth"),
         (KlyqaConnectionError("down"), "@klyqa.welly-dev", "cannot_connect"),
+        (KlyqaDeviceError("error body"), "@klyqa.welly-dev", "cannot_connect"),
+        (RuntimeError("boom"), "@klyqa.welly-dev", "unknown"),
         (None, "@klyqa.lighting.kl-rgbc3.rgbcw", "not_supported"),
     ],
 )

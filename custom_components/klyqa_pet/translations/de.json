@@ -47,7 +47,8 @@
     "error": {
       "cannot_connect": "Verbindung zum Gerät fehlgeschlagen",
       "invalid_auth": "Das Gerät hat den Zugriffstoken abgelehnt",
-      "not_supported": "Dieses Gerät wird von der Klyqa-Pet-Integration nicht unterstützt"
+      "not_supported": "Dieses Gerät wird von der Klyqa-Pet-Integration nicht unterstützt",
+      "unknown": "Unerwarteter Fehler"
     }
   },
   "selector": { "environment": { "options": { "prod": "Produktion", "test": "Test" } } },

@@ -36,6 +36,7 @@ from pyklyqa_pet import (
     KlyqaAuthError,
     KlyqaConnectionError,
     KlyqaDevice,
+    KlyqaDeviceError,
     device_type_from_product_id,
     parse_zeroconf_properties,
 )
@@ -268,8 +269,11 @@ class KlyqaPetOptionsFlow(OptionsFlowWithReload):
                 info = await device.get_system_info()
             except KlyqaAuthError:
                 errors["base"] = "invalid_auth"
-            except KlyqaConnectionError:
+            except (KlyqaConnectionError, KlyqaDeviceError):
                 errors["base"] = "cannot_connect"
+            except Exception:
+                _LOGGER.exception("Unexpected error while adding a manual device")
+                errors["base"] = "unknown"
             else:
                 if device_type_from_product_id(info.product_id) is None:
                     errors["base"] = "not_supported"

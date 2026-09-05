@@ -61,7 +61,8 @@
     "error": {
       "cannot_connect": "Failed to connect to the device",
       "invalid_auth": "The device rejected the access token",
-      "not_supported": "This device is not supported by the Klyqa Pet integration"
+      "not_supported": "This device is not supported by the Klyqa Pet integration",
+      "unknown": "Unexpected error"
     }
   },
   "selector": {
