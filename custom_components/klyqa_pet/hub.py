@@ -9,7 +9,7 @@ import logging
 from typing import Any, cast
 
 from homeassistant.components.zeroconf import async_get_async_instance
-from homeassistant.config_entries import ConfigEntry
+from homeassistant.config_entries import SOURCE_ZEROCONF, ConfigEntry
 from homeassistant.const import CONF_EMAIL, CONF_HOST, CONF_PASSWORD, CONF_PORT
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
@@ -246,6 +246,8 @@ class KlyqaPetHub:
             self.hass.config_entries.async_update_entry(
                 self.entry, data={**self.entry.data, CONF_DEVICES: merged}
             )
+            for device_id in merged:
+                self._async_abort_discovery_flow(device_id)
             for device_id, record in merged.items():
                 if self.is_manual(device_id):
                     # A manually added device keeps the token it was given; the cloud
@@ -306,6 +308,23 @@ class KlyqaPetHub:
         if discovered is not None:
             await self.async_device_discovered(discovered)
 
+    @callback
+    def _async_abort_discovery_flow(self, device_id: str) -> None:
+        """Abort a pending discovery flow for a device that now belongs to this entry.
+
+        HA core's zeroconf discovery can start its own config flow for a device before
+        any account claims it. Once the hub sees (via its own mDNS browser or a cloud
+        token refresh) that the device is now part of this entry, that stale discovery
+        flow must be aborted - otherwise it stays listed as "Discovered" until clicked.
+        A no-op when no such flow exists.
+        """
+        unique_id = f"discovered:{device_id}"
+        for flow in self.hass.config_entries.flow.async_progress_by_handler(
+            DOMAIN, include_uninitialized=True, match_context={"source": SOURCE_ZEROCONF}
+        ):
+            if flow["context"].get("unique_id") == unique_id:
+                self.hass.config_entries.flow.async_abort(flow["flow_id"])
+
     async def async_device_discovered(self, discovered: DiscoveredDevice) -> None:
         """Handle a supported device seen on the LAN."""
         device_id = discovered.local_device_id
@@ -318,6 +337,7 @@ class KlyqaPetHub:
                 discovered.host,
             )
             return
+        self._async_abort_discovery_flow(device_id)
         if not self.is_manual(device_id) and self._is_claimed_elsewhere(device_id):
             _LOGGER.debug("Ignoring %s: claimed by another entry", device_id)
             return

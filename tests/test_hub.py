@@ -4,8 +4,9 @@ from datetime import timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from freezegun.api import FrozenDateTimeFactory
-from homeassistant.config_entries import SOURCE_REAUTH, ConfigEntryState
+from homeassistant.config_entries import SOURCE_REAUTH, SOURCE_ZEROCONF, ConfigEntryState
 from homeassistant.core import HomeAssistant
+from homeassistant.data_entry_flow import FlowResultType
 from homeassistant.helpers import device_registry as dr
 import pytest
 from pytest_homeassistant_custom_component.common import (
@@ -43,6 +44,7 @@ from .conftest import (
     device_record,
     setup_integration,
 )
+from .test_config_flow import zeroconf_info
 
 MANUAL_ID = "AABBCCDDEE01"
 
@@ -116,6 +118,59 @@ async def test_discovery_updates_host(
     await hass.async_block_till_done()
     assert mock_welly.host == "192.168.2.200"
     assert mock_config_entry.data[CONF_DEVICES][WELLY_ID]["host"] == "192.168.2.200"
+
+
+async def test_discovered_device_belonging_to_entry_aborts_pending_flow(
+    hass: HomeAssistant,
+    mock_config_entry: MockConfigEntry,
+    mock_cloud: MagicMock,
+    mock_devices: dict,
+) -> None:
+    """A stale discovery card for a device must go away once the hub handles it directly.
+
+    This is the real-world race: HA core's zeroconf discovery started its own config
+    flow for the device before any account claimed it; the hub's independent mDNS
+    browser later resolves the same device once it belongs to this entry.
+    """
+    discovery = await hass.config_entries.flow.async_init(
+        DOMAIN,
+        context={"source": SOURCE_ZEROCONF},
+        data=zeroconf_info(WELLY_ID, "@klyqa.welly-dev"),
+    )
+    assert discovery["type"] is FlowResultType.MENU
+
+    await setup_integration(hass, mock_config_entry)
+    hub = mock_config_entry.runtime_data
+    await hub.async_device_discovered(_discovered(WELLY_ID, WELLY_HOST))
+    await hass.async_block_till_done()
+
+    assert hass.config_entries.flow.async_progress(DOMAIN) == []
+
+
+async def test_refresh_tokens_aborts_pending_flow_for_new_device(
+    hass: HomeAssistant,
+    mock_config_entry: MockConfigEntry,
+    mock_cloud: MagicMock,
+    mock_devices: dict,
+    cloud_devices: list[CloudDevice],
+) -> None:
+    """A device the cloud newly reports must have its stale discovery card removed."""
+    await setup_integration(hass, mock_config_entry)
+    hub = mock_config_entry.runtime_data
+
+    new_id = "AABBCCDDEE99"
+    discovery = await hass.config_entries.flow.async_init(
+        DOMAIN,
+        context={"source": SOURCE_ZEROCONF},
+        data=zeroconf_info(new_id, "@klyqa.welly-dev"),
+    )
+    assert discovery["type"] is FlowResultType.MENU
+
+    cloud_devices.append(CloudDevice(new_id, "new-token", "New device", "@klyqa.welly-dev", raw={}))
+    await hub.async_refresh_tokens(force=True)
+    await hass.async_block_till_done()
+
+    assert hass.config_entries.flow.async_progress(DOMAIN) == []
 
 
 async def test_device_401_triggers_token_refresh(

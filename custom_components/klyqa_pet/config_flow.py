@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping
 import logging
 from typing import Any, cast
 
 from homeassistant.config_entries import (
+    SOURCE_ZEROCONF,
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
@@ -138,6 +139,7 @@ class KlyqaPetConfigFlow(ConfigFlow, domain=DOMAIN):
                     raise_on_progress=False,
                 )
                 self._abort_if_unique_id_configured()
+                self._async_abort_stale_discoveries(devices)
                 return self.async_create_entry(
                     title=f"{user_input[CONF_EMAIL]} ({user_input[CONF_ENVIRONMENT]})",
                     data={
@@ -190,6 +192,7 @@ class KlyqaPetConfigFlow(ConfigFlow, domain=DOMAIN):
                         CONF_DEVICE_NAME: "",
                     }
                     await self.async_set_unique_id(LOCAL_ENTRY_UNIQUE_ID, raise_on_progress=False)
+                    self._async_abort_stale_discoveries([info.device_id])
                     existing = self._existing_local_entry()
                     if existing is not None:
                         manual = {
@@ -216,6 +219,29 @@ class KlyqaPetConfigFlow(ConfigFlow, domain=DOMAIN):
             errors=errors,
         )
 
+    def _is_device_configured(self, device_id: str) -> bool:
+        """Return True if any current entry already has this device."""
+        return any(
+            device_id in entry.data.get(CONF_DEVICES, {})
+            or device_id in entry.options.get(CONF_MANUAL_DEVICES, {})
+            for entry in self._async_current_entries(include_ignore=False)
+        )
+
+    def _async_abort_stale_discoveries(self, device_ids: Iterable[str]) -> None:
+        """Abort other devices' discovery flows once those devices got configured.
+
+        Each mDNS-discovered device starts its own discovery flow. When one of them is
+        completed with a cloud account (or a device is added manually), the resulting
+        entry can end up owning several devices at once - every other discovery flow
+        for those devices must be aborted, or it stays listed as a stale "Discovered"
+        card that only aborts once clicked.
+        """
+        unique_ids = {f"discovered:{device_id}" for device_id in device_ids}
+        for flow in self._async_in_progress(include_uninitialized=True):
+            context = flow["context"]
+            if context.get("source") == SOURCE_ZEROCONF and context.get("unique_id") in unique_ids:
+                self.hass.config_entries.flow.async_abort(flow["flow_id"])
+
     async def async_step_zeroconf(self, discovery_info: ZeroconfServiceInfo) -> ConfigFlowResult:
         """Handle a device announced via mDNS."""
         discovered = parse_zeroconf_properties(
@@ -225,11 +251,8 @@ class KlyqaPetConfigFlow(ConfigFlow, domain=DOMAIN):
         )
         if discovered is None:
             return self.async_abort(reason="not_supported")
-        for entry in self._async_current_entries(include_ignore=False):
-            if discovered.local_device_id in entry.data.get(
-                CONF_DEVICES, {}
-            ) or discovered.local_device_id in entry.options.get(CONF_MANUAL_DEVICES, {}):
-                return self.async_abort(reason="already_configured")
+        if self._is_device_configured(discovered.local_device_id):
+            return self.async_abort(reason="already_configured")
         await self.async_set_unique_id(f"discovered:{discovered.local_device_id}")
         self._discovered = discovered
         self.context["title_placeholders"] = {
@@ -247,6 +270,11 @@ class KlyqaPetConfigFlow(ConfigFlow, domain=DOMAIN):
     ) -> ConfigFlowResult:
         """Let the user choose how to set up the discovered device."""
         assert self._discovered is not None
+        if user_input is None and self._is_device_configured(self._discovered.local_device_id):
+            # The device was configured elsewhere while this card sat unattended (e.g.
+            # another discovery flow was completed with the same cloud account); never
+            # show the login menu again for it.
+            return self.async_abort(reason="already_configured")
         return self.async_show_menu(
             step_id="discovery_confirm",
             menu_options=["cloud", "local"],

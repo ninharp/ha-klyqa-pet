@@ -23,6 +23,7 @@ from custom_components.klyqa_pet.const import (
 from pyklyqa_pet import KlyqaAuthError, KlyqaConnectionError, KlyqaDeviceError
 
 from .conftest import (
+    FOODY_ID,
     MANUAL_HOST,
     MANUAL_ID,
     WELLY_HOST,
@@ -439,3 +440,95 @@ async def test_reconfigure_local_entry_aborts(
     result = await mock_local_config_entry.start_reconfigure_flow(hass)
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "not_supported_local"
+
+
+async def test_completing_cloud_flow_aborts_other_discovery_flows(
+    hass: HomeAssistant, mock_fetch: AsyncMock, mock_setup_entry: Any
+) -> None:
+    """Adopting an account must clean up every other device's stale discovery card."""
+    result1 = await hass.config_entries.flow.async_init(
+        DOMAIN,
+        context={"source": SOURCE_ZEROCONF},
+        data=zeroconf_info(WELLY_ID, "@klyqa.welly-dev"),
+    )
+    result2 = await hass.config_entries.flow.async_init(
+        DOMAIN,
+        context={"source": SOURCE_ZEROCONF},
+        data=zeroconf_info(FOODY_ID, "@klyqa.foody-dev"),
+    )
+    assert result1["type"] is FlowResultType.MENU
+    assert result2["type"] is FlowResultType.MENU
+
+    mock_fetch.return_value = {
+        WELLY_ID: device_record("welly-token", "Kitchen fountain", "@klyqa.welly-dev", None),
+        FOODY_ID: device_record("foody-token", "Feeder", "@klyqa.foody-dev", None),
+    }
+    result1 = await hass.config_entries.flow.async_configure(
+        result1["flow_id"], {"next_step_id": "cloud"}
+    )
+    result1 = await hass.config_entries.flow.async_configure(result1["flow_id"], USER_INPUT)
+    await hass.async_block_till_done()
+    assert result1["type"] is FlowResultType.CREATE_ENTRY
+
+    assert hass.config_entries.flow.async_progress(DOMAIN) == []
+
+
+async def test_completing_local_flow_aborts_matching_discovery_flow(
+    hass: HomeAssistant, mock_manual_device: Any, mock_setup_entry: Any
+) -> None:
+    """Adding a device manually must only abort that device's own discovery card."""
+    flow_a = await hass.config_entries.flow.async_init(
+        DOMAIN,
+        context={"source": SOURCE_ZEROCONF},
+        data=zeroconf_info(WELLY_ID, "@klyqa.welly-dev"),
+    )
+    flow_b = await hass.config_entries.flow.async_init(
+        DOMAIN,
+        context={"source": SOURCE_ZEROCONF},
+        data=zeroconf_info(FOODY_ID, "@klyqa.foody-dev"),
+    )
+    assert flow_a["type"] is FlowResultType.MENU
+    assert flow_b["type"] is FlowResultType.MENU
+
+    mock_manual_device.get_system_info = AsyncMock(
+        return_value=make_system_info("@klyqa.welly-dev", WELLY_ID, "Klyqa Welly")
+    )
+    result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": SOURCE_USER})
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {"next_step_id": "local"}
+    )
+    result = await hass.config_entries.flow.async_configure(result["flow_id"], LOCAL_INPUT)
+    await hass.async_block_till_done()
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+
+    remaining = hass.config_entries.flow.async_progress(DOMAIN)
+    assert [flow["flow_id"] for flow in remaining] == [flow_b["flow_id"]]
+
+
+async def test_discovery_confirm_aborts_when_meanwhile_configured(
+    hass: HomeAssistant, mock_config_entry: MockConfigEntry
+) -> None:
+    """A discovery card must not show its menu again once the device got configured."""
+    mock_config_entry.add_to_hass(hass)
+    new_id = "AABBCCDDEE99"
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN,
+        context={"source": SOURCE_ZEROCONF},
+        data=zeroconf_info(new_id, "@klyqa.welly-dev"),
+    )
+    assert result["type"] is FlowResultType.MENU
+
+    hass.config_entries.async_update_entry(
+        mock_config_entry,
+        data={
+            **mock_config_entry.data,
+            CONF_DEVICES: {
+                **mock_config_entry.data[CONF_DEVICES],
+                new_id: device_record("new-token", "New device", "@klyqa.welly-dev", WELLY_HOST),
+            },
+        },
+    )
+
+    result = await hass.config_entries.flow.async_configure(result["flow_id"], None)
+    assert result["type"] is FlowResultType.ABORT
+    assert result["reason"] == "already_configured"
