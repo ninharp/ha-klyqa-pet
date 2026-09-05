@@ -5,6 +5,7 @@ from __future__ import annotations
 from homeassistant.config_entries import ConfigEntry, ConfigEntryState
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers import translation
 
 from .const import CONF_DEVICES, CONF_MANUAL_DEVICES, DOMAIN, PLATFORMS
 from .hub import KlyqaPetHub
@@ -14,6 +15,17 @@ type KlyqaPetConfigEntry = ConfigEntry[KlyqaPetHub]
 
 async def async_setup_entry(hass: HomeAssistant, entry: KlyqaPetConfigEntry) -> bool:
     """Set up Klyqa Pet from a config entry."""
+    # hub.async_setup() below immediately refreshes every known device's coordinator,
+    # which can raise a translated UpdateFailed/HomeAssistantError. HA's own translation
+    # cache for this integration is normally ready by the time a config entry is set up,
+    # but under load at startup the bulk background load kicked off for every integration
+    # in bootstrap.async_setup_multi_components can still be in flight, and the fallback
+    # load in homeassistant.setup._async_setup_component queues up behind the same lock -
+    # so the very first refresh can race it and log a bare translation key (e.g.
+    # "update_failed") instead of the rendered message. Loading our own translations here
+    # is cheap (a no-op once cached) and guarantees they are ready before any device is
+    # touched.
+    await translation.async_load_integrations(hass, {DOMAIN})
     hub = KlyqaPetHub(hass, entry)
     await hub.async_setup()
     entry.runtime_data = hub
