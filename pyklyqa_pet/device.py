@@ -35,6 +35,17 @@ def _as_str(value: Any) -> str:
     return "" if value is None else str(value)
 
 
+def _describe(err: BaseException) -> str:
+    """Return a human-readable description of `err`.
+
+    Some exceptions (notably `TimeoutError`) have an empty `str()`, which produces
+    unhelpful log/error messages like "request failed: ". Fall back to the exception
+    type name in that case.
+    """
+    text = str(err)
+    return text if text else f"{type(err).__name__}: {err}"
+
+
 @dataclass(frozen=True, slots=True)
 class SystemInfo:
     """Response of GET system/info."""
@@ -143,7 +154,7 @@ class KlyqaDevice:
                         f"Device {self._host} answered HTTP {response.status} for {path}"
                     )
         except (aiohttp.ClientError, TimeoutError) as err:
-            raise KlyqaConnectionError(f"Request to {url} failed: {err}") from err
+            raise KlyqaConnectionError(f"Request to {url} failed: {_describe(err)}") from err
         try:
             body = json.loads(text)
         except json.JSONDecodeError as err:

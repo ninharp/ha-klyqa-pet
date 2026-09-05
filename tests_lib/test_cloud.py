@@ -1,6 +1,7 @@
 import aiohttp
 import pytest
 
+import pyklyqa_pet.cloud
 from pyklyqa_pet.cloud import CloudDevice, KlyqaCloudClient
 from pyklyqa_pet.const import CLOUD_BASE_URLS, Environment
 from pyklyqa_pet.exceptions import KlyqaAuthError, KlyqaConnectionError
@@ -36,6 +37,16 @@ async def test_login_connection_error(session: aiohttp.ClientSession) -> None:
     client = KlyqaCloudClient(session, Environment.TEST, base_url="http://127.0.0.1:1")
     with pytest.raises(KlyqaConnectionError):
         await client.login("user@example.com", "secret")
+
+
+async def test_login_timeout(
+    session: aiohttp.ClientSession, api: FakeApi, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(pyklyqa_pet.cloud, "CLOUD_REQUEST_TIMEOUT", 0.05)
+    api.add("POST", "/auth/login", 201, {"accountToken": "acc-token"}, delay=0.5)
+    with pytest.raises(KlyqaConnectionError) as excinfo:
+        await make_client(session, api).login("user@example.com", "secret")
+    assert "TimeoutError" in str(excinfo.value)
 
 
 async def test_login_server_error(session: aiohttp.ClientSession, api: FakeApi) -> None:

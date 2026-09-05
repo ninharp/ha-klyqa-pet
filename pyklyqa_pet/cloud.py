@@ -8,7 +8,8 @@ from typing import Any
 
 import aiohttp
 
-from .const import CLOUD_BASE_URLS, REQUEST_TIMEOUT, Environment
+from .const import CLOUD_BASE_URLS, CLOUD_REQUEST_TIMEOUT, Environment
+from .device import _describe
 from .exceptions import KlyqaAuthError, KlyqaConnectionError
 
 _LOGGER = logging.getLogger(__name__)
@@ -69,7 +70,7 @@ class KlyqaCloudClient:
             async with self._session.post(
                 f"{self._base_url}/auth/login",
                 json={"email": email, "password": password},
-                timeout=aiohttp.ClientTimeout(total=REQUEST_TIMEOUT),
+                timeout=aiohttp.ClientTimeout(total=CLOUD_REQUEST_TIMEOUT),
             ) as response:
                 if response.status in (400, 401, 403):
                     raise KlyqaAuthError("Cloud login rejected")
@@ -77,7 +78,7 @@ class KlyqaCloudClient:
                     raise KlyqaConnectionError(f"Cloud login failed with HTTP {response.status}")
                 body = await response.json(content_type=None)
         except (aiohttp.ClientError, TimeoutError) as err:
-            raise KlyqaConnectionError(f"Cloud login request failed: {err}") from err
+            raise KlyqaConnectionError(f"Cloud login request failed: {_describe(err)}") from err
         token = body.get("accountToken") if isinstance(body, dict) else None
         if not token:
             raise KlyqaAuthError("Cloud login response did not contain an account token")
@@ -92,7 +93,7 @@ class KlyqaCloudClient:
             async with self._session.get(
                 f"{self._base_url}/settings",
                 headers={"Authorization": f"Bearer {self._account_token}"},
-                timeout=aiohttp.ClientTimeout(total=REQUEST_TIMEOUT),
+                timeout=aiohttp.ClientTimeout(total=CLOUD_REQUEST_TIMEOUT),
             ) as response:
                 if response.status in (401, 403):
                     raise KlyqaAuthError("Cloud account token rejected")
@@ -100,7 +101,7 @@ class KlyqaCloudClient:
                     raise KlyqaConnectionError(f"Cloud settings failed with HTTP {response.status}")
                 body = await response.json(content_type=None)
         except (aiohttp.ClientError, TimeoutError) as err:
-            raise KlyqaConnectionError(f"Cloud settings request failed: {err}") from err
+            raise KlyqaConnectionError(f"Cloud settings request failed: {_describe(err)}") from err
         raw_devices = body.get("devices", []) if isinstance(body, dict) else []
         devices: list[CloudDevice] = []
         for raw in raw_devices:

@@ -90,8 +90,9 @@ async def test_connection_error(session: aiohttp.ClientSession) -> None:
 async def test_timeout(device: KlyqaDevice, api: FakeApi, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(pyklyqa_pet.device, "REQUEST_TIMEOUT", 0.05)
     api.add("GET", "/api/v1/system/info", 200, {"type": "system_info"}, delay=0.5)
-    with pytest.raises(KlyqaConnectionError):
+    with pytest.raises(KlyqaConnectionError) as excinfo:
         await device.get_system_info()
+    assert "TimeoutError" in str(excinfo.value)
 
 
 async def test_http_500(device: KlyqaDevice, api: FakeApi) -> None:

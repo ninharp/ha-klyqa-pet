@@ -29,3 +29,4 @@ API_PREFIX: Final = "/api/v1/"
 DEV_ACCESS_TOKEN: Final = "aabbccddeeff0011223344"
 ZEROCONF_TYPE: Final = "_qcxrest._tcp.local."
 REQUEST_TIMEOUT: Final = 10
+CLOUD_REQUEST_TIMEOUT: Final = 30
