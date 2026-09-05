@@ -2,23 +2,27 @@
 
 from unittest.mock import MagicMock, patch
 
-from pyklyqa_pet import KlyqaDeviceError
-import pytest
-from pytest_homeassistant_custom_component.common import MockConfigEntry, snapshot_platform
-from syrupy.assertion import SnapshotAssertion
-
-from homeassistant.components.switch import DOMAIN as SWITCH_DOMAIN, SERVICE_TURN_OFF, SERVICE_TURN_ON
+from homeassistant.components.switch import DOMAIN as SWITCH_DOMAIN
+from homeassistant.components.switch import SERVICE_TURN_OFF, SERVICE_TURN_ON
 from homeassistant.const import ATTR_ENTITY_ID, Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import entity_registry as er
+import pytest
+from pytest_homeassistant_custom_component.common import MockConfigEntry, snapshot_platform
+from syrupy.assertion import SnapshotAssertion
+
+from pyklyqa_pet import KlyqaDeviceError
 
 from .conftest import setup_integration
 
 
 @pytest.fixture
 async def switches(
-    hass: HomeAssistant, mock_config_entry: MockConfigEntry, mock_cloud: MagicMock, mock_devices: dict
+    hass: HomeAssistant,
+    mock_config_entry: MockConfigEntry,
+    mock_cloud: MagicMock,
+    mock_devices: dict,
 ) -> None:
     with patch("custom_components.klyqa_pet.PLATFORMS", [Platform.SWITCH]):
         await setup_integration(hass, mock_config_entry)
@@ -38,11 +42,41 @@ async def test_switches(
 @pytest.mark.parametrize(
     ("entity_id", "device", "method", "on_kwargs", "off_kwargs"),
     [
-        ("switch.kitchen_fountain_heating", "mock_welly", "set_heating", {"enabled": True}, {"enabled": False}),
-        ("switch.kitchen_fountain_light", "mock_welly", "update_settings", {"light_switch": True}, {"light_switch": False}),
-        ("switch.feeder_pet_lock", "mock_foody", "update_settings", {"app_pet_lock": True}, {"app_pet_lock": False}),
-        ("switch.klyqa_airpurifier_e85dfc_ionizer", "mock_purifier", "set_ionizer", {"on": True}, {"on": False}),
-        ("switch.klyqa_airpurifier_e85dfc_child_lock", "mock_purifier", "set_child_lock", {"on": True}, {"on": False}),
+        (
+            "switch.kitchen_fountain_heating",
+            "mock_welly",
+            "set_heating",
+            {"enabled": True},
+            {"enabled": False},
+        ),
+        (
+            "switch.kitchen_fountain_light",
+            "mock_welly",
+            "update_settings",
+            {"light_switch": True},
+            {"light_switch": False},
+        ),
+        (
+            "switch.feeder_pet_lock",
+            "mock_foody",
+            "update_settings",
+            {"app_pet_lock": True},
+            {"app_pet_lock": False},
+        ),
+        (
+            "switch.klyqa_airpurifier_e85dfc_ionizer",
+            "mock_purifier",
+            "set_ionizer",
+            {"on": True},
+            {"on": False},
+        ),
+        (
+            "switch.klyqa_airpurifier_e85dfc_child_lock",
+            "mock_purifier",
+            "set_child_lock",
+            {"on": True},
+            {"on": False},
+        ),
     ],
 )
 async def test_switch_commands(
@@ -55,9 +89,13 @@ async def test_switch_commands(
     off_kwargs: dict,
 ) -> None:
     mock = request.getfixturevalue(device)
-    await hass.services.async_call(SWITCH_DOMAIN, SERVICE_TURN_ON, {ATTR_ENTITY_ID: entity_id}, blocking=True)
+    await hass.services.async_call(
+        SWITCH_DOMAIN, SERVICE_TURN_ON, {ATTR_ENTITY_ID: entity_id}, blocking=True
+    )
     getattr(mock, method).assert_awaited_with(**on_kwargs)
-    await hass.services.async_call(SWITCH_DOMAIN, SERVICE_TURN_OFF, {ATTR_ENTITY_ID: entity_id}, blocking=True)
+    await hass.services.async_call(
+        SWITCH_DOMAIN, SERVICE_TURN_OFF, {ATTR_ENTITY_ID: entity_id}, blocking=True
+    )
     getattr(mock, method).assert_awaited_with(**off_kwargs)
 
 
@@ -66,5 +104,8 @@ async def test_switch_command_error(hass: HomeAssistant, mock_welly: MagicMock) 
     mock_welly.set_heating.side_effect = KlyqaDeviceError(["Invalid heating value"])
     with pytest.raises(HomeAssistantError, match="rejected the command"):
         await hass.services.async_call(
-            SWITCH_DOMAIN, SERVICE_TURN_ON, {ATTR_ENTITY_ID: "switch.kitchen_fountain_heating"}, blocking=True
+            SWITCH_DOMAIN,
+            SERVICE_TURN_ON,
+            {ATTR_ENTITY_ID: "switch.kitchen_fountain_heating"},
+            blocking=True,
         )

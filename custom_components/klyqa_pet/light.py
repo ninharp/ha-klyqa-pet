@@ -6,10 +6,10 @@ from typing import Any
 
 from homeassistant.components.light import (
     ATTR_RGB_COLOR,
-    ColorMode,
     LightEntity,
     LightEntityDescription,
 )
+from homeassistant.components.light.const import ColorMode
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 

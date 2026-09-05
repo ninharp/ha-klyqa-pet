@@ -2,21 +2,24 @@
 
 from unittest.mock import MagicMock, patch
 
-import pytest
-from pytest_homeassistant_custom_component.common import MockConfigEntry, snapshot_platform
-from syrupy.assertion import SnapshotAssertion
-
-from homeassistant.components.button import DOMAIN as BUTTON_DOMAIN, SERVICE_PRESS
+from homeassistant.components.button import DOMAIN as BUTTON_DOMAIN
+from homeassistant.components.button import SERVICE_PRESS
 from homeassistant.const import ATTR_ENTITY_ID, Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
+import pytest
+from pytest_homeassistant_custom_component.common import MockConfigEntry, snapshot_platform
+from syrupy.assertion import SnapshotAssertion
 
 from .conftest import FOODY_ID, setup_integration
 
 
 @pytest.fixture
 async def buttons(
-    hass: HomeAssistant, mock_config_entry: MockConfigEntry, mock_cloud: MagicMock, mock_devices: dict
+    hass: HomeAssistant,
+    mock_config_entry: MockConfigEntry,
+    mock_cloud: MagicMock,
+    mock_devices: dict,
 ) -> None:
     with patch("custom_components.klyqa_pet.PLATFORMS", [Platform.BUTTON]):
         await setup_integration(hass, mock_config_entry)
@@ -41,7 +44,9 @@ async def test_button_presses(
     mock_purifier: MagicMock,
 ) -> None:
     async def press(entity_id: str) -> None:
-        await hass.services.async_call(BUTTON_DOMAIN, SERVICE_PRESS, {ATTR_ENTITY_ID: entity_id}, blocking=True)
+        await hass.services.async_call(
+            BUTTON_DOMAIN, SERVICE_PRESS, {ATTR_ENTITY_ID: entity_id}, blocking=True
+        )
 
     await press("button.kitchen_fountain_start_descaling")
     mock_welly.set_descaling.assert_awaited_with(True)
