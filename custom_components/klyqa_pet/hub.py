@@ -190,6 +190,15 @@ class KlyqaPetHub:
                 if not self.is_manual(device_id):
                     await self._async_remove_stale_device(device_id)
 
+    async def async_remove_manual_device(self, device_id: str) -> None:
+        """Forget a manually added device."""
+        if (coordinator := self.coordinators.pop(device_id, None)) is not None:
+            await coordinator.async_shutdown()
+        manual = {k: v for k, v in self.manual_devices.items() if k != device_id}
+        self.hass.config_entries.async_update_entry(
+            self.entry, options={**self.entry.options, CONF_MANUAL_DEVICES: manual}
+        )
+
     async def _async_remove_stale_device(self, device_id: str) -> None:
         if (coordinator := self.coordinators.pop(device_id, None)) is not None:
             await coordinator.async_shutdown()
