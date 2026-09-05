@@ -243,6 +243,8 @@ pytest
 - `scripts/probe_devices.py` discovers Klyqa devices on the LAN via mDNS and dumps
   their system info and state — useful for verifying connectivity and firmware
   behaviour outside of Home Assistant.
+- `brands/klyqa_pet/` contains the icon and logo assets prepared for submission
+  to [home-assistant/brands](https://github.com/home-assistant/brands).
 
 Pull requests are welcome at
 [github.com/ninharp/ha-klyqa-pet](https://github.com/ninharp/ha-klyqa-pet).
