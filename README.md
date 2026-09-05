@@ -56,21 +56,34 @@ Configuration is done entirely from the UI — there is nothing to add to
 
 1. Go to **Settings → Devices & services → Add integration** and search for
    **Klyqa Pet**.
-2. Enter:
-   - **Environment** — Production or Test. Use Production unless you have a Klyqa
-     test account.
-   - **Email** — your Klyqa account email.
-   - **Password** — your Klyqa account password.
-3. The integration signs in once, fetches the access token of every device on the
-   account, and sets up a coordinator per device. If a Klyqa device also announces
-   itself on the network via mDNS, Home Assistant offers the same sign-in dialog as a
-   discovered flow — accept it and sign in with the account the device is paired with.
+2. Choose one of the two setup paths:
+   - **Sign in with a Klyqa account** — enter:
+     - **Environment** — Production or Test. Use Production unless you have a Klyqa
+       test account.
+     - **Email** — your Klyqa account email.
+     - **Password** — your Klyqa account password.
+
+     The integration signs in once, fetches the access token of every device on the
+     account, and sets up a coordinator per device. If a Klyqa device also announces
+     itself on the network via mDNS, Home Assistant offers the same choice as a
+     discovered flow.
+   - **Add a local device (no account)** — for a device that has no cloud account at
+     all, for example a re-flashed development board. See below.
 
 ### Adding a device manually
 
 Some devices — for example a development unit — are not paired with a cloud account
-and are never returned by the cloud login. For these, open the integration's
-**Configure** dialog and choose **Add a device manually**:
+and are never returned by the cloud login. There are two ways to add one by IP address
+and access token instead:
+
+- **A brand new, account-free setup**: on the integration's **Add integration** dialog,
+  choose **Add a local device (no account)**. This creates its own "Klyqa Pet (local)"
+  entry that never talks to the Klyqa cloud. Adding a second local device the same way
+  adds it to that same local entry instead of creating a duplicate.
+- **Adding one more manual device to an existing account entry**: open that entry's
+  **Configure** dialog and choose **Add a device manually**.
+
+Both forms ask for the same fields:
 
 | Field | Description |
 |---|---|
@@ -80,6 +93,11 @@ and are never returned by the cloud login. For these, open the integration's
 
 Klyqa development firmware accepts the fixed token `aabbccddeeff0011223344` for local
 testing; it is rejected by production firmware.
+
+A device added manually — either way — is never polled with a cloud-issued token, even
+if the same id later shows up in a Klyqa account: manually added devices always take
+precedence over an account's records for the same device, and a device claimed by a
+local (no-account) entry is ignored by every account entry.
 
 ## Supported functionality
 
@@ -205,6 +223,15 @@ network as Home Assistant, and that Home Assistant can reach it on port `3333`
 (`curl -H "Authorization: <token>" http://<device-ip>:3333/api/v1/system/info`). If
 the device was previously discovered via mDNS and has since changed its IP address,
 wait for the next mDNS announcement or restart Home Assistant to force a re-resolve.
+
+**A re-flashed development board isn't listed by the cloud account, or the cloud's
+token/product id for it is stale.** This is expected for a board whose id is derived
+from its MAC address: re-flashing does not change the MAC, so the cloud entry (if any)
+still describes the board's previous firmware. Add it with **Add a local device (no
+account)** or **Add a device manually** instead of relying on the account — see
+[Adding a device manually](#adding-a-device-manually). Once added this way, the device
+keeps its own token and is never touched by an account's cloud token refresh, even if
+the same id is also listed by an account.
 
 **A device rejects its access token.** This affects only that one device: it becomes
 unavailable and the log shows a warning naming it ("… rejects the access token from
