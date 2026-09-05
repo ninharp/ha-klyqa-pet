@@ -9,6 +9,10 @@ class KlyqaConnectionError(KlyqaError):
     """The device or the cloud could not be reached."""
 
 
+class KlyqaRateLimitError(KlyqaConnectionError):
+    """The device rejected the request because of its rate limit."""
+
+
 class KlyqaAuthError(KlyqaError):
     """Authentication failed (bad credentials or token)."""
 

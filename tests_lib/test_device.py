@@ -1,12 +1,18 @@
 import json
 from pathlib import Path
+import time
 
 import aiohttp
 import pytest
 
 import pyklyqa_pet.device
 from pyklyqa_pet.device import KlyqaDevice, SystemInfo
-from pyklyqa_pet.exceptions import KlyqaAuthError, KlyqaConnectionError, KlyqaDeviceError
+from pyklyqa_pet.exceptions import (
+    KlyqaAuthError,
+    KlyqaConnectionError,
+    KlyqaDeviceError,
+    KlyqaRateLimitError,
+)
 
 from .conftest import FakeApi
 
@@ -111,3 +117,65 @@ async def test_json_not_an_object(device: KlyqaDevice, api: FakeApi) -> None:
     api.add("GET", "/api/v1/system/info", 200, [1, 2])
     with pytest.raises(KlyqaConnectionError):
         await device.get_system_info()
+
+
+async def test_requests_are_spaced(
+    device: KlyqaDevice, api: FakeApi, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(pyklyqa_pet.device, "MIN_REQUEST_INTERVAL", 0.1)
+    info = load_fixture("system_info.json")
+    api.add("GET", "/api/v1/system/info", 200, info)
+    api.add("GET", "/api/v1/system/info", 200, info)
+
+    start = time.monotonic()
+    await device.get_system_info()
+    await device.get_system_info()
+    elapsed = time.monotonic() - start
+
+    assert elapsed >= 0.1
+
+
+async def test_rate_limit_retried_then_succeeds(
+    device: KlyqaDevice, api: FakeApi, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(pyklyqa_pet.device, "RATE_LIMIT_RETRY_DELAY", 0.01)
+    api.add("GET", "/api/v1/system/info", 400, body="Rate limit exceeded")
+    api.add("GET", "/api/v1/system/info", 200, load_fixture("system_info.json"))
+
+    info = await device.get_system_info()
+
+    assert info.device_id == "188B0EAF2D7C"
+    assert len(api.calls_for("GET", "/api/v1/system/info")) == 2
+
+
+async def test_rate_limit_json_body_is_detected(
+    device: KlyqaDevice, api: FakeApi, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(pyklyqa_pet.device, "RATE_LIMIT_RETRY_DELAY", 0.01)
+    api.add(
+        "GET",
+        "/api/v1/system/info",
+        400,
+        {"type": "error", "error": ["Rate limit exceeded"]},
+    )
+    api.add("GET", "/api/v1/system/info", 200, load_fixture("system_info.json"))
+
+    info = await device.get_system_info()
+
+    assert info.device_id == "188B0EAF2D7C"
+    assert len(api.calls_for("GET", "/api/v1/system/info")) == 2
+
+
+async def test_persistent_rate_limit_raises(
+    device: KlyqaDevice, api: FakeApi, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(pyklyqa_pet.device, "RATE_LIMIT_RETRY_DELAY", 0.01)
+    # A single queued response sticks for every call (see FakeApi.add docstring).
+    api.add("GET", "/api/v1/system/info", 400, body="Rate limit exceeded")
+
+    with pytest.raises(KlyqaRateLimitError) as excinfo:
+        await device.get_system_info()
+
+    assert isinstance(excinfo.value, KlyqaConnectionError)
+    # Initial attempt + RATE_LIMIT_RETRIES retries.
+    assert len(api.calls_for("GET", "/api/v1/system/info")) == 3

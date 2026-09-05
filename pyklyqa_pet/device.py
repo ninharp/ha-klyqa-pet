@@ -2,17 +2,41 @@
 
 from __future__ import annotations
 
+import asyncio
 from dataclasses import dataclass, field
 import json
 import logging
+import time
 from typing import Any
 
 import aiohttp
 
-from .const import API_PREFIX, DEFAULT_PORT, REQUEST_TIMEOUT
-from .exceptions import KlyqaAuthError, KlyqaConnectionError, KlyqaDeviceError
+from .const import (
+    API_PREFIX,
+    DEFAULT_PORT,
+    MIN_REQUEST_INTERVAL,
+    RATE_LIMIT_RETRIES,
+    RATE_LIMIT_RETRY_DELAY,
+    REQUEST_TIMEOUT,
+)
+from .exceptions import KlyqaAuthError, KlyqaConnectionError, KlyqaDeviceError, KlyqaRateLimitError
 
 _LOGGER = logging.getLogger(__name__)
+
+_RATE_LIMIT_MESSAGE = "Rate limit exceeded"
+
+
+def _is_rate_limited(status: int, text: str) -> bool:
+    """Detect the firmware's rate limit response.
+
+    ESP-IDF has no HTTP 429, so the firmware answers with 400 via the SDK error
+    responder; the body may be plain text or `{"type": "error", "error": ["Rate limit
+    exceeded"]}`, so check the raw text before attempting to parse it as JSON. A real
+    429 is also accepted in case a future firmware sends one.
+    """
+    if status == 429:
+        return True
+    return status == 400 and _RATE_LIMIT_MESSAGE in text
 
 
 def _as_int(value: Any, default: int = 0) -> int:
@@ -104,6 +128,10 @@ class KlyqaDevice:
         self._host = host
         self._port = port
         self._access_token = access_token
+        # Serialise requests to this device and space them out to respect the firmware's
+        # rate limit; commands from entities and polls therefore never overlap.
+        self._request_lock = asyncio.Lock()
+        self._last_request: float = 0.0
 
     @property
     def host(self) -> str:
@@ -136,7 +164,44 @@ class KlyqaDevice:
     async def request(
         self, method: str, path: str, json_body: dict[str, Any] | None = None
     ) -> dict[str, Any]:
-        """Perform a request against the device and return the parsed JSON body."""
+        """Perform a request against the device and return the parsed JSON body.
+
+        Requests to this device are serialised and spaced by `MIN_REQUEST_INTERVAL` to
+        stay under the firmware's REST rate limit. A rate-limited response is retried
+        `RATE_LIMIT_RETRIES` times (with `RATE_LIMIT_RETRY_DELAY` between attempts)
+        before `KlyqaRateLimitError` is raised.
+        """
+        async with self._request_lock:
+            attempt = 0
+            while True:
+                await self._async_wait_for_slot()
+                try:
+                    return await self._request_once(method, path, json_body)
+                except KlyqaRateLimitError:
+                    attempt += 1
+                    if attempt > RATE_LIMIT_RETRIES:
+                        raise
+                    _LOGGER.debug(
+                        "Device %s rate-limited %s %s, retrying (%d/%d)",
+                        self._host,
+                        method,
+                        path,
+                        attempt,
+                        RATE_LIMIT_RETRIES,
+                    )
+                    await asyncio.sleep(RATE_LIMIT_RETRY_DELAY)
+
+    async def _async_wait_for_slot(self) -> None:
+        """Sleep until `MIN_REQUEST_INTERVAL` has passed since the previous request."""
+        wait = MIN_REQUEST_INTERVAL - (time.monotonic() - self._last_request)
+        if wait > 0:
+            await asyncio.sleep(wait)
+        self._last_request = time.monotonic()
+
+    async def _request_once(
+        self, method: str, path: str, json_body: dict[str, Any] | None
+    ) -> dict[str, Any]:
+        """Perform a single request attempt without spacing/retry handling."""
         url = f"{self.base_url}{path}"
         try:
             async with self._session.request(
@@ -149,6 +214,10 @@ class KlyqaDevice:
                 if response.status == 401:
                     raise KlyqaAuthError(f"Device {self._host} rejected the access token")
                 text = await response.text()
+                if _is_rate_limited(response.status, text):
+                    raise KlyqaRateLimitError(
+                        f"Device {self._host} rate-limited request {method} {path}"
+                    )
                 if response.status >= 400:
                     raise KlyqaConnectionError(
                         f"Device {self._host} answered HTTP {response.status} for {path}"

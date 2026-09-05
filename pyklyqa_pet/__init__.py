@@ -9,7 +9,13 @@ from .cloud import CloudDevice, KlyqaCloudClient
 from .const import DEFAULT_PORT, DEV_ACCESS_TOKEN, ZEROCONF_TYPE, DeviceType, Environment
 from .device import KlyqaDevice, SystemInfo
 from .discovery import DiscoveredDevice, device_type_from_product_id, parse_zeroconf_properties
-from .exceptions import KlyqaAuthError, KlyqaConnectionError, KlyqaDeviceError, KlyqaError
+from .exceptions import (
+    KlyqaAuthError,
+    KlyqaConnectionError,
+    KlyqaDeviceError,
+    KlyqaError,
+    KlyqaRateLimitError,
+)
 from .foody import FoodyDevice, FoodySettings, FoodyState
 from .welly import WellyDevice, WellyMode, WellySettings, WellyState
 
@@ -53,6 +59,7 @@ __all__ = [
     "KlyqaDevice",
     "KlyqaDeviceError",
     "KlyqaError",
+    "KlyqaRateLimitError",
     "SystemInfo",
     "WellyDevice",
     "WellyMode",
