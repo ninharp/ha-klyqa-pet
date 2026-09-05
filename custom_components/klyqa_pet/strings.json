@@ -19,5 +19,25 @@
     "abort": {
       "already_configured": "Account is already configured"
     }
+  },
+  "exceptions": {
+    "update_failed": {
+      "message": "Updating {device} failed: {error}"
+    },
+    "token_refresh_failed": {
+      "message": "{device} rejected its access token and the Klyqa cloud could not be reached to refresh it"
+    },
+    "device_auth_failed": {
+      "message": "{device} rejected the configured access token"
+    },
+    "auth_failed": {
+      "message": "{device} rejected the access token"
+    },
+    "device_rejected": {
+      "message": "{device} rejected the command: {error}"
+    },
+    "cannot_connect": {
+      "message": "Could not reach {device}"
+    }
   }
 }

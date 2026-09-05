@@ -1,0 +1,23 @@
+{
+  "type": "status",
+  "ts": 1755500000,
+  "error_log": [{"error": 260, "error_str": "Power Supply Disconnected", "ts": 1755499000}],
+  "power_state": true,
+  "adapter_state": true,
+  "battery_level": -1,
+  "food_bin_state": 1,
+  "bowl_state": 0,
+  "feeding_state": 0,
+  "error_state": 0,
+  "led_indicator": true,
+  "app_pet_lock": false,
+  "beep_switch": true,
+  "bowl_remaining": 120,
+  "custom_button": {"function": 0, "state": false},
+  "last_manual_feeding": {"report_info": 1, "portions_dispensed": 2},
+  "last_scheduled_feeding": {"report_info": 1, "portions_dispensed": 3, "next_feed_time": 245, "schedule_id": 0},
+  "last_realtime_weight": 1234,
+  "last_portion_weight": 8,
+  "mcu_version": {"sw_version": 56, "hw_version": 2},
+  "wifi_parameters": {"rssi": -59, "security": 3, "channel": 1}
+}

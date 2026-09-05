@@ -1,0 +1,21 @@
+{
+  "type": "status",
+  "ts": 1756990500,
+  "mode": 1,
+  "state": 2,
+  "power": {"supply": 0, "status": 1, "battery_level": 95, "charging": true},
+  "heating": {"enabled": true, "temperature": 28},
+  "water_temperature": 23,
+  "pump_status": 1,
+  "microwave_sensor": 0,
+  "water_tray_low": false,
+  "descaling": -1,
+  "do_not_disturb": false,
+  "tank_volume": {"clean": 499, "sewage": 983},
+  "drinking": {"volume": 40, "total_consumption": 1234, "daily_goal": 500, "last_time": 1756990000},
+  "ultrafiltration": {"life_remaining": 77, "type": 0, "id": "", "total_time": 259200, "remaining_time": 77},
+  "light_id": 2,
+  "mcu_version": {"mcu_hw": "1.00", "mcu_fw": "1.58", "w_hw": "2.00", "w_fw": "1.35"},
+  "wifi_parameters": {"rssi": -70, "security": 3, "channel": 6},
+  "error_log": [{"error": 260, "error_str": "Power Supply Disconnected", "type": 0, "level": 1, "extra": -1, "ts": 3933052}]
+}

@@ -1,0 +1,19 @@
+{
+  "chip_info": {"version": "v5.4.1", "model": "esp32c3", "features": "WiFi/BLE"},
+  "type": "system_info",
+  "product_id": "@klyqa.welly-dev",
+  "device_id": "188B0EAF2D7C",
+  "serial_number": 4711,
+  "timestamp": 1720000000,
+  "product_name": "Klyqa Welly",
+  "service_name": "KLYQA-AF2D7C",
+  "hw_revision": 2,
+  "sdk_ver": "2.3.0",
+  "app_ver": "1.4.2",
+  "build_date": "Aug 24 2026 13:30:00",
+  "branch": "main",
+  "boot_reason": 1,
+  "boot": 1756990000,
+  "partition": "ota_0",
+  "free_heap": 123456
+}

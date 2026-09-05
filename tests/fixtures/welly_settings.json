@@ -1,0 +1,17 @@
+{
+  "type": "settings",
+  "light_switch": true,
+  "ambient_light_switch": false,
+  "lowest_water_output_range": 0,
+  "highest_water_output_range": 100,
+  "radar_sensitivity": 1,
+  "radar_sensing_interval": 60,
+  "sensor_mode_light": true,
+  "alert_clean_tank_low": true,
+  "threshold_clean_tank_low": 600,
+  "alert_dirty_tank_full": true,
+  "threshold_dirty_tank_full": 600,
+  "super_power_saving_mode": false,
+  "circulation_pump_speed": 80,
+  "telemetry": true
+}
