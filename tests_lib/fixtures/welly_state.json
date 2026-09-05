@@ -1,0 +1,19 @@
+{
+  "type": "status",
+  "mode": 1,
+  "state": 2,
+  "power": {"supply": 0, "status": 1, "battery_level": 95, "charging": true},
+  "heating": {"enabled": true, "temperature": 28},
+  "water_temperature": 23,
+  "pump_status": 1,
+  "water_tray_low": false,
+  "descaling": -1,
+  "do_not_disturb": false,
+  "tank_volume": {"clean": 499, "sewage": 983},
+  "drinking": {"duration": 12, "volume": 40, "total_consumption": 1234, "daily_goal": 500, "last_time": 1756990000},
+  "ultrafiltration": {"enabled": true, "status": 0, "life_remaining": 77},
+  "light_id": 2,
+  "light_time": 0,
+  "wifi_parameters": {"rssi": -70, "security": 3, "channel": 6},
+  "error_log": [{"error": 260, "error_str": "Power Supply Disconnected", "type": 0, "level": 1, "ts": 3933052}]
+}
