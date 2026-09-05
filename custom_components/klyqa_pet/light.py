@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from homeassistant.components.light import (
+    ATTR_BRIGHTNESS,
     ATTR_RGB_COLOR,
     LightEntity,
     LightEntityDescription,
@@ -40,10 +41,11 @@ async def async_setup_entry(
 
 
 class KlyqaPurifierLight(KlyqaPetEntity, LightEntity):
-    """Custom LED colour of the purifier.
+    """Custom LED colour and brightness of the purifier.
 
     "On" means a user-defined colour is active; "off" returns the ring to the automatic
-    air-quality colour. The firmware exposes no brightness write, so brightness is read-only.
+    air-quality colour. Brightness (0..100 %, mapped from Home Assistant's 0..255 range)
+    can be set together with, or independently of, the colour.
     """
 
     _attr_color_mode = ColorMode.RGB
@@ -66,9 +68,12 @@ class KlyqaPurifierLight(KlyqaPetEntity, LightEntity):
         return round(self.coordinator.data.purifier.led_brightness * 255 / 100)
 
     async def async_turn_on(self, **kwargs: Any) -> None:
-        """Enable the custom colour, optionally with a new RGB value."""
+        """Enable the custom colour, optionally with a new RGB value and/or brightness."""
         rgb: tuple[int, int, int] | None = kwargs.get(ATTR_RGB_COLOR)
-        await self._async_send(self.coordinator.purifier_device.set_led(True, rgb))
+        brightness: int | None = None
+        if ATTR_BRIGHTNESS in kwargs:
+            brightness = round(kwargs[ATTR_BRIGHTNESS] * 100 / 255)
+        await self._async_send(self.coordinator.purifier_device.set_led(True, rgb, brightness))
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Return to the automatic colour."""

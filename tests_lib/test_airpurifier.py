@@ -64,6 +64,19 @@ def test_state_from_minimal_dict() -> None:
             lambda d: d.set_led(True, (1, 2, 3)),
             {"type": "request", "les": "on", "color": {"red": 1, "green": 2, "blue": 3}},
         ),
+        (
+            lambda d: d.set_led(True, None, 42),
+            {"type": "request", "les": "on", "brightness": {"percentage": 42}},
+        ),
+        (
+            lambda d: d.set_led(True, (1, 2, 3), 42),
+            {
+                "type": "request",
+                "les": "on",
+                "color": {"red": 1, "green": 2, "blue": 3},
+                "brightness": {"percentage": 42},
+            },
+        ),
         (lambda d: d.set_ionizer(True), {"type": "request", "anion_switch": 1}),
         (lambda d: d.set_child_lock(True), {"type": "request", "child_lock": 1}),
         (lambda d: d.set_key_tone(False), {"type": "request", "key_tone": 0}),
@@ -81,6 +94,12 @@ async def test_state_commands(
 async def test_fan_level_out_of_range(device: AirPurifierDevice, level: int) -> None:
     with pytest.raises(ValueError):
         await device.set_fan_level(level)
+
+
+@pytest.mark.parametrize("brightness", [-1, 101])
+async def test_led_brightness_out_of_range(device: AirPurifierDevice, brightness: int) -> None:
+    with pytest.raises(ValueError):
+        await device.set_led(True, brightness=brightness)
 
 
 async def test_get_state(device: AirPurifierDevice, api: FakeApi) -> None:

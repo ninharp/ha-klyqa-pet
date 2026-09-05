@@ -56,11 +56,18 @@ async def test_light_commands(hass: HomeAssistant, mock_purifier: MagicMock) -> 
         {ATTR_ENTITY_ID: ENTITY_ID, ATTR_RGB_COLOR: (1, 2, 3)},
         blocking=True,
     )
-    mock_purifier.set_led.assert_awaited_with(True, (1, 2, 3))
+    mock_purifier.set_led.assert_awaited_with(True, (1, 2, 3), None)
+    await hass.services.async_call(
+        LIGHT_DOMAIN,
+        SERVICE_TURN_ON,
+        {ATTR_ENTITY_ID: ENTITY_ID, ATTR_BRIGHTNESS: 128},
+        blocking=True,
+    )
+    mock_purifier.set_led.assert_awaited_with(True, None, 50)
     await hass.services.async_call(
         LIGHT_DOMAIN, SERVICE_TURN_ON, {ATTR_ENTITY_ID: ENTITY_ID}, blocking=True
     )
-    mock_purifier.set_led.assert_awaited_with(True, None)
+    mock_purifier.set_led.assert_awaited_with(True, None, None)
     await hass.services.async_call(
         LIGHT_DOMAIN, SERVICE_TURN_OFF, {ATTR_ENTITY_ID: ENTITY_ID}, blocking=True
     )

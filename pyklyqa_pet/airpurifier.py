@@ -111,14 +111,26 @@ class AirPurifierDevice(KlyqaDevice):
         """Set the run mode (see AirPurifierRunMode)."""
         await self._post_state(run_mode=int(mode))
 
-    async def set_led(self, on: bool, rgb: tuple[int, int, int] | None = None) -> None:
-        """Enable custom LED colour (on=True with rgb) or return to automatic colour (on=False)."""
+    async def set_led(
+        self,
+        on: bool,
+        rgb: tuple[int, int, int] | None = None,
+        brightness: int | None = None,
+    ) -> None:
+        """Enable a custom LED colour/brightness (on=True) or return to automatic colour (on=False).
+
+        `brightness` is a percentage (0..100); it is only sent when `on` is True.
+        """
         if not on:
             await self._post_state(les="off")
             return
         fields: dict[str, Any] = {"les": "on"}
         if rgb is not None:
             fields["color"] = {"red": int(rgb[0]), "green": int(rgb[1]), "blue": int(rgb[2])}
+        if brightness is not None:
+            if not 0 <= brightness <= 100:
+                raise ValueError("brightness must be between 0 and 100")
+            fields["brightness"] = {"percentage": int(brightness)}
         await self._post_state(**fields)
 
     async def set_ionizer(self, on: bool) -> None:

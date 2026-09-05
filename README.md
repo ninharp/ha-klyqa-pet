@@ -115,7 +115,7 @@ mains power, since the device never reports a battery level in that configuratio
 | Platform | Entity | Notes |
 |---|---|---|
 | fan | Air purifier | On/off, speed (3 levels), preset modes standalone/auto/night/pet |
-| light | LED | On/off and RGB colour of the ring; brightness is read-only (see Known limitations) |
+| light | LED | On/off, RGB colour and brightness of the ring |
 | switch | Ionizer, Child lock, Key tone | Ionizer is a primary control; Child lock and Key tone are config category |
 | sensor | PM2.5, Air quality, Filter remaining, Filter life (%), Total run time, Air volume, Pet mode time | |
 | binary_sensor | Tilted, Filter removed, Ionizer active | |
@@ -176,8 +176,6 @@ devices (Settings → Devices & services → Klyqa Pet → your device).
   uploading custom voice recordings are not exposed by this integration. The
   device's local REST API does not expose all of these, and some (like firmware
   updates) are intentionally left to the manufacturer's app.
-- The Airpurifier's LED brightness is read-only; the firmware provides no way to set
-  it, only to read the current value and toggle between automatic and custom colour.
 - The first-generation Klyqa air purifier (`@klyqa.cleaning.airpurifier1`) uses a
   different local API and is not supported.
 - On Foody units that run on mains power only, the battery sensor stays "unknown"
