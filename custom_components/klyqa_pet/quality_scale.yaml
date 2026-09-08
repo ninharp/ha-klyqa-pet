@@ -4,7 +4,13 @@ rules:
     status: exempt
     comment: The integration does not register custom actions.
   appropriate-polling: done
-  brands: todo
+  brands:
+    status: done
+    comment: >
+      Since HA 2026.3's Brands Proxy API, custom integrations ship their own
+      brand/ folder instead of submitting to home-assistant/brands (that repo
+      no longer accepts custom-integration PRs). icon.png/icon@2x.png live in
+      custom_components/klyqa_pet/brand/ and are served locally.
   common-modules: done
   config-flow: done
   config-flow-test-coverage: done

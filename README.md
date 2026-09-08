@@ -320,16 +320,14 @@ pytest
 - `scripts/probe_devices.py` discovers Klyqa devices on the LAN via mDNS and dumps
   their system info and state — useful for verifying connectivity and firmware
   behaviour outside of Home Assistant.
-- `brands/klyqa_pet/` contains the icon and logo assets prepared for submission
-  to [home-assistant/brands](https://github.com/home-assistant/brands). The same
-  files are also copied into `custom_components/klyqa_pet/brand/` as an interim
-  fallback so HACS's brand check passes before that submission is merged; once
-  the `home-assistant/brands` PR lands, the icon shown in Home Assistant's UI
-  comes from there and the local copy can be removed.
-- The integration implements the Home Assistant Bronze through Platinum quality
-  scale rules (see `custom_components/klyqa_pet/quality_scale.yaml`), except for the
-  `brands` rule: the assets above still need to be submitted and merged upstream
-  before that rule — and the manifest's `quality_scale` claim — can be marked done.
+- `custom_components/klyqa_pet/brand/` contains the icon assets (`icon.png`,
+  `icon@2x.png`, and copies as `logo.png`/`logo@2x.png`). Since Home Assistant
+  2026.3's Brands Proxy API, this is the actual (not interim) way for custom
+  integrations to ship branding — `home-assistant/brands` no longer accepts
+  PRs for custom integrations, only core ones. HA serves these locally via
+  `/api/brands/integration/klyqa_pet/...`, no submission needed.
+- The integration implements the Home Assistant Bronze through Platinum
+  quality scale rules (see `custom_components/klyqa_pet/quality_scale.yaml`).
 
 Pull requests are welcome at
 [github.com/ninharp/ha-klyqa-pet](https://github.com/ninharp/ha-klyqa-pet).
