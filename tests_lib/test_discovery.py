@@ -13,6 +13,8 @@ from pyklyqa_pet.discovery import (
     [
         ("@klyqa.welly", DeviceType.WELLY),
         ("@klyqa.welly-dev", DeviceType.WELLY),
+        ("@klyqa.welly1", DeviceType.WELLY),
+        ("@klyqa.welly1-dev", DeviceType.WELLY),
         ("@pfriendly.water-fountain", DeviceType.WELLY),
         ("@klyqa.foody", DeviceType.FOODY),
         ("@klyqa.foody-dev", DeviceType.FOODY),

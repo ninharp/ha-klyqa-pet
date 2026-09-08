@@ -15,6 +15,8 @@ that the integration never depends on the cloud being reachable.
 |---|---|---|
 | `@klyqa.welly` | Welly water fountain | Supported |
 | `@klyqa.welly-dev` | Welly water fountain (development firmware) | Supported |
+| `@klyqa.welly1` | Welly water fountain (revision 1) | Supported |
+| `@klyqa.welly1-dev` | Welly water fountain (revision 1, development firmware) | Supported |
 | `@klyqa.foody` | Foody feeder | Supported |
 | `@klyqa.foody-dev` | Foody feeder (development firmware) | Supported |
 | `@klyqa.airpurifier2` | Airpurifier (2nd generation) | Supported |

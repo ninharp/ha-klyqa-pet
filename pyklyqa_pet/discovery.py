@@ -10,6 +10,8 @@ from .const import DEFAULT_PORT, DeviceType
 _PRODUCT_ID_MAP: dict[str, DeviceType] = {
     "@klyqa.welly": DeviceType.WELLY,
     "@klyqa.welly-dev": DeviceType.WELLY,
+    "@klyqa.welly1": DeviceType.WELLY,
+    "@klyqa.welly1-dev": DeviceType.WELLY,
     "@pfriendly.water-fountain": DeviceType.WELLY,
     "@pfriendly.water-fountain-dev": DeviceType.WELLY,
     "@klyqa.foody": DeviceType.FOODY,
