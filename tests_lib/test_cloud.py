@@ -24,7 +24,11 @@ async def test_login_success(session: aiohttp.ClientSession, api: FakeApi) -> No
     token = await client.login("user@example.com", "secret")
     assert token == "acc-token"
     assert client.account_token == "acc-token"
-    assert api.last_call().json == {"email": "user@example.com", "password": "secret"}
+    assert api.last_call().json == {
+        "email": "user@example.com", 
+        "password": "secret", 
+        "environmentName": "Klyqapet"
+    }
 
 
 async def test_login_invalid_credentials(session: aiohttp.ClientSession, api: FakeApi) -> None:

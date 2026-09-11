@@ -69,7 +69,7 @@ class KlyqaCloudClient:
         try:
             async with self._session.post(
                 f"{self._base_url}/auth/login",
-                json={"email": email, "password": password},
+                json={"email": email, "password": password, "environmentName": "Klyqapet"},
                 timeout=aiohttp.ClientTimeout(total=CLOUD_REQUEST_TIMEOUT),
             ) as response:
                 if response.status in (400, 401, 403):
