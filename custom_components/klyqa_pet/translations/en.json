@@ -301,8 +301,7 @@
       }
     },
     "light": {
-      "led": { "name": "LED" },
-      "strip": { "name": "Strip" }
+      "led": { "name": "LED" }
     }
   }
 }

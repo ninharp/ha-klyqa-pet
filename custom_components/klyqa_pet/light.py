@@ -26,7 +26,7 @@ from .entity import KlyqaPetEntity, async_setup_platform_entities
 PARALLEL_UPDATES = 1
 
 LED_DESCRIPTION = LightEntityDescription(key="led", translation_key="led")
-STRIP_DESCRIPTION = LightEntityDescription(key="strip", translation_key="strip")
+STRIP_DESCRIPTION = LightEntityDescription(key="strip", translation_key="strip", name=None)
 
 
 async def async_setup_entry(
@@ -101,7 +101,12 @@ class KlyqaStrypeLight(KlyqaPetEntity, LightEntity):
 
     @property
     def color_mode(self) -> ColorMode:
-        """Follow the mode the firmware reports; `cmd` keeps the last colour mode."""
+        """Follow the mode the firmware reports.
+
+        `cmd` means an app-driven effect is running; the firmware gives no way to recover
+        which mode (colour or colour temperature) was active before the effect started, so
+        RGB is reported as a fallback.
+        """
         return ColorMode.COLOR_TEMP if self.coordinator.data.strype.mode == "cct" else ColorMode.RGB
 
     @property
@@ -129,7 +134,7 @@ class KlyqaStrypeLight(KlyqaPetEntity, LightEntity):
                 rgb=kwargs.get(ATTR_RGB_COLOR),
                 temperature_kelvin=kwargs.get(ATTR_COLOR_TEMP_KELVIN),
                 brightness_percent=None if brightness is None else round(brightness * 100 / 255),
-                transition_ms=None if transition is None else int(transition * 1000),
+                transition_ms=None if transition is None else round(transition * 1000),
             )
         )
 
@@ -139,6 +144,6 @@ class KlyqaStrypeLight(KlyqaPetEntity, LightEntity):
         await self._async_send(
             self.coordinator.strype_device.set_state(
                 power_on=False,
-                transition_ms=None if transition is None else int(transition * 1000),
+                transition_ms=None if transition is None else round(transition * 1000),
             )
         )

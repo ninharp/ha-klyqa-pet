@@ -72,7 +72,7 @@
     'state': 'on',
   })
 # ---
-# name: test_light[light.living_room_strip_strip-entry]
+# name: test_light[light.living_room_strip-entry]
   EntityRegistryEntrySnapshot({
     'aliases': list([
       None,
@@ -93,7 +93,7 @@
     'disabled_by': None,
     'domain': 'light',
     'entity_category': None,
-    'entity_id': 'light.living_room_strip_strip',
+    'entity_id': 'light.living_room_strip',
     'has_entity_name': True,
     'hidden_by': None,
     'icon': None,
@@ -101,12 +101,12 @@
     'labels': set({
     }),
     'name': None,
-    'object_id_base': 'Strip',
+    'object_id_base': None,
     'options': dict({
     }),
     'original_device_class': None,
     'original_icon': None,
-    'original_name': 'Strip',
+    'original_name': None,
     'platform': 'klyqa_pet',
     'previous_unique_id': None,
     'suggested_object_id': None,
@@ -116,13 +116,13 @@
     'unit_of_measurement': None,
   })
 # ---
-# name: test_light[light.living_room_strip_strip-state]
+# name: test_light[light.living_room_strip-state]
   StateSnapshot({
     'attributes': ReadOnlyDict({
       <LightEntityStateAttribute.BRIGHTNESS: 'brightness'>: 178,
       <LightEntityStateAttribute.COLOR_MODE: 'color_mode'>: <ColorMode.RGB: 'rgb'>,
       <LightEntityStateAttribute.COLOR_TEMP_KELVIN: 'color_temp_kelvin'>: None,
-      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Living room strip Strip',
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Living room strip',
       <LightEntityStateAttribute.HS_COLOR: 'hs_color'>: tuple(
         30.118,
         100.0,
@@ -145,7 +145,7 @@
       ),
     }),
     'context': <ANY>,
-    'entity_id': 'light.living_room_strip_strip',
+    'entity_id': 'light.living_room_strip',
     'last_changed': <ANY>,
     'last_reported': <ANY>,
     'last_updated': <ANY>,
