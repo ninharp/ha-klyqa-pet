@@ -5,6 +5,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 from freezegun.api import FrozenDateTimeFactory
 from homeassistant.config_entries import SOURCE_REAUTH, SOURCE_ZEROCONF, ConfigEntryState
+from homeassistant.const import CONF_EMAIL, CONF_PASSWORD
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
 from homeassistant.helpers import device_registry as dr
@@ -19,6 +20,7 @@ from custom_components.klyqa_pet.const import (
     CONF_ACCESS_TOKEN,
     CONF_DEVICE_NAME,
     CONF_DEVICES,
+    CONF_ENVIRONMENT,
     CONF_MANUAL_DEVICES,
     CONF_PRODUCT_ID,
     CONF_PRODUCT_NAME,
@@ -174,6 +176,42 @@ async def test_refresh_tokens_aborts_pending_flow_for_new_device(
     await hass.async_block_till_done()
 
     assert hass.config_entries.flow.async_progress(DOMAIN) == []
+
+
+async def test_refresh_tokens_defaults_missing_tenant_to_klyqapet(
+    hass: HomeAssistant,
+    mock_cloud: MagicMock,
+    mock_devices: dict,
+) -> None:
+    """An entry stored before the tenant field existed must still log in as Klyqapet.
+
+    Every config entry that exists today has no `cloud_app` in its data - it predates
+    this field entirely. `async_refresh_tokens` must default the tenant for such an
+    entry rather than erroring or logging in without one.
+    """
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        title="user@example.com (test)",
+        unique_id="test:user@example.com",
+        data={
+            CONF_ENVIRONMENT: "test",
+            CONF_EMAIL: "user@example.com",
+            CONF_PASSWORD: "secret",
+            CONF_DEVICES: {
+                WELLY_ID: device_record(
+                    "welly-token",
+                    "Kitchen fountain",
+                    "@klyqa.welly-dev",
+                    WELLY_HOST,
+                    "Klyqa Welly",
+                )
+            },
+        },
+    )
+    await setup_integration(hass, entry)
+    mock_cloud.login.assert_awaited_once_with(
+        "user@example.com", "secret", environment_name="Klyqapet"
+    )
 
 
 async def test_device_401_triggers_token_refresh(
