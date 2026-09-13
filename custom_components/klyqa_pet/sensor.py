@@ -27,7 +27,7 @@ from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.helpers.typing import StateType
 from homeassistant.util import dt as dt_util
 
-from pyklyqa_pet import DeviceType
+from pyklyqa_pet import DeviceType, StrypeState
 
 from . import KlyqaPetConfigEntry
 from .const import (
@@ -67,6 +67,14 @@ def _enum(mapping: dict[int, str], value: int) -> str | None:
     return mapping.get(value)
 
 
+def _wifi_rssi(data: KlyqaDeviceData) -> int | None:
+    # The Strype's device/state response carries no wifi info at all.
+    state = data.state
+    if isinstance(state, StrypeState):
+        return None
+    return state.wifi_rssi
+
+
 def _enum_description(
     key: str,
     mapping: dict[int, str],
@@ -92,7 +100,7 @@ COMMON_SENSORS: tuple[KlyqaSensorEntityDescription, ...] = (
         state_class=SensorStateClass.MEASUREMENT,
         entity_category=EntityCategory.DIAGNOSTIC,
         entity_registry_enabled_default=False,
-        value_fn=lambda data: data.state.wifi_rssi,
+        value_fn=_wifi_rssi,
     ),
     KlyqaSensorEntityDescription(
         key="firmware_version",
@@ -349,7 +357,7 @@ async def async_setup_entry(
     """Set up sensors for all devices of the entry."""
 
     def _entities(coordinator: KlyqaDeviceCoordinator) -> list[KlyqaSensor]:
-        descriptions = COMMON_SENSORS + SENSORS_BY_TYPE[coordinator.device_type]
+        descriptions = COMMON_SENSORS + SENSORS_BY_TYPE.get(coordinator.device_type, ())
         return [KlyqaSensor(coordinator, description) for description in descriptions]
 
     async_setup_platform_entities(entry, async_add_entities, _entities)

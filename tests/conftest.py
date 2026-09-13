@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Generator
+from dataclasses import replace
 import json
 from pathlib import Path
 from typing import Any
@@ -36,6 +37,8 @@ from pyklyqa_pet import (
     FoodyDevice,
     FoodySettings,
     FoodyState,
+    StrypeDevice,
+    StrypeState,
     SystemInfo,
     WellyDevice,
     WellySettings,
@@ -47,10 +50,12 @@ FIXTURES = Path(__file__).parent / "fixtures"
 WELLY_ID = "188B0EAF2D7C"
 FOODY_ID = "A0F26219DC34"
 PURIFIER_ID = "D83BDAE85DFC"
+STRYPE_ID = "80659988019C"
 
 WELLY_HOST = "192.168.2.148"
 FOODY_HOST = "192.168.2.223"
 PURIFIER_HOST = "192.168.2.21"
+STRYPE_HOST = "192.168.2.77"
 
 
 def load_json(name: str) -> dict[str, Any]:
@@ -93,6 +98,13 @@ def cloud_devices() -> list[CloudDevice]:
         CloudDevice(WELLY_ID, "welly-token", "Kitchen fountain", "@klyqa.welly-dev", raw={}),
         CloudDevice(FOODY_ID, "foody-token", "Feeder", "@klyqa.foody-dev", raw={}),
         CloudDevice(PURIFIER_ID, "purifier-token", "", "@klyqa.airpurifier2", raw={}),
+        CloudDevice(
+            STRYPE_ID,
+            "strype-token",
+            "Living room strip",
+            "@klyqa.lighting.kl-rgbc3.rgbcw",
+            raw={},
+        ),
     ]
 
 
@@ -145,14 +157,36 @@ def mock_purifier() -> MagicMock:
 
 
 @pytest.fixture
+def mock_strype() -> MagicMock:
+    device = MagicMock(spec=StrypeDevice)
+    state = StrypeState.from_dict(load_json("strype_state.json"))
+    device.get_system_info = AsyncMock(
+        return_value=make_system_info(
+            "@klyqa.lighting.kl-rgbc3.rgbcw", STRYPE_ID, "Klyqa Strype RGB CW/WW"
+        )
+    )
+    device.get_state = AsyncMock(return_value=state)
+    # length_ret only ever comes back from a POST
+    with_length = replace(state, length_metres=3)
+    device.read_length = AsyncMock(return_value=with_length)
+    device.set_state = AsyncMock(return_value=with_length)
+    device.detect_length = AsyncMock(return_value=replace(with_length, length_metres=5))
+    return device
+
+
+@pytest.fixture
 def mock_devices(
-    mock_welly: MagicMock, mock_foody: MagicMock, mock_purifier: MagicMock
+    mock_welly: MagicMock,
+    mock_foody: MagicMock,
+    mock_purifier: MagicMock,
+    mock_strype: MagicMock,
 ) -> Generator[dict[DeviceType, MagicMock]]:
     """Patch pyklyqa_pet.create_device (as used by the hub) to hand out the mocks."""
     devices = {
         DeviceType.WELLY: mock_welly,
         DeviceType.FOODY: mock_foody,
         DeviceType.AIRPURIFIER: mock_purifier,
+        DeviceType.STRYPE: mock_strype,
     }
 
     def _create(
@@ -225,6 +259,13 @@ def mock_config_entry() -> MockConfigEntry:
                     "@klyqa.airpurifier2",
                     PURIFIER_HOST,
                     "Klyqa airpurifier",
+                ),
+                STRYPE_ID: device_record(
+                    "strype-token",
+                    "Living room strip",
+                    "@klyqa.lighting.kl-rgbc3.rgbcw",
+                    STRYPE_HOST,
+                    "Klyqa Strype RGB CW/WW",
                 ),
             },
         },

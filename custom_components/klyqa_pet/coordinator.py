@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime
 import logging
 from typing import TYPE_CHECKING, Any
@@ -26,6 +26,8 @@ from pyklyqa_pet import (
     KlyqaDevice,
     KlyqaDeviceError,
     KlyqaRateLimitError,
+    StrypeDevice,
+    StrypeState,
     SystemInfo,
     WellyDevice,
     WellySettings,
@@ -48,13 +50,14 @@ if TYPE_CHECKING:
 
 _LOGGER = logging.getLogger(__name__)
 
-type DeviceState = WellyState | FoodyState | AirPurifierState
+type DeviceState = WellyState | FoodyState | AirPurifierState | StrypeState
 type DeviceSettings = WellySettings | FoodySettings | None
 
 _DEFAULT_PRODUCT_NAMES = {
     DeviceType.WELLY: "Klyqa Welly",
     DeviceType.FOODY: "Klyqa Foody",
     DeviceType.AIRPURIFIER: "Klyqa Airpurifier",
+    DeviceType.STRYPE: "Klyqa Strype",
 }
 
 
@@ -94,6 +97,12 @@ class KlyqaDeviceData:
     def purifier(self) -> AirPurifierState:
         """Return the state as air purifier state."""
         assert isinstance(self.state, AirPurifierState)
+        return self.state
+
+    @property
+    def strype(self) -> StrypeState:
+        """Return the state as Strype state."""
+        assert isinstance(self.state, StrypeState)
         return self.state
 
 
@@ -167,6 +176,12 @@ class KlyqaDeviceCoordinator(DataUpdateCoordinator[KlyqaDeviceData]):
     def purifier_device(self) -> AirPurifierDevice:
         """Return the device client as air purifier client."""
         assert isinstance(self.device, AirPurifierDevice)
+        return self.device
+
+    @property
+    def strype_device(self) -> StrypeDevice:
+        """Return the device client as Strype client."""
+        assert isinstance(self.device, StrypeDevice)
         return self.device
 
     async def _async_update_data(self) -> KlyqaDeviceData:
@@ -280,6 +295,14 @@ class KlyqaDeviceCoordinator(DataUpdateCoordinator[KlyqaDeviceData]):
             settings = self._settings
         elif isinstance(self.device, AirPurifierDevice):
             state = await self.device.get_state()
+        elif isinstance(self.device, StrypeDevice):
+            known_length = self.data.strype.length_metres if self.data is not None else None
+            if known_length is None:
+                # length_ret only ever comes back from a POST; an empty body is a
+                # no-op because every field the firmware reads is optional.
+                state = await self.device.read_length()
+            else:
+                state = replace(await self.device.get_state(), length_metres=known_length)
         else:  # pragma: no cover - guarded by create_device
             raise UpdateFailed(f"Unsupported device class {type(self.device).__name__}")
         return KlyqaDeviceData(system_info=self._system_info, state=state, settings=settings)

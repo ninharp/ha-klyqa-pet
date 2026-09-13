@@ -44,6 +44,7 @@ from pyklyqa_pet import (
 from .conftest import (
     FOODY_ID,
     PURIFIER_ID,
+    STRYPE_ID,
     WELLY_HOST,
     WELLY_ID,
     device_record,
@@ -396,8 +397,13 @@ async def test_empty_cloud_list_keeps_devices(
     cloud_devices.clear()
     await hub.async_refresh_tokens(force=True)
     await hass.async_block_till_done()
-    assert set(hub.coordinators) == {WELLY_ID, FOODY_ID, PURIFIER_ID}
-    assert set(mock_config_entry.data[CONF_DEVICES]) == {WELLY_ID, FOODY_ID, PURIFIER_ID}
+    assert set(hub.coordinators) == {WELLY_ID, FOODY_ID, PURIFIER_ID, STRYPE_ID}
+    assert set(mock_config_entry.data[CONF_DEVICES]) == {
+        WELLY_ID,
+        FOODY_ID,
+        PURIFIER_ID,
+        STRYPE_ID,
+    }
     assert "returned no devices" in caplog.text
 
 

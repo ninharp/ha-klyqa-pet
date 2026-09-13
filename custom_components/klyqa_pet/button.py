@@ -86,7 +86,7 @@ async def async_setup_entry(
     """Set up buttons for all devices of the entry."""
 
     def _entities(coordinator: KlyqaDeviceCoordinator) -> list[KlyqaButton]:
-        descriptions = COMMON_BUTTONS + BUTTONS_BY_TYPE[coordinator.device_type]
+        descriptions = COMMON_BUTTONS + BUTTONS_BY_TYPE.get(coordinator.device_type, ())
         return [KlyqaButton(coordinator, description) for description in descriptions]
 
     async_setup_platform_entities(entry, async_add_entities, _entities)

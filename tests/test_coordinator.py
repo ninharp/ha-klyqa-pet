@@ -16,7 +16,7 @@ from pytest_homeassistant_custom_component.common import (
 from custom_components.klyqa_pet.const import SCAN_INTERVAL
 from pyklyqa_pet import KlyqaConnectionError, KlyqaRateLimitError, WellySettings
 
-from .conftest import WELLY_ID, load_json, setup_integration
+from .conftest import STRYPE_ID, WELLY_ID, load_json, setup_integration
 
 
 async def test_update_failed_message_is_rendered(
@@ -126,3 +126,22 @@ async def test_settings_write_reloads_on_next_refresh(
     )
 
     assert mock_welly.get_settings.call_count == 2
+
+
+async def test_strype_length_is_read_once_then_carried_forward(
+    hass: HomeAssistant,
+    mock_config_entry: MockConfigEntry,
+    mock_cloud: MagicMock,
+    mock_devices: dict,
+    mock_strype: MagicMock,
+) -> None:
+    """length_ret only comes from POST, so it is read once and reused afterwards."""
+    await setup_integration(hass, mock_config_entry)
+    coordinator = mock_config_entry.runtime_data.coordinators[STRYPE_ID]
+    assert coordinator.data.strype.length_metres == 3
+    assert mock_strype.read_length.await_count == 1
+
+    await coordinator.async_refresh()
+    assert coordinator.data.strype.length_metres == 3
+    assert mock_strype.read_length.await_count == 1
+    assert mock_strype.get_state.await_count >= 1

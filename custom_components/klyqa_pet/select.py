@@ -81,7 +81,7 @@ async def async_setup_entry(
     def _entities(coordinator: KlyqaDeviceCoordinator) -> list[KlyqaSelect]:
         return [
             KlyqaSelect(coordinator, description)
-            for description in SELECTS_BY_TYPE[coordinator.device_type]
+            for description in SELECTS_BY_TYPE.get(coordinator.device_type, ())
         ]
 
     async_setup_platform_entities(entry, async_add_entities, _entities)

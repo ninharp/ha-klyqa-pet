@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Coroutine, Iterable
+from dataclasses import replace
 from typing import TYPE_CHECKING, Any
 
 from homeassistant.core import callback
@@ -16,6 +17,7 @@ from pyklyqa_pet import (
     KlyqaAuthError,
     KlyqaConnectionError,
     KlyqaDeviceError,
+    StrypeState,
     WellySettings,
 )
 
@@ -74,6 +76,11 @@ class KlyqaPetEntity(CoordinatorEntity[KlyqaDeviceCoordinator]):
                 translation_key="cannot_connect",
                 translation_placeholders={"device": device},
             ) from err
+        if isinstance(result, StrypeState):
+            # A Strype write echoes the complete state, so there is nothing left to
+            # poll; publishing it also carries the fresh length_ret forward.
+            self.coordinator.async_set_updated_data(replace(self.coordinator.data, state=result))
+            return
         if isinstance(result, WellySettings | FoodySettings):
             # A settings write already returns the fresh settings; mark the coordinator's
             # cache stale so the refresh below reloads it instead of reusing the copy
