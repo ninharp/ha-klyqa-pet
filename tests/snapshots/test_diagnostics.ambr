@@ -431,6 +431,7 @@
             'out': 500,
           }),
           'fwversion': 'V2.1.0.38',
+          'length_ret': 3,
           'mode': 'rgb',
           'open_slots': 5,
           'power_on': 1,

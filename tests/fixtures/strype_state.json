@@ -5,6 +5,7 @@
   "color": { "red": 255, "green": 128, "blue": 0 },
   "temperature": 4000,
   "brightness": { "percentage": 70 },
+  "length_ret": 3,
   "fade": { "in": 500, "out": 500 },
   "power_on": 1,
   "active_command": 0,

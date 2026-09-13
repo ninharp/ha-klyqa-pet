@@ -150,12 +150,12 @@ class KlyqaDeviceCoordinator(DataUpdateCoordinator[KlyqaDeviceData]):
         # settings write marks this stale so the very next poll reloads it.
         self._settings: DeviceSettings = None
         self._poll_count = 0
-        # Strype only: the strip length is reported as `length_ret`, which the firmware
-        # adds to POST responses only. It is probed exactly once (see _async_fetch) and
-        # then carried forward across the GET-based polls; a POST that reports a fresh
-        # value updates it through remember_length().
-        self._length_probed = False
-        self._length_metres: int | None = None
+        # Strype only: the last state published for this device. The lighting firmware
+        # answers every request with a mode-dependent status message - `color` only in
+        # rgb mode, `temperature` only in cct mode, neither in cmd mode - and offers no
+        # endpoint that reports both, so each response is merged onto this one rather
+        # than replacing it (see StrypeState.from_dict).
+        self._strype_state: StrypeState | None = None
         # dt_util.utcnow() (not time.monotonic()) so tests can control this clock with
         # freezegun; monotonic() is untouched by freezegun and made the cache gate
         # untestable.
@@ -266,16 +266,22 @@ class KlyqaDeviceCoordinator(DataUpdateCoordinator[KlyqaDeviceData]):
         """
         self._settings = None
 
-    @callback
-    def remember_length(self, length_metres: int) -> None:
-        """Record a strip length that a POST response reported.
+    @property
+    def strype_state(self) -> StrypeState | None:
+        """Return the last known Strype state, to merge the next response onto."""
+        return self._strype_state
 
-        A POST response is the only place `length_ret` appears, so a write (or the
-        explicit length detection) is the only chance to pick up a new value; the
-        GET-based polls then carry it forward.
+    @callback
+    def async_publish_strype_state(self, state: StrypeState) -> None:
+        """Publish the state a Strype write returned.
+
+        The library has already merged the device's response onto the state passed in as
+        `previous=` (this coordinator's own), so `state` is a complete picture and can be
+        published straight away. That is both faster for the user and gentler on the
+        firmware's rate limit than following every write with another request.
         """
-        self._length_probed = True
-        self._length_metres = length_metres
+        self._strype_state = state
+        self.async_set_updated_data(replace(self.data, state=state))
 
     async def _async_recover_token(self) -> None:
         """Fetch fresh tokens from the cloud after the device rejected ours."""
@@ -313,16 +319,11 @@ class KlyqaDeviceCoordinator(DataUpdateCoordinator[KlyqaDeviceData]):
         elif isinstance(self.device, AirPurifierDevice):
             state = await self.device.get_state()
         elif isinstance(self.device, StrypeDevice):
-            if not self._length_probed:
-                # length_ret only ever comes back from a POST; a body with nothing but
-                # the message type is a no-op because every field the firmware reads is
-                # optional. The flag (rather than "is the length still unknown?") makes
-                # this a one-shot probe even for a device that never reports a length.
-                state = await self.device.read_length()
-                self._length_probed = True
-                self._length_metres = state.length_metres
-            else:
-                state = replace(await self.device.get_state(), length_metres=self._length_metres)
+            # There is no state GET on the lighting firmware: a read is a command that
+            # carries no state-changing field, answered with the same mode-dependent
+            # status message a write returns. Merge it onto what we already knew.
+            state = await self.device.get_state(previous=self._strype_state)
+            self._strype_state = state
         else:  # pragma: no cover - guarded by create_device
             raise UpdateFailed(f"Unsupported device class {type(self.device).__name__}")
         return KlyqaDeviceData(system_info=self._system_info, state=state, settings=settings)

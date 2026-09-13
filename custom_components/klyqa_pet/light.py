@@ -135,6 +135,7 @@ class KlyqaStrypeLight(KlyqaPetEntity, LightEntity):
                 temperature_kelvin=kwargs.get(ATTR_COLOR_TEMP_KELVIN),
                 brightness_percent=None if brightness is None else round(brightness * 100 / 255),
                 transition_ms=None if transition is None else round(transition * 1000),
+                previous=self.coordinator.strype_state,
             )
         )
 
@@ -145,5 +146,6 @@ class KlyqaStrypeLight(KlyqaPetEntity, LightEntity):
             self.coordinator.strype_device.set_state(
                 power_on=False,
                 transition_ms=None if transition is None else round(transition * 1000),
+                previous=self.coordinator.strype_state,
             )
         )

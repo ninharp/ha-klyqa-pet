@@ -99,10 +99,7 @@ async def test_strype_light_reports_color_temp_mode(
     mock_devices: dict,
     mock_strype: MagicMock,
 ) -> None:
-    # The first poll for a Strype device fetches its length via read_length(), not
-    # get_state(); patch both so the mode change is visible regardless of poll path.
-    cct_state = replace(mock_strype.read_length.return_value, mode="cct")
-    mock_strype.read_length = AsyncMock(return_value=cct_state)
+    cct_state = replace(mock_strype.get_state.return_value, mode="cct")
     mock_strype.get_state = AsyncMock(return_value=cct_state)
     with patch("custom_components.klyqa_pet.PLATFORMS", [Platform.LIGHT]):
         await setup_integration(hass, mock_config_entry)
@@ -125,8 +122,7 @@ async def test_strype_light_reports_cmd_mode_as_rgb_fallback(
     mock_devices: dict,
     mock_strype: MagicMock,
 ) -> None:
-    cmd_state = replace(mock_strype.read_length.return_value, mode="cmd")
-    mock_strype.read_length = AsyncMock(return_value=cmd_state)
+    cmd_state = replace(mock_strype.get_state.return_value, mode="cmd")
     mock_strype.get_state = AsyncMock(return_value=cmd_state)
     with patch("custom_components.klyqa_pet.PLATFORMS", [Platform.LIGHT]):
         await setup_integration(hass, mock_config_entry)
@@ -150,6 +146,7 @@ async def test_strype_light_sets_colour_temperature(
         temperature_kelvin=3000,
         brightness_percent=None,
         transition_ms=None,
+        previous=mock_strype.get_state.return_value,
     )
 
 
@@ -167,6 +164,7 @@ async def test_strype_light_sets_brightness(hass: HomeAssistant, mock_strype: Ma
         temperature_kelvin=None,
         brightness_percent=50,  # round(128 * 100 / 255)
         transition_ms=None,
+        previous=mock_strype.get_state.return_value,
     )
 
 
@@ -180,7 +178,11 @@ async def test_strype_light_turn_off_with_transition(
         {"entity_id": STRYPE_ENTITY_ID, "transition": 2},
         blocking=True,
     )
-    mock_strype.set_state.assert_awaited_with(power_on=False, transition_ms=2000)
+    mock_strype.set_state.assert_awaited_with(
+        power_on=False,
+        transition_ms=2000,
+        previous=mock_strype.get_state.return_value,
+    )
 
 
 @pytest.mark.usefixtures("lights")
@@ -197,6 +199,7 @@ async def test_strype_light_power_transition_reaches_the_device_as_a_temp_fade(
     posted: list[dict] = []
 
     async def _record(method: str, path: str, body: dict | None = None) -> dict:
+        assert (method, path) == ("PUT", "system/command")
         posted.append(body or {})
         return {"status": "off", "mode": "rgb", "length_ret": 3}
 
@@ -220,9 +223,9 @@ async def test_strype_light_power_transition_reaches_the_device_as_a_temp_fade(
             blocking=True,
         )
 
-    assert posted[0]["temp_fade"] == {"out": 2000}
-    assert posted[1]["temp_fade"] == {"in": 3000}
-    assert all(body["type"] == "request" for body in posted)
+    assert posted[0]["command"]["temp_fade"] == {"out": 2000}
+    assert posted[1]["command"]["temp_fade"] == {"in": 3000}
+    assert all(body["command"]["type"] == "request" for body in posted)
 
 
 async def test_strype_light_colour_write_in_cct_mode_converges_to_rgb(
@@ -234,22 +237,21 @@ async def test_strype_light_colour_write_in_cct_mode_converges_to_rgb(
 ) -> None:
     """Writing a colour while the device is in cct mode must flip the reported mode.
 
-    The POST echo is partial, so the mode can only be trusted from the following
-    GET; this asserts the entity converges on it instead of going stale.
+    The response reports `mode` and only the active mode's colour field, so the merge
+    is what makes the entity converge: the new colour and mode come from the device,
+    the colour temperature is carried forward.
     """
     cct_state = replace(mock_strype.get_state.return_value, mode="cct")
-    mock_strype.read_length = AsyncMock(return_value=replace(cct_state, length_metres=3))
     mock_strype.get_state = AsyncMock(return_value=cct_state)
     with patch("custom_components.klyqa_pet.PLATFORMS", [Platform.LIGHT]):
         await setup_integration(hass, mock_config_entry)
     assert hass.states.get(STRYPE_ENTITY_ID).attributes["color_mode"] == ColorMode.COLOR_TEMP
 
-    # The device switched to rgb; its POST echo carries only `color`, the GET both.
-    rgb_state = replace(cct_state, mode="rgb", rgb=(10, 20, 30))
-    mock_strype.get_state = AsyncMock(return_value=rgb_state)
+    # The device switched to rgb, so its response carries `color` and no `temperature`.
     mock_strype.set_state = AsyncMock(
         return_value=StrypeState.from_dict(
-            {"status": "on", "mode": "rgb", "color": {"red": 10, "green": 20, "blue": 30}}
+            {"status": "on", "mode": "rgb", "color": {"red": 10, "green": 20, "blue": 30}},
+            cct_state,
         )
     )
     await hass.services.async_call(
@@ -277,11 +279,11 @@ async def test_strype_light_temperature_write_in_rgb_mode_converges_to_cct(
         await setup_integration(hass, mock_config_entry)
     assert hass.states.get(STRYPE_ENTITY_ID).attributes["color_mode"] == ColorMode.RGB
 
-    cct_state = replace(mock_strype.get_state.return_value, mode="cct", temperature_kelvin=3000)
-    mock_strype.get_state = AsyncMock(return_value=cct_state)
+    polled = mock_strype.get_state.return_value
     mock_strype.set_state = AsyncMock(
         return_value=StrypeState.from_dict(
-            {"status": "on", "mode": "cct", "temperature": 3000, "length_ret": 3}
+            {"status": "on", "mode": "cct", "temperature": 3000, "length_ret": 3},
+            polled,
         )
     )
     await hass.services.async_call(

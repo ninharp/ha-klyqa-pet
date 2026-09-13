@@ -1,8 +1,7 @@
 """Tests for the coordinator: translated UpdateFailed messages and settings polling."""
 
-from dataclasses import replace
 from datetime import timedelta
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import MagicMock
 
 from freezegun.api import FrozenDateTimeFactory
 from homeassistant.components.switch import DOMAIN as SWITCH_DOMAIN
@@ -131,59 +130,36 @@ async def test_settings_write_reloads_on_next_refresh(
     assert mock_welly.get_settings.call_count == 2
 
 
-async def test_strype_length_is_read_once_then_carried_forward(
+async def test_strype_poll_merges_onto_the_previous_state(
     hass: HomeAssistant,
     mock_config_entry: MockConfigEntry,
     mock_cloud: MagicMock,
     mock_devices: dict,
     mock_strype: MagicMock,
 ) -> None:
-    """length_ret only comes from POST, so it is read once and reused afterwards."""
+    """Each poll hands the last known state to the library to merge the response onto."""
     await setup_integration(hass, mock_config_entry)
     coordinator = mock_config_entry.runtime_data.coordinators[STRYPE_ID]
     assert coordinator.data.strype.length_metres == 3
-    assert mock_strype.read_length.await_count == 1
+    # The first read has nothing to merge onto.
+    assert mock_strype.get_state.await_args.kwargs["previous"] is None
 
     await coordinator.async_refresh()
-    assert coordinator.data.strype.length_metres == 3
-    assert mock_strype.read_length.await_count == 1
-    assert mock_strype.get_state.await_count == 1
+    assert mock_strype.get_state.await_count == 2
+    assert mock_strype.get_state.await_args.kwargs["previous"] is not None
 
 
-async def test_strype_length_is_probed_only_once_even_without_a_result(
+async def test_strype_write_is_published_without_another_poll(
     hass: HomeAssistant,
     mock_config_entry: MockConfigEntry,
     mock_cloud: MagicMock,
     mock_devices: dict,
     mock_strype: MagicMock,
 ) -> None:
-    """A device that never reports a length must not be POSTed on every poll."""
-    mock_strype.read_length = AsyncMock(
-        return_value=replace(mock_strype.get_state.return_value, length_metres=None)
-    )
-    await setup_integration(hass, mock_config_entry)
-    coordinator = mock_config_entry.runtime_data.coordinators[STRYPE_ID]
-    assert coordinator.data.strype.length_metres is None
-    assert mock_strype.read_length.await_count == 1
+    """A write's response is already merged, so entity.py publishes it directly.
 
-    await coordinator.async_refresh()
-    assert mock_strype.read_length.await_count == 1
-    assert mock_strype.get_state.await_count == 1
-
-
-async def test_strype_write_keeps_only_the_length_from_the_partial_echo(
-    hass: HomeAssistant,
-    mock_config_entry: MockConfigEntry,
-    mock_cloud: MagicMock,
-    mock_devices: dict,
-    mock_strype: MagicMock,
-) -> None:
-    """A POST echo is partial, so entity.py must not publish it as the new state.
-
-    The firmware assembles a POST response mode-dependently (`color` only in rgb
-    mode, `temperature` only in cct mode, neither in cmd mode), so the echo's
-    neutral defaults must never replace the values from the last GET. Only the
-    `length_ret` it carries is kept; everything else comes from the refresh.
+    There is no state GET on this firmware, so refreshing after a write would only
+    repeat the same request; the merged result the write returned is complete.
     """
     await setup_integration(hass, mock_config_entry)
     coordinator = mock_config_entry.runtime_data.coordinators[STRYPE_ID]
@@ -193,22 +169,25 @@ async def test_strype_write_keeps_only_the_length_from_the_partial_echo(
     assert polled.rgb == (255, 128, 0)
     get_state_calls = mock_strype.get_state.await_count
 
-    # What a cmd-mode echo of a power flip actually looks like: no colour, no
-    # temperature, but a fresh length_ret.
-    echo = StrypeState.from_dict(
-        {"status": "off", "mode": "cmd", "brightness": {"percentage": 70}, "length_ret": 7}
+    # What a cmd-mode response to a power flip looks like once merged: neither colour
+    # field was reported, so both were carried forward from `polled`.
+    result = StrypeState.from_dict(
+        {"status": "off", "mode": "cmd", "brightness": {"percentage": 70}, "length_ret": 7},
+        polled,
     )
-    assert echo.rgb == (0, 0, 0)
 
     async def _command() -> StrypeState:
-        return echo
+        return result
 
     await entity._async_send(_command())
     await hass.async_block_till_done()
 
-    # The refresh (a GET) provided the state, not the echo.
-    assert mock_strype.get_state.await_count == get_state_calls + 1
-    assert coordinator.data.strype.rgb == (255, 128, 0)
-    assert coordinator.data.strype.temperature_kelvin == polled.temperature_kelvin
-    # ... but the length the echo alone could report was carried over.
-    assert coordinator.data.strype.length_metres == 7
+    assert mock_strype.get_state.await_count == get_state_calls
+    published = coordinator.data.strype
+    assert published.power_on is False
+    assert published.mode == "cmd"
+    assert published.rgb == (255, 128, 0)
+    assert published.temperature_kelvin == polled.temperature_kelvin
+    assert published.length_metres == 7
+    # The published state also becomes the base for the next poll's merge.
+    assert coordinator.strype_state == published

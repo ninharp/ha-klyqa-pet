@@ -159,6 +159,9 @@ def mock_purifier() -> MagicMock:
 @pytest.fixture
 def mock_strype() -> MagicMock:
     device = MagicMock(spec=StrypeDevice)
+    # The firmware never reports `color` and `temperature` in one response; this fixture
+    # carries both because it stands for a *merged* state - what StrypeDevice returns
+    # after folding a response into the previous one - not for a single wire payload.
     state = StrypeState.from_dict(load_json("strype_state.json"))
     device.get_system_info = AsyncMock(
         return_value=make_system_info(
@@ -166,11 +169,8 @@ def mock_strype() -> MagicMock:
         )
     )
     device.get_state = AsyncMock(return_value=state)
-    # length_ret only ever comes back from a POST
-    with_length = replace(state, length_metres=3)
-    device.read_length = AsyncMock(return_value=with_length)
-    device.set_state = AsyncMock(return_value=with_length)
-    device.detect_length = AsyncMock(return_value=replace(with_length, length_metres=5))
+    device.set_state = AsyncMock(return_value=state)
+    device.detect_length = AsyncMock(return_value=replace(state, length_metres=5))
     return device
 
 

@@ -1,15 +1,15 @@
 {
   "type": "status",
   "status": "on",
-  "mode": "rgb",
-  "color": { "red": 255, "green": 128, "blue": 0 },
-  "temperature": 4000,
+  "active_scene": "",
   "brightness": { "percentage": 70 },
+  "length_ret": 3,
+  "transitionTime": 1000,
   "fade": { "in": 500, "out": 500 },
   "power_on": 1,
   "active_command": 0,
-  "active_scene": "",
-  "open_slots": 5,
-  "fwversion": "V2.1.0.38",
-  "sdkversion": "1.2.3"
+  "color": { "red": 255, "green": 128, "blue": 0 },
+  "mode": "rgb",
+  "error": [],
+  "wifi_rssi": -52
 }

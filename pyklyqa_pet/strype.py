@@ -11,18 +11,17 @@ from .device import KlyqaDevice, _as_int, _as_str
 
 @dataclass(frozen=True, slots=True)
 class StrypeState:
-    """Parsed device/state of a Strype.
+    """State of a Strype, as reported by a `system/command` status response.
 
-    A GET response is always complete: the firmware's `device_state_get_json` adds
-    both `color` and `temperature` regardless of the active mode.
+    The lighting firmware never reports the whole state at once. Its response callback
+    adds `temperature` only while the strip is in `cct` mode and `color` only while it
+    is in `rgb` mode; in `cmd` mode (an app-driven effect) it adds neither. The value
+    for the inactive mode is not lost - the firmware keeps it - it is simply not sent,
+    and there is no endpoint that would report it, so an absent key says nothing about
+    the device and must never be read as "off"/"black"/"0".
 
-    A POST response is **partial**. The firmware assembles it mode-dependently: in
-    `cct` mode it carries `temperature` but no `color`, in `rgb` mode `color` but no
-    `temperature`, and in `cmd` mode neither. Absent keys are parsed as neutral
-    values here (`rgb=(0, 0, 0)`, `temperature_kelvin=0`), so a state parsed from a
-    POST response must not be treated as a full picture of the device. Only
-    `length_ret` is unique to a POST response, which is why `length_metres` is None
-    for states read via GET.
+    Every response is therefore merged onto the previously known state: see
+    `from_dict`, which is the only place that decides what an absent key means.
     """
 
     power_on: bool
@@ -34,22 +33,61 @@ class StrypeState:
     raw: dict[str, Any] = field(compare=False, repr=False)
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> StrypeState:
-        """Parse a state JSON object; missing keys fall back to neutral values."""
-        color = data.get("color") or {}
-        brightness = data.get("brightness") or {}
-        length = data.get("length_ret")
-        return cls(
-            power_on=_as_str(data.get("status")) == "on",
-            mode=_as_str(data.get("mode")) or "rgb",
-            rgb=(
+    def from_dict(cls, data: dict[str, Any], previous: StrypeState | None = None) -> StrypeState:
+        """Parse a status response, carrying keys it omits over from `previous`.
+
+        Every key that is present is authoritative. Every key that is absent is taken
+        from `previous`, and only falls back to a neutral value when there is no
+        previous state at all - the very first read of a device.
+
+        This lives on the parser rather than in a separate merge helper because only
+        the parser can still tell an absent key from a key that happens to carry a
+        neutral value; once parsed, `temperature_kelvin=0` and "no `temperature` in the
+        response" are indistinguishable, and a merge helper would have to guess.
+        """
+        color = data.get("color")
+        if isinstance(color, dict):
+            rgb = (
                 _as_int(color.get("red")),
                 _as_int(color.get("green")),
                 _as_int(color.get("blue")),
-            ),
-            temperature_kelvin=_as_int(data.get("temperature")),
-            brightness_percent=_as_int(brightness.get("percentage")),
-            length_metres=None if length is None else _as_int(length),
+            )
+        else:
+            rgb = previous.rgb if previous is not None else (0, 0, 0)
+
+        brightness = data.get("brightness")
+        if isinstance(brightness, dict):
+            brightness_percent = _as_int(brightness.get("percentage"))
+        else:
+            brightness_percent = previous.brightness_percent if previous is not None else 0
+
+        if "temperature" in data:
+            temperature_kelvin = _as_int(data["temperature"])
+        else:
+            temperature_kelvin = previous.temperature_kelvin if previous is not None else 0
+
+        if "status" in data:
+            power_on = _as_str(data["status"]) == "on"
+        else:
+            power_on = previous.power_on if previous is not None else False
+
+        if "mode" in data:
+            mode = _as_str(data["mode"]) or "rgb"
+        else:
+            mode = previous.mode if previous is not None else "rgb"
+
+        if "length_ret" in data:
+            length_metres: int | None = _as_int(data["length_ret"])
+        else:
+            length_metres = previous.length_metres if previous is not None else None
+
+        return cls(
+            power_on=power_on,
+            mode=mode,
+            rgb=rgb,
+            temperature_kelvin=temperature_kelvin,
+            brightness_percent=brightness_percent,
+            length_metres=length_metres,
             raw=data,
         )
 
@@ -57,24 +95,41 @@ class StrypeState:
 class StrypeDevice(KlyqaDevice):
     """Client for the Klyqa Strype LED strip.
 
-    The lighting firmware only exposes device/state; there is no settings or
-    control endpoint.
+    Unlike the pet-line devices, the lighting firmware serves no `device/state` route
+    at all: the `app_request_paths[]` table that would register it is commented out in
+    `fw-klyqa-lighting_config.h` and `register_rest_endpoints()` is compiled out with
+    `#if 0`, so an RGBCW build answers on `system/info`, `system/settings` and
+    `system/command` and nothing else.
+
+    All device traffic therefore goes through `PUT system/command`, whose SDK handler
+    unwraps the request's `command` object and passes it to the lighting message
+    dispatcher - which in turn rejects any message without a string `type` and routes
+    only `type == "request"` to the state handler.
     """
 
-    async def get_state(self) -> StrypeState:
-        """Return the current state (without the strip length)."""
-        return StrypeState.from_dict(await self.request("GET", "device/state"))
-
-    async def _post_state(self, **fields: Any) -> StrypeState:
-        """POST a state change and parse the (partial, see StrypeState) echo.
-
-        The lighting firmware's message dispatcher rejects any message without a
-        string `type` property and only routes `type == "request"` to the state
-        handler, so every POST must carry it.
-        """
+    async def _command(self, previous: StrypeState | None, **fields: Any) -> StrypeState:
+        """Send one `type: "request"` message and parse the status response."""
         return StrypeState.from_dict(
-            await self.request("POST", "device/state", {"type": "request", **fields})
+            await self.request("PUT", "system/command", {"command": {"type": "request", **fields}}),
+            previous,
         )
+
+    async def get_state(self, *, previous: StrypeState | None = None) -> StrypeState:
+        """Read the current state with a request that carries no state-changing field.
+
+        This firmware has no local state GET, so the only way to read the device is to
+        send it a command that changes nothing. A request without `status`, `color`,
+        `temperature`, `brightness` or `length_detection` sets no change flag, and the
+        firmware applies power, colour, temperature, brightness and mode only inside
+        its `if (changed > NOTHING_CHANGED)` block, so none of them are touched. The
+        response still reports all of them.
+
+        The one thing such a request does do is set the driver's fade time to the
+        firmware default, because `lightbulb_set_fade_time()` sits outside that guard.
+        That is invisible: the fade time only shapes the *next* transition, and every
+        write this client sends passes `transitionTime` explicitly anyway.
+        """
+        return await self._command(previous)
 
     async def set_state(
         self,
@@ -84,8 +139,13 @@ class StrypeDevice(KlyqaDevice):
         temperature_kelvin: int | None = None,
         brightness_percent: int | None = None,
         transition_ms: int | None = None,
+        previous: StrypeState | None = None,
     ) -> StrypeState:
-        """Apply the given changes and return the (partial) state the device echoes."""
+        """Apply the given changes and return the resulting state.
+
+        The response is the same status message a read returns, so it is merged onto
+        `previous` exactly the same way (see `StrypeState.from_dict`).
+        """
         body: dict[str, Any] = {}
         if power_on is not None:
             body["status"] = "on" if power_on else "off"
@@ -106,12 +166,8 @@ class StrypeDevice(KlyqaDevice):
                 # keep both values in step.
                 fade_ms = max(int(transition_ms), STRYPE_MIN_TRANSITION_MS)
                 body["temp_fade"] = {"in": fade_ms} if power_on else {"out": fade_ms}
-        return await self._post_state(**body)
+        return await self._command(previous, **body)
 
-    async def detect_length(self) -> StrypeState:
+    async def detect_length(self, *, previous: StrypeState | None = None) -> StrypeState:
         """Re-measure the strip length; the response carries the new value."""
-        return await self._post_state(length_detection=1)
-
-    async def read_length(self) -> StrypeState:
-        """Read the stored strip length via a side-effect-free POST."""
-        return await self._post_state()
+        return await self._command(previous, length_detection=1)
