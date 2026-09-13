@@ -27,7 +27,7 @@ from .foody import FoodyDevice, FoodySettings, FoodyState
 from .strype import StrypeDevice, StrypeState
 from .welly import WellyDevice, WellyMode, WellySettings, WellyState
 
-__version__ = "0.1.5"
+__version__ = "0.2.0"
 
 _DEVICE_CLASSES: dict[DeviceType, type[KlyqaDevice]] = {
     DeviceType.WELLY: WellyDevice,
