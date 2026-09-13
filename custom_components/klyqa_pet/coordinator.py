@@ -299,7 +299,10 @@ class KlyqaDeviceCoordinator(DataUpdateCoordinator[KlyqaDeviceData]):
             known_length = self.data.strype.length_metres if self.data is not None else None
             if known_length is None:
                 # length_ret only ever comes back from a POST; an empty body is a
-                # no-op because every field the firmware reads is optional.
+                # no-op because every field the firmware reads is optional. Note this
+                # also conflates "not read yet" with "device reported no length": if a
+                # POST response ever omitted length_ret, this would POST on every poll
+                # forever instead of once.
                 state = await self.device.read_length()
             else:
                 state = replace(await self.device.get_state(), length_metres=known_length)

@@ -141,6 +141,7 @@ NUMBERS_BY_TYPE: dict[DeviceType, tuple[KlyqaNumberEntityDescription, ...]] = {
     DeviceType.WELLY: WELLY_NUMBERS,
     DeviceType.FOODY: FOODY_NUMBERS,
     DeviceType.AIRPURIFIER: (),
+    DeviceType.STRYPE: (),
 }
 
 
@@ -154,7 +155,7 @@ async def async_setup_entry(
     def _entities(coordinator: KlyqaDeviceCoordinator) -> list[KlyqaNumber]:
         return [
             KlyqaNumber(coordinator, description)
-            for description in NUMBERS_BY_TYPE.get(coordinator.device_type, ())
+            for description in NUMBERS_BY_TYPE[coordinator.device_type]
         ]
 
     async_setup_platform_entities(entry, async_add_entities, _entities)

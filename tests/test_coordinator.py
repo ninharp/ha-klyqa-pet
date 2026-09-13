@@ -1,5 +1,6 @@
 """Tests for the coordinator: translated UpdateFailed messages and settings polling."""
 
+from dataclasses import replace
 from datetime import timedelta
 from unittest.mock import MagicMock
 
@@ -8,13 +9,15 @@ from homeassistant.components.switch import DOMAIN as SWITCH_DOMAIN
 from homeassistant.components.switch import SERVICE_TURN_ON
 from homeassistant.const import ATTR_ENTITY_ID
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.entity import EntityDescription
 from pytest_homeassistant_custom_component.common import (
     MockConfigEntry,
     async_fire_time_changed,
 )
 
 from custom_components.klyqa_pet.const import SCAN_INTERVAL
-from pyklyqa_pet import KlyqaConnectionError, KlyqaRateLimitError, WellySettings
+from custom_components.klyqa_pet.entity import KlyqaPetEntity
+from pyklyqa_pet import KlyqaConnectionError, KlyqaRateLimitError, StrypeState, WellySettings
 
 from .conftest import STRYPE_ID, WELLY_ID, load_json, setup_integration
 
@@ -144,4 +147,40 @@ async def test_strype_length_is_read_once_then_carried_forward(
     await coordinator.async_refresh()
     assert coordinator.data.strype.length_metres == 3
     assert mock_strype.read_length.await_count == 1
-    assert mock_strype.get_state.await_count >= 1
+    assert mock_strype.get_state.await_count == 1
+
+
+async def test_strype_write_publishes_state_without_polling(
+    hass: HomeAssistant,
+    mock_config_entry: MockConfigEntry,
+    mock_cloud: MagicMock,
+    mock_devices: dict,
+    mock_strype: MagicMock,
+) -> None:
+    """entity.py's _async_send publishes a returned StrypeState straight to the
+
+    coordinator instead of triggering a follow-up poll, since the write already
+    echoes the device's complete state (including a fresh length_ret). This is the
+    mechanism the carry-forward scheme in _async_fetch depends on, exercised here
+    without needing a real Strype entity platform (added in Tasks 5/6).
+    """
+    await setup_integration(hass, mock_config_entry)
+    coordinator = mock_config_entry.runtime_data.coordinators[STRYPE_ID]
+    entity = KlyqaPetEntity(coordinator, EntityDescription(key="test"))
+
+    get_state_calls = mock_strype.get_state.await_count
+    read_length_calls = mock_strype.read_length.await_count
+
+    written_state: StrypeState = replace(
+        coordinator.data.strype, length_metres=3, power_on=not coordinator.data.strype.power_on
+    )
+
+    async def _command() -> StrypeState:
+        return written_state
+
+    await entity._async_send(_command())
+
+    assert coordinator.data.strype.length_metres == 3
+    assert coordinator.data.strype.power_on == written_state.power_on
+    assert mock_strype.get_state.await_count == get_state_calls
+    assert mock_strype.read_length.await_count == read_length_calls

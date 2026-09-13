@@ -99,6 +99,7 @@ SWITCHES_BY_TYPE: dict[DeviceType, tuple[KlyqaSwitchEntityDescription, ...]] = {
     DeviceType.WELLY: WELLY_SWITCHES,
     DeviceType.FOODY: FOODY_SWITCHES,
     DeviceType.AIRPURIFIER: PURIFIER_SWITCHES,
+    DeviceType.STRYPE: (),
 }
 
 
@@ -112,7 +113,7 @@ async def async_setup_entry(
     def _entities(coordinator: KlyqaDeviceCoordinator) -> list[KlyqaSwitch]:
         return [
             KlyqaSwitch(coordinator, description)
-            for description in SWITCHES_BY_TYPE.get(coordinator.device_type, ())
+            for description in SWITCHES_BY_TYPE[coordinator.device_type]
         ]
 
     async_setup_platform_entities(entry, async_add_entities, _entities)

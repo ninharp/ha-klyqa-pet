@@ -27,7 +27,7 @@ from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.helpers.typing import StateType
 from homeassistant.util import dt as dt_util
 
-from pyklyqa_pet import DeviceType, StrypeState
+from pyklyqa_pet import DeviceType
 
 from . import KlyqaPetConfigEntry
 from .const import (
@@ -67,14 +67,6 @@ def _enum(mapping: dict[int, str], value: int) -> str | None:
     return mapping.get(value)
 
 
-def _wifi_rssi(data: KlyqaDeviceData) -> int | None:
-    # The Strype's device/state response carries no wifi info at all.
-    state = data.state
-    if isinstance(state, StrypeState):
-        return None
-    return state.wifi_rssi
-
-
 def _enum_description(
     key: str,
     mapping: dict[int, str],
@@ -92,16 +84,6 @@ def _enum_description(
 
 
 COMMON_SENSORS: tuple[KlyqaSensorEntityDescription, ...] = (
-    KlyqaSensorEntityDescription(
-        key="wifi_rssi",
-        translation_key="wifi_rssi",
-        device_class=SensorDeviceClass.SIGNAL_STRENGTH,
-        native_unit_of_measurement=SIGNAL_STRENGTH_DECIBELS_MILLIWATT,
-        state_class=SensorStateClass.MEASUREMENT,
-        entity_category=EntityCategory.DIAGNOSTIC,
-        entity_registry_enabled_default=False,
-        value_fn=_wifi_rssi,
-    ),
     KlyqaSensorEntityDescription(
         key="firmware_version",
         translation_key="firmware_version",
@@ -127,6 +109,16 @@ COMMON_SENSORS: tuple[KlyqaSensorEntityDescription, ...] = (
 )
 
 WELLY_SENSORS: tuple[KlyqaSensorEntityDescription, ...] = (
+    KlyqaSensorEntityDescription(
+        key="wifi_rssi",
+        translation_key="wifi_rssi",
+        device_class=SensorDeviceClass.SIGNAL_STRENGTH,
+        native_unit_of_measurement=SIGNAL_STRENGTH_DECIBELS_MILLIWATT,
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        entity_registry_enabled_default=False,
+        value_fn=lambda data: data.welly.wifi_rssi,
+    ),
     KlyqaSensorEntityDescription(
         key="water_temperature",
         translation_key="water_temperature",
@@ -219,6 +211,16 @@ WELLY_SENSORS: tuple[KlyqaSensorEntityDescription, ...] = (
 
 FOODY_SENSORS: tuple[KlyqaSensorEntityDescription, ...] = (
     KlyqaSensorEntityDescription(
+        key="wifi_rssi",
+        translation_key="wifi_rssi",
+        device_class=SensorDeviceClass.SIGNAL_STRENGTH,
+        native_unit_of_measurement=SIGNAL_STRENGTH_DECIBELS_MILLIWATT,
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        entity_registry_enabled_default=False,
+        value_fn=lambda data: data.foody.wifi_rssi,
+    ),
+    KlyqaSensorEntityDescription(
         key="bowl_remaining",
         translation_key="bowl_remaining",
         device_class=SensorDeviceClass.WEIGHT,
@@ -287,6 +289,16 @@ FOODY_SENSORS: tuple[KlyqaSensorEntityDescription, ...] = (
 
 PURIFIER_SENSORS: tuple[KlyqaSensorEntityDescription, ...] = (
     KlyqaSensorEntityDescription(
+        key="wifi_rssi",
+        translation_key="wifi_rssi",
+        device_class=SensorDeviceClass.SIGNAL_STRENGTH,
+        native_unit_of_measurement=SIGNAL_STRENGTH_DECIBELS_MILLIWATT,
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        entity_registry_enabled_default=False,
+        value_fn=lambda data: data.purifier.wifi_rssi,
+    ),
+    KlyqaSensorEntityDescription(
         key="pm25",
         device_class=SensorDeviceClass.PM25,
         native_unit_of_measurement=UnitOfDensity.MICROGRAMS_PER_CUBIC_METER,
@@ -346,6 +358,7 @@ SENSORS_BY_TYPE: dict[DeviceType, tuple[KlyqaSensorEntityDescription, ...]] = {
     DeviceType.WELLY: WELLY_SENSORS,
     DeviceType.FOODY: FOODY_SENSORS,
     DeviceType.AIRPURIFIER: PURIFIER_SENSORS,
+    DeviceType.STRYPE: (),
 }
 
 
@@ -357,7 +370,7 @@ async def async_setup_entry(
     """Set up sensors for all devices of the entry."""
 
     def _entities(coordinator: KlyqaDeviceCoordinator) -> list[KlyqaSensor]:
-        descriptions = COMMON_SENSORS + SENSORS_BY_TYPE.get(coordinator.device_type, ())
+        descriptions = COMMON_SENSORS + SENSORS_BY_TYPE[coordinator.device_type]
         return [KlyqaSensor(coordinator, description) for description in descriptions]
 
     async_setup_platform_entities(entry, async_add_entities, _entities)

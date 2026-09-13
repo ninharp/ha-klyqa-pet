@@ -22,7 +22,7 @@ from pyklyqa_pet import (
 )
 
 from .const import DOMAIN, MANUFACTURER
-from .coordinator import KlyqaDeviceCoordinator
+from .coordinator import KlyqaDeviceCoordinator, KlyqaDeviceData
 
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
@@ -77,9 +77,16 @@ class KlyqaPetEntity(CoordinatorEntity[KlyqaDeviceCoordinator]):
                 translation_placeholders={"device": device},
             ) from err
         if isinstance(result, StrypeState):
-            # A Strype write echoes the complete state, so there is nothing left to
-            # poll; publishing it also carries the fresh length_ret forward.
-            self.coordinator.async_set_updated_data(replace(self.coordinator.data, state=result))
+            # DataUpdateCoordinator.data is typed as non-optional but is genuinely None
+            # until the first refresh completes; a coordinator whose first poll failed
+            # is still registered and its entities still created, so this is reachable.
+            current_data: KlyqaDeviceData | None = self.coordinator.data
+            if current_data is not None:
+                # A Strype write echoes the complete state, so there is nothing left to
+                # poll; publishing it also carries the fresh length_ret forward.
+                self.coordinator.async_set_updated_data(replace(current_data, state=result))
+                return
+            await self.coordinator.async_request_refresh()
             return
         if isinstance(result, WellySettings | FoodySettings):
             # A settings write already returns the fresh settings; mark the coordinator's

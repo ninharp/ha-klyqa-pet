@@ -68,6 +68,7 @@ SELECTS_BY_TYPE: dict[DeviceType, tuple[KlyqaSelectEntityDescription, ...]] = {
     DeviceType.WELLY: WELLY_SELECTS,
     DeviceType.FOODY: FOODY_SELECTS,
     DeviceType.AIRPURIFIER: (),
+    DeviceType.STRYPE: (),
 }
 
 
@@ -81,7 +82,7 @@ async def async_setup_entry(
     def _entities(coordinator: KlyqaDeviceCoordinator) -> list[KlyqaSelect]:
         return [
             KlyqaSelect(coordinator, description)
-            for description in SELECTS_BY_TYPE.get(coordinator.device_type, ())
+            for description in SELECTS_BY_TYPE[coordinator.device_type]
         ]
 
     async_setup_platform_entities(entry, async_add_entities, _entities)
