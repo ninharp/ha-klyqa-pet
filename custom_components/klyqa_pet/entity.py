@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Coroutine, Iterable
-from dataclasses import replace
 from typing import TYPE_CHECKING, Any
 
 from homeassistant.core import callback
@@ -22,7 +21,7 @@ from pyklyqa_pet import (
 )
 
 from .const import DOMAIN, MANUFACTURER
-from .coordinator import KlyqaDeviceCoordinator, KlyqaDeviceData
+from .coordinator import KlyqaDeviceCoordinator
 
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
@@ -77,18 +76,17 @@ class KlyqaPetEntity(CoordinatorEntity[KlyqaDeviceCoordinator]):
                 translation_placeholders={"device": device},
             ) from err
         if isinstance(result, StrypeState):
-            # DataUpdateCoordinator.data is typed as non-optional but is genuinely None
-            # until the first refresh completes; a coordinator whose first poll failed
-            # is still registered and its entities still created, so this is reachable.
-            current_data: KlyqaDeviceData | None = self.coordinator.data
-            if current_data is not None:
-                # A Strype write echoes the complete state, so there is nothing left to
-                # poll; publishing it also carries the fresh length_ret forward.
-                self.coordinator.async_set_updated_data(replace(current_data, state=result))
-                return
-            await self.coordinator.async_request_refresh()
-            return
-        if isinstance(result, WellySettings | FoodySettings):
+            # A Strype write echoes only a *partial* state: the lighting firmware adds
+            # `color` only in rgb mode, `temperature` only in cct mode and neither in
+            # cmd mode, so publishing the echo would overwrite the known-good values
+            # from the last GET with the neutral defaults StrypeState parses for the
+            # absent keys (a lit strip would read as black until the next poll). The
+            # one thing the echo alone can tell us is `length_ret`; keep that and let
+            # the ordinary refresh below - a GET, which always reports both - provide
+            # everything else, exactly like every other platform does after a write.
+            if result.length_metres is not None:
+                self.coordinator.remember_length(result.length_metres)
+        elif isinstance(result, WellySettings | FoodySettings):
             # A settings write already returns the fresh settings; mark the coordinator's
             # cache stale so the refresh below reloads it instead of reusing the copy
             # from before the write (see KlyqaDeviceCoordinator.mark_settings_stale).

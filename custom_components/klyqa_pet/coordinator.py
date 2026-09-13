@@ -150,6 +150,12 @@ class KlyqaDeviceCoordinator(DataUpdateCoordinator[KlyqaDeviceData]):
         # settings write marks this stale so the very next poll reloads it.
         self._settings: DeviceSettings = None
         self._poll_count = 0
+        # Strype only: the strip length is reported as `length_ret`, which the firmware
+        # adds to POST responses only. It is probed exactly once (see _async_fetch) and
+        # then carried forward across the GET-based polls; a POST that reports a fresh
+        # value updates it through remember_length().
+        self._length_probed = False
+        self._length_metres: int | None = None
         # dt_util.utcnow() (not time.monotonic()) so tests can control this clock with
         # freezegun; monotonic() is untouched by freezegun and made the cache gate
         # untestable.
@@ -260,6 +266,17 @@ class KlyqaDeviceCoordinator(DataUpdateCoordinator[KlyqaDeviceData]):
         """
         self._settings = None
 
+    @callback
+    def remember_length(self, length_metres: int) -> None:
+        """Record a strip length that a POST response reported.
+
+        A POST response is the only place `length_ret` appears, so a write (or the
+        explicit length detection) is the only chance to pick up a new value; the
+        GET-based polls then carry it forward.
+        """
+        self._length_probed = True
+        self._length_metres = length_metres
+
     async def _async_recover_token(self) -> None:
         """Fetch fresh tokens from the cloud after the device rejected ours."""
         _LOGGER.debug(
@@ -296,16 +313,16 @@ class KlyqaDeviceCoordinator(DataUpdateCoordinator[KlyqaDeviceData]):
         elif isinstance(self.device, AirPurifierDevice):
             state = await self.device.get_state()
         elif isinstance(self.device, StrypeDevice):
-            known_length = self.data.strype.length_metres if self.data is not None else None
-            if known_length is None:
-                # length_ret only ever comes back from a POST; an empty body is a
-                # no-op because every field the firmware reads is optional. Note this
-                # also conflates "not read yet" with "device reported no length": if a
-                # POST response ever omitted length_ret, this would POST on every poll
-                # forever instead of once.
+            if not self._length_probed:
+                # length_ret only ever comes back from a POST; a body with nothing but
+                # the message type is a no-op because every field the firmware reads is
+                # optional. The flag (rather than "is the length still unknown?") makes
+                # this a one-shot probe even for a device that never reports a length.
                 state = await self.device.read_length()
+                self._length_probed = True
+                self._length_metres = state.length_metres
             else:
-                state = replace(await self.device.get_state(), length_metres=known_length)
+                state = replace(await self.device.get_state(), length_metres=self._length_metres)
         else:  # pragma: no cover - guarded by create_device
             raise UpdateFailed(f"Unsupported device class {type(self.device).__name__}")
         return KlyqaDeviceData(system_info=self._system_info, state=state, settings=settings)

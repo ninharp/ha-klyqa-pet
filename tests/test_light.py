@@ -21,6 +21,9 @@ import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry, snapshot_platform
 from syrupy.assertion import SnapshotAssertion
 
+from pyklyqa_pet import StrypeState
+from pyklyqa_pet.strype import StrypeDevice
+
 from .conftest import setup_integration
 
 ENTITY_ID = "light.klyqa_airpurifier_e85dfc_led"
@@ -178,3 +181,117 @@ async def test_strype_light_turn_off_with_transition(
         blocking=True,
     )
     mock_strype.set_state.assert_awaited_with(power_on=False, transition_ms=2000)
+
+
+@pytest.mark.usefixtures("lights")
+async def test_strype_light_power_transition_reaches_the_device_as_a_temp_fade(
+    hass: HomeAssistant, mock_strype: MagicMock
+) -> None:
+    """A transition that flips power must arrive as `temp_fade`, not `transitionTime` alone.
+
+    The firmware overwrites its fade time with the stored fade-in/fade-out on any
+    power flip unless the request carries `temp_fade`, so `transitionTime` alone is
+    silently ignored for exactly the case Home Assistant asks for most. Driving the
+    real library client (not the mock) is what makes the wire body observable here.
+    """
+    posted: list[dict] = []
+
+    async def _record(method: str, path: str, body: dict | None = None) -> dict:
+        posted.append(body or {})
+        return {"status": "off", "mode": "rgb", "length_ret": 3}
+
+    real = StrypeDevice(MagicMock(), "1.2.3.4", "tok")
+
+    async def _through_the_real_client(**kwargs) -> StrypeState:
+        return await real.set_state(**kwargs)
+
+    with patch.object(StrypeDevice, "request", side_effect=_record):
+        mock_strype.set_state.side_effect = _through_the_real_client
+        await hass.services.async_call(
+            LIGHT_DOMAIN,
+            SERVICE_TURN_OFF,
+            {"entity_id": STRYPE_ENTITY_ID, "transition": 2},
+            blocking=True,
+        )
+        await hass.services.async_call(
+            LIGHT_DOMAIN,
+            SERVICE_TURN_ON,
+            {"entity_id": STRYPE_ENTITY_ID, "transition": 3},
+            blocking=True,
+        )
+
+    assert posted[0]["temp_fade"] == {"out": 2000}
+    assert posted[1]["temp_fade"] == {"in": 3000}
+    assert all(body["type"] == "request" for body in posted)
+
+
+async def test_strype_light_colour_write_in_cct_mode_converges_to_rgb(
+    hass: HomeAssistant,
+    mock_config_entry: MockConfigEntry,
+    mock_cloud: MagicMock,
+    mock_devices: dict,
+    mock_strype: MagicMock,
+) -> None:
+    """Writing a colour while the device is in cct mode must flip the reported mode.
+
+    The POST echo is partial, so the mode can only be trusted from the following
+    GET; this asserts the entity converges on it instead of going stale.
+    """
+    cct_state = replace(mock_strype.get_state.return_value, mode="cct")
+    mock_strype.read_length = AsyncMock(return_value=replace(cct_state, length_metres=3))
+    mock_strype.get_state = AsyncMock(return_value=cct_state)
+    with patch("custom_components.klyqa_pet.PLATFORMS", [Platform.LIGHT]):
+        await setup_integration(hass, mock_config_entry)
+    assert hass.states.get(STRYPE_ENTITY_ID).attributes["color_mode"] == ColorMode.COLOR_TEMP
+
+    # The device switched to rgb; its POST echo carries only `color`, the GET both.
+    rgb_state = replace(cct_state, mode="rgb", rgb=(10, 20, 30))
+    mock_strype.get_state = AsyncMock(return_value=rgb_state)
+    mock_strype.set_state = AsyncMock(
+        return_value=StrypeState.from_dict(
+            {"status": "on", "mode": "rgb", "color": {"red": 10, "green": 20, "blue": 30}}
+        )
+    )
+    await hass.services.async_call(
+        LIGHT_DOMAIN,
+        SERVICE_TURN_ON,
+        {"entity_id": STRYPE_ENTITY_ID, ATTR_RGB_COLOR: (10, 20, 30)},
+        blocking=True,
+    )
+    await hass.async_block_till_done()
+
+    state = hass.states.get(STRYPE_ENTITY_ID)
+    assert state.attributes["color_mode"] == ColorMode.RGB
+    assert state.attributes["rgb_color"] == (10, 20, 30)
+
+
+async def test_strype_light_temperature_write_in_rgb_mode_converges_to_cct(
+    hass: HomeAssistant,
+    mock_config_entry: MockConfigEntry,
+    mock_cloud: MagicMock,
+    mock_devices: dict,
+    mock_strype: MagicMock,
+) -> None:
+    """The mirror case: a temperature write while the device is in rgb mode."""
+    with patch("custom_components.klyqa_pet.PLATFORMS", [Platform.LIGHT]):
+        await setup_integration(hass, mock_config_entry)
+    assert hass.states.get(STRYPE_ENTITY_ID).attributes["color_mode"] == ColorMode.RGB
+
+    cct_state = replace(mock_strype.get_state.return_value, mode="cct", temperature_kelvin=3000)
+    mock_strype.get_state = AsyncMock(return_value=cct_state)
+    mock_strype.set_state = AsyncMock(
+        return_value=StrypeState.from_dict(
+            {"status": "on", "mode": "cct", "temperature": 3000, "length_ret": 3}
+        )
+    )
+    await hass.services.async_call(
+        LIGHT_DOMAIN,
+        SERVICE_TURN_ON,
+        {"entity_id": STRYPE_ENTITY_ID, "color_temp_kelvin": 3000},
+        blocking=True,
+    )
+    await hass.async_block_till_done()
+
+    state = hass.states.get(STRYPE_ENTITY_ID)
+    assert state.attributes["color_mode"] == ColorMode.COLOR_TEMP
+    assert state.attributes["color_temp_kelvin"] == 3000

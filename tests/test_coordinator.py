@@ -2,7 +2,7 @@
 
 from dataclasses import replace
 from datetime import timedelta
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 from freezegun.api import FrozenDateTimeFactory
 from homeassistant.components.switch import DOMAIN as SWITCH_DOMAIN
@@ -150,37 +150,65 @@ async def test_strype_length_is_read_once_then_carried_forward(
     assert mock_strype.get_state.await_count == 1
 
 
-async def test_strype_write_publishes_state_without_polling(
+async def test_strype_length_is_probed_only_once_even_without_a_result(
     hass: HomeAssistant,
     mock_config_entry: MockConfigEntry,
     mock_cloud: MagicMock,
     mock_devices: dict,
     mock_strype: MagicMock,
 ) -> None:
-    """entity.py's _async_send publishes a returned StrypeState straight to the
+    """A device that never reports a length must not be POSTed on every poll."""
+    mock_strype.read_length = AsyncMock(
+        return_value=replace(mock_strype.get_state.return_value, length_metres=None)
+    )
+    await setup_integration(hass, mock_config_entry)
+    coordinator = mock_config_entry.runtime_data.coordinators[STRYPE_ID]
+    assert coordinator.data.strype.length_metres is None
+    assert mock_strype.read_length.await_count == 1
 
-    coordinator instead of triggering a follow-up poll, since the write already
-    echoes the device's complete state (including a fresh length_ret). This is the
-    mechanism the carry-forward scheme in _async_fetch depends on, exercised here
-    without needing a real Strype entity platform (added in Tasks 5/6).
+    await coordinator.async_refresh()
+    assert mock_strype.read_length.await_count == 1
+    assert mock_strype.get_state.await_count == 1
+
+
+async def test_strype_write_keeps_only_the_length_from_the_partial_echo(
+    hass: HomeAssistant,
+    mock_config_entry: MockConfigEntry,
+    mock_cloud: MagicMock,
+    mock_devices: dict,
+    mock_strype: MagicMock,
+) -> None:
+    """A POST echo is partial, so entity.py must not publish it as the new state.
+
+    The firmware assembles a POST response mode-dependently (`color` only in rgb
+    mode, `temperature` only in cct mode, neither in cmd mode), so the echo's
+    neutral defaults must never replace the values from the last GET. Only the
+    `length_ret` it carries is kept; everything else comes from the refresh.
     """
     await setup_integration(hass, mock_config_entry)
     coordinator = mock_config_entry.runtime_data.coordinators[STRYPE_ID]
     entity = KlyqaPetEntity(coordinator, EntityDescription(key="test"))
 
+    polled = coordinator.data.strype
+    assert polled.rgb == (255, 128, 0)
     get_state_calls = mock_strype.get_state.await_count
-    read_length_calls = mock_strype.read_length.await_count
 
-    written_state: StrypeState = replace(
-        coordinator.data.strype, length_metres=3, power_on=not coordinator.data.strype.power_on
+    # What a cmd-mode echo of a power flip actually looks like: no colour, no
+    # temperature, but a fresh length_ret.
+    echo = StrypeState.from_dict(
+        {"status": "off", "mode": "cmd", "brightness": {"percentage": 70}, "length_ret": 7}
     )
+    assert echo.rgb == (0, 0, 0)
 
     async def _command() -> StrypeState:
-        return written_state
+        return echo
 
     await entity._async_send(_command())
+    await hass.async_block_till_done()
 
-    assert coordinator.data.strype.length_metres == 3
-    assert coordinator.data.strype.power_on == written_state.power_on
-    assert mock_strype.get_state.await_count == get_state_calls
-    assert mock_strype.read_length.await_count == read_length_calls
+    # The refresh (a GET) provided the state, not the echo.
+    assert mock_strype.get_state.await_count == get_state_calls + 1
+    assert coordinator.data.strype.rgb == (255, 128, 0)
+    assert coordinator.data.strype.temperature_kelvin == polled.temperature_kelvin
+    # ... but the length the echo alone could report was carried over.
+    assert coordinator.data.strype.length_metres == 7
