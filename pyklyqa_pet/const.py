@@ -53,3 +53,7 @@ RATE_LIMIT_RETRIES: Final = 2
 # The Strype's colour temperature range, from the firmware's cct_mix_mode config.
 STRYPE_MIN_KELVIN: Final = 2700
 STRYPE_MAX_KELVIN: Final = 6500
+
+# MIN_FADING_TIME from the lighting firmware's ledcontrol.h: any shorter fade is
+# raised to this value by the firmware itself.
+STRYPE_MIN_TRANSITION_MS: Final = 100
