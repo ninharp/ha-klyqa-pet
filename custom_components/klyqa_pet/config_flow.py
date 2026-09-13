@@ -56,6 +56,8 @@ from .const import (
     ENVIRONMENT_LOCAL,
     LOCAL_ENTRY_UNIQUE_ID,
 )
+from .const import MINOR_VERSION as ENTRY_MINOR_VERSION
+from .const import VERSION as ENTRY_VERSION
 from .hub import (
     DeviceRecord,
     async_fetch_cloud_devices,
@@ -106,7 +108,8 @@ def _account_unique_id(environment: str, cloud_app: str, email: str) -> str:
 class KlyqaPetConfigFlow(ConfigFlow, domain=DOMAIN):
     """Handle the account-based config flow."""
 
-    VERSION = 1
+    VERSION = ENTRY_VERSION
+    MINOR_VERSION = ENTRY_MINOR_VERSION
 
     def __init__(self) -> None:
         """Initialise flow state."""
@@ -123,8 +126,8 @@ class KlyqaPetConfigFlow(ConfigFlow, domain=DOMAIN):
         environment: str,
         email: str,
         password: str,
+        cloud_app: str,
         errors: dict[str, str],
-        cloud_app: str = CloudApp.KLYQAPET.value,
     ) -> dict[str, DeviceRecord] | None:
         """Log in and return the device records, filling errors on failure."""
         try:
@@ -152,8 +155,8 @@ class KlyqaPetConfigFlow(ConfigFlow, domain=DOMAIN):
                 user_input[CONF_ENVIRONMENT],
                 user_input[CONF_EMAIL],
                 user_input[CONF_PASSWORD],
-                errors,
                 user_input[CONF_CLOUD_APP],
+                errors,
             )
             if devices is not None:
                 await self.async_set_unique_id(
@@ -343,8 +346,8 @@ class KlyqaPetConfigFlow(ConfigFlow, domain=DOMAIN):
                 entry.data[CONF_ENVIRONMENT],
                 entry.data[CONF_EMAIL],
                 user_input[CONF_PASSWORD],
-                errors,
                 entry.data.get(CONF_CLOUD_APP, CloudApp.KLYQAPET.value),
+                errors,
             )
             if devices is not None:
                 return self.async_update_reload_and_abort(
@@ -376,8 +379,8 @@ class KlyqaPetConfigFlow(ConfigFlow, domain=DOMAIN):
                 entry.data[CONF_ENVIRONMENT],
                 entry.data[CONF_EMAIL],
                 user_input[CONF_PASSWORD],
-                errors,
                 entry.data.get(CONF_CLOUD_APP, CloudApp.KLYQAPET.value),
+                errors,
             )
             if devices is not None:
                 return self.async_update_reload_and_abort(

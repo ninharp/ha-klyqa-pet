@@ -569,10 +569,114 @@ async def test_discovery_confirm_aborts_when_meanwhile_configured(
     assert result["reason"] == "already_configured"
 
 
-async def test_cloud_entry_unique_id_includes_the_tenant(hass: HomeAssistant) -> None:
-    """The same account can be added once per cloud tenant."""
-    from custom_components.klyqa_pet.config_flow import _account_unique_id
+async def _run_cloud_flow(hass: HomeAssistant, user_input: dict[str, Any]) -> Any:
+    result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": SOURCE_USER})
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {"next_step_id": "cloud"}
+    )
+    result = await hass.config_entries.flow.async_configure(result["flow_id"], user_input)
+    await hass.async_block_till_done()
+    return result
 
-    pet = _account_unique_id("test", "Klyqapet", "user@example.com")
-    lighting = _account_unique_id("test", "Klyqa", "user@example.com")
-    assert pet != lighting
+
+async def test_the_same_account_can_be_added_under_both_tenants(
+    hass: HomeAssistant, mock_fetch: AsyncMock, mock_setup_entry: Any
+) -> None:
+    """An account sees different devices per tenant, so each gets its own entry.
+
+    Adding it a second time under the same tenant must still abort; only the
+    other tenant may create a second entry.
+    """
+    pet = await _run_cloud_flow(hass, USER_INPUT)
+    assert pet["type"] is FlowResultType.CREATE_ENTRY
+    assert pet["result"].unique_id == "test:Klyqapet:user@example.com"
+
+    lighting = await _run_cloud_flow(hass, {**USER_INPUT, CONF_CLOUD_APP: "Klyqa"})
+    assert lighting["type"] is FlowResultType.CREATE_ENTRY
+    assert lighting["result"].unique_id == "test:Klyqa:user@example.com"
+    assert lighting["title"] == "user@example.com (Klyqa, test)"
+
+    again = await _run_cloud_flow(hass, USER_INPUT)
+    assert again["type"] is FlowResultType.ABORT
+    assert again["reason"] == "already_configured"
+
+
+async def test_legacy_cloud_entry_unique_id_is_migrated(
+    hass: HomeAssistant, mock_setup_entry: Any
+) -> None:
+    """An entry created before the tenant was part of the unique id is rewritten.
+
+    Without this, the upgrading user could add the same pet account a second
+    time: the new flow's id would never match the legacy one, so the abort on
+    "already configured" would not fire and two coordinators would poll each
+    device.
+    """
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        title="user@example.com (test)",
+        unique_id="test:user@example.com",
+        minor_version=1,
+        data={
+            CONF_ENVIRONMENT: "test",
+            CONF_EMAIL: "user@example.com",
+            CONF_PASSWORD: "secret",
+            CONF_DEVICES: CLOUD_DEVICES,
+        },
+    )
+    entry.add_to_hass(hass)
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+
+    assert entry.unique_id == "test:Klyqapet:user@example.com"
+    assert entry.minor_version == 2
+    assert entry.data[CONF_CLOUD_APP] == "Klyqapet"
+
+
+async def test_migrated_entry_then_blocks_re_adding_the_same_account(
+    hass: HomeAssistant, mock_fetch: AsyncMock, mock_setup_entry: Any
+) -> None:
+    """The point of the migration: the legacy entry now collides with a new flow."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        title="user@example.com (test)",
+        unique_id="test:user@example.com",
+        minor_version=1,
+        data={
+            CONF_ENVIRONMENT: "test",
+            CONF_EMAIL: "user@example.com",
+            CONF_PASSWORD: "secret",
+            CONF_DEVICES: CLOUD_DEVICES,
+        },
+    )
+    entry.add_to_hass(hass)
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+
+    result = await _run_cloud_flow(hass, USER_INPUT)
+    assert result["type"] is FlowResultType.ABORT
+    assert result["reason"] == "already_configured"
+
+
+async def test_local_entry_is_not_touched_by_the_migration(
+    hass: HomeAssistant, mock_setup_entry: Any
+) -> None:
+    """A local-only entry has no account, so its fixed unique id must survive."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        title="Klyqa Pet (local)",
+        unique_id=LOCAL_ENTRY_UNIQUE_ID,
+        minor_version=1,
+        data={CONF_ENVIRONMENT: ENVIRONMENT_LOCAL, CONF_DEVICES: {}},
+        options={
+            CONF_MANUAL_DEVICES: {
+                MANUAL_ID: device_record("tok", "", "@klyqa.welly-dev", MANUAL_HOST)
+            }
+        },
+    )
+    entry.add_to_hass(hass)
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+
+    assert entry.unique_id == LOCAL_ENTRY_UNIQUE_ID
+    assert entry.minor_version == 2
+    assert CONF_CLOUD_APP not in entry.data

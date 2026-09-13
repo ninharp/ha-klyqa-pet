@@ -2,15 +2,68 @@
 
 from __future__ import annotations
 
+import logging
+
 from homeassistant.config_entries import ConfigEntry, ConfigEntryState
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import translation
 
-from .const import CONF_DEVICES, CONF_MANUAL_DEVICES, DOMAIN, PLATFORMS
+from pyklyqa_pet import CloudApp
+
+from .const import (
+    CONF_CLOUD_APP,
+    CONF_DEVICES,
+    CONF_ENVIRONMENT,
+    CONF_MANUAL_DEVICES,
+    DOMAIN,
+    ENVIRONMENT_LOCAL,
+    LOCAL_ENTRY_UNIQUE_ID,
+    MINOR_VERSION,
+    PLATFORMS,
+)
 from .hub import KlyqaPetHub
 
+_LOGGER = logging.getLogger(__name__)
+
 type KlyqaPetConfigEntry = ConfigEntry[KlyqaPetHub]
+
+
+async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    """Migrate an entry created before the cloud tenant became part of its identity.
+
+    A cloud entry's unique id used to be "<environment>:<email>"; it is now
+    "<environment>:<tenant>:<email>", because the same account sees a different set
+    of devices per tenant and must therefore be addable once per tenant. Without
+    this migration an existing entry keeps the old id forever, and re-adding the
+    same account no longer aborts as already configured - leaving two entries (and
+    so two coordinators) fighting over the same rate-limited devices.
+    """
+    if entry.minor_version >= MINOR_VERSION:
+        return True
+    unique_id = entry.unique_id
+    if (
+        unique_id is None
+        or unique_id == LOCAL_ENTRY_UNIQUE_ID
+        or entry.data.get(CONF_ENVIRONMENT) == ENVIRONMENT_LOCAL
+        or unique_id.count(":") != 1
+    ):
+        # A local-only entry, or an id that already carries the tenant.
+        hass.config_entries.async_update_entry(entry, minor_version=MINOR_VERSION)
+        return True
+    environment, email = unique_id.split(":")
+    # Legacy entries predate the tenant selector entirely, so they can only ever
+    # have been created against the pet tenant; record it in the data too.
+    cloud_app = entry.data.get(CONF_CLOUD_APP, CloudApp.KLYQAPET.value)
+    new_unique_id = f"{environment}:{cloud_app}:{email}"
+    _LOGGER.debug("Migrating config entry unique id %s to %s", unique_id, new_unique_id)
+    hass.config_entries.async_update_entry(
+        entry,
+        unique_id=new_unique_id,
+        data={**entry.data, CONF_CLOUD_APP: cloud_app},
+        minor_version=MINOR_VERSION,
+    )
+    return True
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: KlyqaPetConfigEntry) -> bool:
