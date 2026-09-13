@@ -17,6 +17,7 @@ from syrupy.assertion import SnapshotAssertion
 
 from custom_components.klyqa_pet.const import (
     CONF_ACCESS_TOKEN,
+    CONF_CLOUD_APP,
     CONF_DEVICE_NAME,
     CONF_DEVICES,
     CONF_ENVIRONMENT,
@@ -200,10 +201,11 @@ def device_record(
 def mock_config_entry() -> MockConfigEntry:
     return MockConfigEntry(
         domain=DOMAIN,
-        title="user@example.com (test)",
-        unique_id="test:user@example.com",
+        title="user@example.com (Klyqapet, test)",
+        unique_id="test:Klyqapet:user@example.com",
         data={
             CONF_ENVIRONMENT: "test",
+            CONF_CLOUD_APP: "Klyqapet",
             CONF_EMAIL: "user@example.com",
             CONF_PASSWORD: "secret",
             CONF_DEVICES: {

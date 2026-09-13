@@ -17,6 +17,7 @@ ENVIRONMENT_LOCAL: Final = "local"
 LOCAL_ENTRY_UNIQUE_ID: Final = "local"
 
 CONF_ENVIRONMENT: Final = "environment"
+CONF_CLOUD_APP: Final = "cloud_app"
 CONF_DEVICES: Final = "devices"
 CONF_MANUAL_DEVICES: Final = "manual_devices"
 CONF_LOCAL_DEVICE_ID: Final = "local_device_id"

@@ -24,7 +24,9 @@ async def test_setup_and_unload(
     hub = mock_config_entry.runtime_data
     assert set(hub.coordinators) == {WELLY_ID, FOODY_ID, PURIFIER_ID}
     assert hub.coordinators[WELLY_ID].last_update_success is True
-    mock_cloud.login.assert_awaited_once_with("user@example.com", "secret")
+    mock_cloud.login.assert_awaited_once_with(
+        "user@example.com", "secret", environment_name="Klyqapet"
+    )
     mock_zeroconf_browser.assert_called_once()
 
     await hass.config_entries.async_unload(mock_config_entry.entry_id)

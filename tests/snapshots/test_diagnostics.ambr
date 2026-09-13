@@ -408,6 +408,7 @@
     ]),
     'entry': dict({
       'data': dict({
+        'cloud_app': 'Klyqapet',
         'devices': dict({
           '188B0EAF2D7C': dict({
             'access_token': '**REDACTED**',

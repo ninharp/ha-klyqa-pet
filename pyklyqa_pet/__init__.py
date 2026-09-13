@@ -6,7 +6,14 @@ import aiohttp
 
 from .airpurifier import AirPurifierDevice, AirPurifierRunMode, AirPurifierState
 from .cloud import CloudDevice, KlyqaCloudClient
-from .const import DEFAULT_PORT, DEV_ACCESS_TOKEN, ZEROCONF_TYPE, DeviceType, Environment
+from .const import (
+    DEFAULT_PORT,
+    DEV_ACCESS_TOKEN,
+    ZEROCONF_TYPE,
+    CloudApp,
+    DeviceType,
+    Environment,
+)
 from .device import KlyqaDevice, SystemInfo
 from .discovery import DiscoveredDevice, device_type_from_product_id, parse_zeroconf_properties
 from .exceptions import (
@@ -48,6 +55,7 @@ __all__ = [
     "AirPurifierDevice",
     "AirPurifierRunMode",
     "AirPurifierState",
+    "CloudApp",
     "CloudDevice",
     "DeviceType",
     "DiscoveredDevice",

@@ -13,6 +13,7 @@
         "description": "Sign in with your Klyqa account to fetch the access tokens of your devices. The devices themselves are controlled locally on your network.",
         "data": {
           "environment": "Environment",
+          "cloud_app": "Product line",
           "email": "Email",
           "password": "Password"
         },
@@ -92,6 +93,12 @@
       "options": {
         "prod": "Production",
         "test": "Test"
+      }
+    },
+    "cloud_app": {
+      "options": {
+        "Klyqapet": "Klyqa Pet",
+        "Klyqa": "Klyqa (lighting)"
       }
     }
   },

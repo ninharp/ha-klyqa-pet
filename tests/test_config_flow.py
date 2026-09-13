@@ -13,6 +13,7 @@ import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.klyqa_pet.const import (
+    CONF_CLOUD_APP,
     CONF_DEVICES,
     CONF_ENVIRONMENT,
     CONF_MANUAL_DEVICES,
@@ -33,7 +34,12 @@ from .conftest import (
     setup_integration,
 )
 
-USER_INPUT = {CONF_ENVIRONMENT: "test", CONF_EMAIL: "user@example.com", CONF_PASSWORD: "secret"}
+USER_INPUT = {
+    CONF_ENVIRONMENT: "test",
+    CONF_CLOUD_APP: "Klyqapet",
+    CONF_EMAIL: "user@example.com",
+    CONF_PASSWORD: "secret",
+}
 CLOUD_DEVICES = {
     WELLY_ID: device_record("welly-token", "Kitchen fountain", "@klyqa.welly-dev", None)
 }
@@ -105,10 +111,10 @@ async def test_user_flow_success(
     result = await hass.config_entries.flow.async_configure(result["flow_id"], USER_INPUT)
     await hass.async_block_till_done()
     assert result["type"] is FlowResultType.CREATE_ENTRY
-    assert result["title"] == "user@example.com (test)"
+    assert result["title"] == "user@example.com (Klyqapet, test)"
     assert result["data"] == {**USER_INPUT, CONF_DEVICES: CLOUD_DEVICES}
-    assert result["result"].unique_id == "test:user@example.com"
-    mock_fetch.assert_awaited_once_with(hass, "test", "user@example.com", "secret")
+    assert result["result"].unique_id == "test:Klyqapet:user@example.com"
+    mock_fetch.assert_awaited_once_with(hass, "test", "user@example.com", "secret", "Klyqapet")
     mock_setup_entry.assert_called_once()
 
 
@@ -341,7 +347,7 @@ async def test_zeroconf_discovery_confirm_shows_menu(
     result = await hass.config_entries.flow.async_configure(result["flow_id"], USER_INPUT)
     await hass.async_block_till_done()
     assert result["type"] is FlowResultType.CREATE_ENTRY
-    assert result["result"].unique_id == "test:user@example.com"
+    assert result["result"].unique_id == "test:Klyqapet:user@example.com"
 
 
 async def test_zeroconf_discovery_local_prefills_host(
@@ -384,7 +390,7 @@ async def test_zeroconf_new_device_leads_to_login(
     result = await hass.config_entries.flow.async_configure(result["flow_id"], USER_INPUT)
     await hass.async_block_till_done()
     assert result["type"] is FlowResultType.CREATE_ENTRY
-    assert result["result"].unique_id == "test:user@example.com"
+    assert result["result"].unique_id == "test:Klyqapet:user@example.com"
 
 
 async def test_reauth_flow(
@@ -561,3 +567,12 @@ async def test_discovery_confirm_aborts_when_meanwhile_configured(
     result = await hass.config_entries.flow.async_configure(result["flow_id"], None)
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "already_configured"
+
+
+async def test_cloud_entry_unique_id_includes_the_tenant(hass: HomeAssistant) -> None:
+    """The same account can be added once per cloud tenant."""
+    from custom_components.klyqa_pet.config_flow import _account_unique_id
+
+    pet = _account_unique_id("test", "Klyqapet", "user@example.com")
+    lighting = _account_unique_id("test", "Klyqa", "user@example.com")
+    assert pet != lighting
