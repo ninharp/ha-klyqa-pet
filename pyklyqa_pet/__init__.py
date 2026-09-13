@@ -17,6 +17,7 @@ from .exceptions import (
     KlyqaRateLimitError,
 )
 from .foody import FoodyDevice, FoodySettings, FoodyState
+from .strype import StrypeDevice, StrypeState
 from .welly import WellyDevice, WellyMode, WellySettings, WellyState
 
 __version__ = "0.1.5"
@@ -25,6 +26,7 @@ _DEVICE_CLASSES: dict[DeviceType, type[KlyqaDevice]] = {
     DeviceType.WELLY: WellyDevice,
     DeviceType.FOODY: FoodyDevice,
     DeviceType.AIRPURIFIER: AirPurifierDevice,
+    DeviceType.STRYPE: StrypeDevice,
 }
 
 
@@ -60,6 +62,8 @@ __all__ = [
     "KlyqaDeviceError",
     "KlyqaError",
     "KlyqaRateLimitError",
+    "StrypeDevice",
+    "StrypeState",
     "SystemInfo",
     "WellyDevice",
     "WellyMode",
