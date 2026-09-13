@@ -8,7 +8,12 @@ from typing import Any
 
 import aiohttp
 
-from .const import CLOUD_BASE_URLS, CLOUD_REQUEST_TIMEOUT, Environment
+from .const import (
+    CLOUD_BASE_URLS,
+    CLOUD_ENVIRONMENT_NAME,
+    CLOUD_REQUEST_TIMEOUT,
+    Environment,
+)
 from .device import _describe
 from .exceptions import KlyqaAuthError, KlyqaConnectionError
 
@@ -64,12 +69,22 @@ class KlyqaCloudClient:
         """Return the account token obtained by login, if any."""
         return self._account_token
 
-    async def login(self, email: str, password: str) -> str:
+    async def login(
+        self,
+        email: str,
+        password: str,
+        *,
+        environment_name: str = CLOUD_ENVIRONMENT_NAME,
+    ) -> str:
         """Authenticate and return the account token."""
         try:
             async with self._session.post(
                 f"{self._base_url}/auth/login",
-                json={"email": email, "password": password, "environmentName": "Klyqapet"},
+                json={
+                    "email": email,
+                    "password": password,
+                    "environmentName": environment_name,
+                },
                 timeout=aiohttp.ClientTimeout(total=CLOUD_REQUEST_TIMEOUT),
             ) as response:
                 if response.status in (400, 401, 403):

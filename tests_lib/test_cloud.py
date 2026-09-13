@@ -31,6 +31,15 @@ async def test_login_success(session: aiohttp.ClientSession, api: FakeApi) -> No
     }
 
 
+async def test_login_environment_name_override(
+    session: aiohttp.ClientSession, api: FakeApi
+) -> None:
+    api.add("POST", "/auth/login", 201, {"accountToken": "acc-token"})
+    client = make_client(session, api)
+    await client.login("user@example.com", "secret", environment_name="KlyqapetBeta")
+    assert api.last_call().json["environmentName"] == "KlyqapetBeta"
+
+
 async def test_login_invalid_credentials(session: aiohttp.ClientSession, api: FakeApi) -> None:
     api.add("POST", "/auth/login", 401, {"message": "Unauthorized"})
     with pytest.raises(KlyqaAuthError):

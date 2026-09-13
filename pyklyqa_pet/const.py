@@ -24,6 +24,10 @@ CLOUD_BASE_URLS: Final[dict[Environment, str]] = {
     Environment.PROD: "https://app-api.prod.qconnex.io",
 }
 
+# Sent as `environmentName` on cloud login; the app build decides which value the
+# backend expects, so it stays overridable per call.
+CLOUD_ENVIRONMENT_NAME: Final = "Klyqapet"
+
 DEFAULT_PORT: Final = 3333
 API_PREFIX: Final = "/api/v1/"
 DEV_ACCESS_TOKEN: Final = "aabbccddeeff0011223344"
