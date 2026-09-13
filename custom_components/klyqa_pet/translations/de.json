@@ -207,6 +207,6 @@
         }
       }
     },
-    "light": { "led": { "name": "LED" } }
+    "light": { "led": { "name": "LED" }, "strip": { "name": "Streifen" } }
   }
 }
