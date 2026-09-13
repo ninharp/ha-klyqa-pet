@@ -201,7 +201,7 @@ async def test_strype_light_power_transition_reaches_the_device_as_a_temp_fade(
     async def _record(method: str, path: str, body: dict | None = None) -> dict:
         assert (method, path) == ("PUT", "system/command")
         posted.append(body or {})
-        return {"status": "off", "mode": "rgb", "length_ret": 3}
+        return {"type": "status", "status": "off", "mode": "rgb", "length_ret": 3}
 
     real = StrypeDevice(MagicMock(), "1.2.3.4", "tok")
 

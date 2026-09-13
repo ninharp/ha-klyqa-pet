@@ -1,10 +1,12 @@
 import json
 from pathlib import Path
+import re
 from typing import Any
 
 import aiohttp
 import pytest
 
+from pyklyqa_pet.exceptions import KlyqaDeviceError
 from pyklyqa_pet.strype import StrypeDevice, StrypeState
 
 from .conftest import FakeApi
@@ -258,3 +260,48 @@ async def test_detect_length(device: StrypeDevice, api: FakeApi) -> None:
     state = await device.detect_length()
     assert api.last_call().json == {"command": {"type": "request", "length_detection": 1}}
     assert state.length_metres == 5
+
+
+async def test_get_state_accepts_a_normal_response_with_an_empty_error_array(
+    device: StrypeDevice, api: FakeApi
+) -> None:
+    """A genuine success carries `"error": []` - an empty array, not a string.
+
+    A guard that treats "has an `error` key" as failure would reject every good
+    response, since the firmware always includes this key on success.
+    """
+    api.add("PUT", COMMAND, 200, load_fixture("strype_state_rgb.json"))
+    state = await device.get_state()
+    assert state.raw["error"] == []
+    assert state.mode == "rgb"
+
+
+async def test_get_state_rejects_a_200_response_missing_the_command_envelope(
+    device: StrypeDevice, api: FakeApi
+) -> None:
+    """A body like `{"type":"request"}` (no `command` object) yields `200 {"error": "..."}`.
+
+    `_request_once` never raises here because the body has no `type` field at all, so
+    the guard has to live in `_command` itself.
+    """
+    api.add("PUT", COMMAND, 200, {"error": "No command object found."})
+    with pytest.raises(KlyqaDeviceError, match=re.escape("No command object found.")):
+        await device.get_state()
+
+
+async def test_get_state_rejects_a_200_response_when_command_is_not_an_object(
+    device: StrypeDevice, api: FakeApi
+) -> None:
+    """`{"command":"nonsense"}` (command present but not an object) is the same error."""
+    api.add("PUT", COMMAND, 200, {"error": "No command object found."})
+    with pytest.raises(KlyqaDeviceError, match=re.escape("No command object found.")):
+        await device.get_state()
+
+
+async def test_get_state_rejects_a_200_response_with_no_type_key(
+    device: StrypeDevice, api: FakeApi
+) -> None:
+    """`{"command":{"status":"on"}}` (no `type` inside) yields `200 {"error_str": "..."}`."""
+    api.add("PUT", COMMAND, 200, {"error_str": "No 'type' key found in message"})
+    with pytest.raises(KlyqaDeviceError, match=re.escape("No 'type' key found in message")):
+        await device.get_state()

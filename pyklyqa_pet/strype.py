@@ -7,6 +7,7 @@ from typing import Any
 
 from .const import STRYPE_MIN_TRANSITION_MS
 from .device import KlyqaDevice, _as_int, _as_str
+from .exceptions import KlyqaDeviceError
 
 
 @dataclass(frozen=True, slots=True)
@@ -121,11 +122,31 @@ class StrypeDevice(KlyqaDevice):
     """
 
     async def _command(self, previous: StrypeState | None, **fields: Any) -> StrypeState:
-        """Send one `type: "request"` message and parse the status response."""
-        return StrypeState.from_dict(
-            await self.request("PUT", "system/command", {"command": {"type": "request", **fields}}),
-            previous,
+        """Send one `type: "request"` message and parse the status response.
+
+        `_request_once` only raises when the payload has `type == "error"`, but this
+        firmware answers a malformed request with HTTP 200 and a body that carries no
+        `type` at all - either `{"error": "..."}` (a string, from the SDK layer, when
+        the `command` envelope itself is missing or not an object) or `{"error_str":
+        "..."}` (from the lighting dispatcher, when `command` has no `type` key).
+        Confirmed on hardware for all three malformed shapes. A genuine success always
+        carries `"type": "status"`, and also carries `"error": []` - an empty array,
+        not a string - so keying the guard on the success condition rather than "has an
+        `error` key" is required to avoid rejecting every good response.
+        """
+        data = await self.request(
+            "PUT", "system/command", {"command": {"type": "request", **fields}}
         )
+        if data.get("type") != "status":
+            error = data.get("error")
+            error_str = data.get("error_str")
+            messages = [
+                str(msg) for msg in (error if isinstance(error, str) else None, error_str) if msg
+            ]
+            if not messages:
+                messages = [f"Device sent an unexpected response for system/command: {data}"]
+            raise KlyqaDeviceError(messages)
+        return StrypeState.from_dict(data, previous)
 
     async def get_state(self, *, previous: StrypeState | None = None) -> StrypeState:
         """Read the current state with a request that carries no state-changing field.
@@ -139,8 +160,10 @@ class StrypeDevice(KlyqaDevice):
 
         The one thing such a request does do is set the driver's fade time to the
         firmware default, because `lightbulb_set_fade_time()` sits outside that guard.
-        That is invisible: the fade time only shapes the *next* transition, and every
-        write this client sends passes `transitionTime` explicitly anyway.
+        That is invisible: the firmware reads `transitionTime` fresh from each request
+        and consumes it within that same request - it is not persisted - so the fade
+        time this read sets is fully overwritten by whatever the next write requests,
+        and nothing from a poll survives to be clobbered.
         """
         return await self._command(previous)
 
