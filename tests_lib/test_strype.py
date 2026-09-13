@@ -31,22 +31,47 @@ def make_state(**overrides: Any) -> StrypeState:
         "temperature_kelvin": 2700,
         "brightness_percent": 50,
         "length_metres": 4,
+        "wifi_rssi": -60,
         "raw": {},
     }
     return StrypeState(**(base | overrides))
 
 
-def test_state_from_dict() -> None:
-    """An rgb-mode response carries `color` but no `temperature`."""
+def test_state_from_dict_of_a_real_cmd_mode_capture() -> None:
+    """The fixture is a verbatim bare-read response from a real Strype (cmd mode)."""
     state = StrypeState.from_dict(load_fixture("strype_state.json"))
     assert state.power_on is True
-    assert state.mode == "rgb"
-    assert state.rgb == (255, 128, 0)
-    assert state.brightness_percent == 70
-    assert state.length_metres == 3
-    # Nothing was known before, so the mode the firmware did not report falls back to
-    # the neutral value rather than to a previous reading.
+    assert state.mode == "cmd"
+    assert state.brightness_percent == 100
+    assert state.length_metres == 2
+    assert state.wifi_rssi == -48
+    # Neither colour field is reported in cmd mode and nothing was known before, so
+    # both fall back to neutral values.
+    assert state.rgb == (0, 0, 0)
     assert state.temperature_kelvin == 0
+
+
+def test_power_comes_from_status_not_from_the_power_on_key() -> None:
+    """`power_on` in the payload is the power-on *behaviour*, not the current state.
+
+    A real device reports `power_on: 0` while lit; only `status` tracks the strip.
+    Keying on `power_on` would report every strip as off.
+    """
+    payload = load_fixture("strype_state.json")
+    assert payload["power_on"] == 0
+    assert payload["status"] == "on"
+    assert StrypeState.from_dict(payload).power_on is True
+
+    assert StrypeState.from_dict(payload | {"status": "off"}).power_on is False
+
+
+def test_state_from_dict_keeps_the_raw_payload_and_ignores_unmodelled_keys() -> None:
+    """`external`, `active_scene`, `reset_reason` etc. are not modelled but not lost."""
+    payload = load_fixture("strype_state.json")
+    state = StrypeState.from_dict(payload)
+    assert state.raw == payload
+    assert state.raw["external"]["mode"] == "EXT_UDP"
+    assert state.raw["active_command"] == 103
 
 
 def test_state_from_dict_tolerates_missing_keys() -> None:
@@ -56,6 +81,21 @@ def test_state_from_dict_tolerates_missing_keys() -> None:
     assert state.rgb == (0, 0, 0)
     assert state.temperature_kelvin == 0
     assert state.length_metres is None
+    assert state.wifi_rssi is None
+
+
+def test_state_from_dict_of_a_real_rgb_mode_capture() -> None:
+    state = StrypeState.from_dict(load_fixture("strype_state_rgb.json"))
+    assert state.mode == "rgb"
+    assert state.rgb == (255, 0, 0)
+    assert "temperature" not in state.raw
+
+
+def test_state_from_dict_of_a_real_cct_mode_capture() -> None:
+    state = StrypeState.from_dict(load_fixture("strype_state_cct.json"))
+    assert state.mode == "cct"
+    assert state.temperature_kelvin == 4000
+    assert "color" not in state.raw
 
 
 def test_state_from_dict_carries_the_inactive_mode_forward() -> None:
@@ -124,7 +164,7 @@ async def test_get_state_uses_the_system_command_endpoint(
     This pins both halves of the transport: the method and path, and the `command`
     envelope the SDK handler requires before it will look at the message at all.
     """
-    api.add("PUT", COMMAND, 200, load_fixture("strype_state.json"))
+    api.add("PUT", COMMAND, 200, load_fixture("strype_state_rgb.json"))
     state = await device.get_state()
     call = api.last_call()
     assert call.method == "PUT"
@@ -134,14 +174,14 @@ async def test_get_state_uses_the_system_command_endpoint(
 
 
 async def test_get_state_merges_onto_the_previous_state(device: StrypeDevice, api: FakeApi) -> None:
-    api.add("PUT", COMMAND, 200, load_fixture("strype_state.json"))
+    api.add("PUT", COMMAND, 200, load_fixture("strype_state_rgb.json"))
     state = await device.get_state(previous=make_state(temperature_kelvin=3300))
-    assert state.rgb == (255, 128, 0)
+    assert state.rgb == (255, 0, 0)
     assert state.temperature_kelvin == 3300
 
 
 async def test_set_state_sends_only_given_fields(device: StrypeDevice, api: FakeApi) -> None:
-    api.add("PUT", COMMAND, 200, load_fixture("strype_state.json"))
+    api.add("PUT", COMMAND, 200, load_fixture("strype_state_rgb.json"))
     state = await device.set_state(power_on=True, rgb=(10, 20, 30), transition_ms=800)
     assert api.last_call().json == {
         "command": {
@@ -152,11 +192,11 @@ async def test_set_state_sends_only_given_fields(device: StrypeDevice, api: Fake
             "temp_fade": {"in": 800},
         }
     }
-    assert state.length_metres == 3
+    assert state.length_metres == 2
 
 
 async def test_set_state_temperature_and_brightness(device: StrypeDevice, api: FakeApi) -> None:
-    api.add("PUT", COMMAND, 200, load_fixture("strype_state.json"))
+    api.add("PUT", COMMAND, 200, load_fixture("strype_state_rgb.json"))
     await device.set_state(temperature_kelvin=3000, brightness_percent=42)
     assert api.last_call().json == {
         "command": {
@@ -181,7 +221,7 @@ async def test_set_state_merges_its_response_onto_the_previous_state(
 async def test_set_state_turn_off_transition_sends_the_out_fade(
     device: StrypeDevice, api: FakeApi
 ) -> None:
-    api.add("PUT", COMMAND, 200, load_fixture("strype_state.json"))
+    api.add("PUT", COMMAND, 200, load_fixture("strype_state_rgb.json"))
     await device.set_state(power_on=False, transition_ms=2000)
     assert api.last_call().json == {
         "command": {
@@ -197,7 +237,7 @@ async def test_set_state_without_power_change_sends_no_temp_fade(
     device: StrypeDevice, api: FakeApi
 ) -> None:
     """Colour/brightness-only transitions are honoured via `transitionTime` alone."""
-    api.add("PUT", COMMAND, 200, load_fixture("strype_state.json"))
+    api.add("PUT", COMMAND, 200, load_fixture("strype_state_rgb.json"))
     await device.set_state(rgb=(1, 2, 3), transition_ms=500)
     command = api.last_call().json["command"]
     assert "temp_fade" not in command
@@ -208,13 +248,13 @@ async def test_set_state_clamps_the_temp_fade_to_the_firmware_minimum(
     device: StrypeDevice, api: FakeApi
 ) -> None:
     """A 0 in `temp_fade` reads as "not given" to the firmware, so it is raised."""
-    api.add("PUT", COMMAND, 200, load_fixture("strype_state.json"))
+    api.add("PUT", COMMAND, 200, load_fixture("strype_state_rgb.json"))
     await device.set_state(power_on=True, transition_ms=0)
     assert api.last_call().json["command"]["temp_fade"] == {"in": 100}
 
 
 async def test_detect_length(device: StrypeDevice, api: FakeApi) -> None:
-    api.add("PUT", COMMAND, 200, load_fixture("strype_state.json") | {"length_ret": 5})
+    api.add("PUT", COMMAND, 200, load_fixture("strype_state_rgb.json") | {"length_ret": 5})
     state = await device.detect_length()
     assert api.last_call().json == {"command": {"type": "request", "length_detection": 1}}
     assert state.length_metres == 5

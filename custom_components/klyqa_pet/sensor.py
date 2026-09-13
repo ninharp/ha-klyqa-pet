@@ -363,6 +363,7 @@ STRYPE_SENSORS: tuple[KlyqaSensorEntityDescription, ...] = (
         options=list(STRYPE_LIGHT_MODES),
         value_fn=lambda data: data.strype.mode,
     ),
+    _wifi_rssi_description(lambda data: data.strype.wifi_rssi),
 )
 
 SENSORS_BY_TYPE: dict[DeviceType, tuple[KlyqaSensorEntityDescription, ...]] = {

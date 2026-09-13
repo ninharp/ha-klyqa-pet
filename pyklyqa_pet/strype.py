@@ -22,6 +22,11 @@ class StrypeState:
 
     Every response is therefore merged onto the previously known state: see
     `from_dict`, which is the only place that decides what an absent key means.
+
+    Note that `power_on` here is parsed from the response's `status` key, not from its
+    `power_on` key. The latter is the device's power-on *behaviour* setting and stays
+    put across an off/on cycle - confirmed on hardware, where `status` flipped
+    "off"/"on" while `power_on` remained 0 throughout.
     """
 
     power_on: bool
@@ -30,6 +35,7 @@ class StrypeState:
     temperature_kelvin: int
     brightness_percent: int
     length_metres: int | None
+    wifi_rssi: int | None
     raw: dict[str, Any] = field(compare=False, repr=False)
 
     @classmethod
@@ -81,6 +87,12 @@ class StrypeState:
         else:
             length_metres = previous.length_metres if previous is not None else None
 
+        wifi = data.get("wifi_parameters")
+        if isinstance(wifi, dict) and wifi.get("rssi") is not None:
+            wifi_rssi: int | None = _as_int(wifi["rssi"])
+        else:
+            wifi_rssi = previous.wifi_rssi if previous is not None else None
+
         return cls(
             power_on=power_on,
             mode=mode,
@@ -88,6 +100,7 @@ class StrypeState:
             temperature_kelvin=temperature_kelvin,
             brightness_percent=brightness_percent,
             length_metres=length_metres,
+            wifi_rssi=wifi_rssi,
             raw=data,
         )
 
@@ -160,7 +173,9 @@ class StrypeDevice(KlyqaDevice):
             if power_on is not None:
                 # `transitionTime` alone is ignored whenever the request actually flips
                 # the power state: the firmware overwrites its fade time with the stored
-                # fade-in/fade-out unless the matching `temp_fade` key is present. The
+                # fade-in/fade-out unless the matching `temp_fade` key is present.
+                # Confirmed on hardware - with `temp_fade` the strip fades over the
+                # requested time, with `transitionTime` alone it switches hard. The
                 # firmware clamps `transitionTime` to MIN_FADING_TIME but not
                 # `temp_fade`, and reads a 0 there as "not given", so clamp it here to
                 # keep both values in step.
