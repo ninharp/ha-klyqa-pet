@@ -243,7 +243,7 @@ async def test_local_flow_second_device_added_to_existing_entry(
         (KlyqaConnectionError("down"), "@klyqa.welly-dev", "cannot_connect"),
         (KlyqaDeviceError("error body"), "@klyqa.welly-dev", "cannot_connect"),
         (RuntimeError("boom"), "@klyqa.welly-dev", "unknown"),
-        (None, "@klyqa.lighting.kl-rgbc3.rgbcw", "not_supported"),
+        (None, "@klyqa.lighting.cw-ww.g95", "not_supported"),
     ],
 )
 async def test_local_flow_errors(
@@ -268,7 +268,7 @@ async def test_zeroconf_unsupported_product(hass: HomeAssistant) -> None:
     result = await hass.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_ZEROCONF},
-        data=zeroconf_info("80659988019C", "@klyqa.lighting.kl-rgbc3.rgbcw"),
+        data=zeroconf_info("80659988019C", "@klyqa.lighting.cw-ww.g95"),
     )
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "not_supported"
