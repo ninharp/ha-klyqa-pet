@@ -9,7 +9,6 @@
   "type": "status",
   "active_command": 0,
   "color": { "red": 255, "green": 128, "blue": 0 },
-  "temperature": 4000,
   "mode": "rgb",
   "error": [],
   "reset_reason": 1,

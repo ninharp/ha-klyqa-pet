@@ -437,7 +437,6 @@
           'power_on': 0,
           'reset_reason': 1,
           'status': 'on',
-          'temperature': 4000,
           'transitionTime': 1000,
           'type': 'status',
           'wifi_parameters': dict({

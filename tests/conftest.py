@@ -159,10 +159,12 @@ def mock_purifier() -> MagicMock:
 @pytest.fixture
 def mock_strype() -> MagicMock:
     device = MagicMock(spec=StrypeDevice)
-    # The firmware never reports `color` and `temperature` in one response; this fixture
-    # carries both because it stands for a *merged* state - what StrypeDevice returns
-    # after folding a response into the previous one - not for a single wire payload.
-    state = StrypeState.from_dict(load_json("strype_state.json"))
+    # `strype_state.json` is a verbatim rgb-mode capture (carries `color`, not
+    # `temperature`), matching what a real device actually sends. The mock's state
+    # additionally carries a `temperature_kelvin` to stand for a *merged* state - what
+    # StrypeDevice.get_state() returns after folding this response onto a previous one
+    # that had a cct-mode reading - not for a single wire payload.
+    state = replace(StrypeState.from_dict(load_json("strype_state.json")), temperature_kelvin=4000)
     device.get_system_info = AsyncMock(
         return_value=make_system_info(
             "@klyqa.lighting.kl-rgbc3.rgbcw", STRYPE_ID, "Klyqa Strype RGB CW/WW"
