@@ -680,3 +680,97 @@ async def test_local_entry_is_not_touched_by_the_migration(
     assert entry.unique_id == LOCAL_ENTRY_UNIQUE_ID
     assert entry.minor_version == 2
     assert CONF_CLOUD_APP not in entry.data
+
+
+async def test_entry_without_a_unique_id_is_only_versioned(
+    hass: HomeAssistant, mock_setup_entry: Any
+) -> None:
+    """An entry with no unique id has nothing to rewrite, but still advances."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        title="Klyqa Pet",
+        unique_id=None,
+        minor_version=1,
+        data={CONF_ENVIRONMENT: ENVIRONMENT_LOCAL, CONF_DEVICES: {}},
+    )
+    entry.add_to_hass(hass)
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+
+    assert entry.unique_id is None
+    assert entry.minor_version == 2
+    assert CONF_CLOUD_APP not in entry.data
+
+
+async def test_entry_already_in_the_new_format_is_left_alone(
+    hass: HomeAssistant, mock_setup_entry: Any
+) -> None:
+    """A tenant-qualified id stuck at minor_version 1 must not be rewritten again.
+
+    Splitting it a second time would produce "test:Klyqapet:Klyqapet:user@example.com".
+    """
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        title="user@example.com (Klyqapet, test)",
+        unique_id="test:Klyqapet:user@example.com",
+        minor_version=1,
+        data={
+            CONF_ENVIRONMENT: "test",
+            CONF_EMAIL: "user@example.com",
+            CONF_PASSWORD: "secret",
+            CONF_CLOUD_APP: "Klyqapet",
+            CONF_DEVICES: CLOUD_DEVICES,
+        },
+    )
+    entry.add_to_hass(hass)
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+
+    assert entry.unique_id == "test:Klyqapet:user@example.com"
+    assert entry.minor_version == 2
+
+
+async def test_migration_does_not_take_a_unique_id_another_entry_holds(
+    hass: HomeAssistant, mock_setup_entry: Any
+) -> None:
+    """A legacy entry that HA skipped must not collide with a freshly added one.
+
+    Home Assistant only migrates entries it sets up, so a disabled or ignored legacy
+    entry keeps its old id. If the user adds the same account again meanwhile and then
+    re-enables the legacy entry, rewriting its id would land on one already in use -
+    which HA logs as an error and then proceeds with, leaving two entries sharing an
+    id. The migration bumps the version only and leaves the id alone.
+    """
+    existing = MockConfigEntry(
+        domain=DOMAIN,
+        title="user@example.com (Klyqapet, test)",
+        unique_id="test:Klyqapet:user@example.com",
+        minor_version=2,
+        data={
+            CONF_ENVIRONMENT: "test",
+            CONF_EMAIL: "user@example.com",
+            CONF_PASSWORD: "secret",
+            CONF_CLOUD_APP: "Klyqapet",
+            CONF_DEVICES: CLOUD_DEVICES,
+        },
+    )
+    existing.add_to_hass(hass)
+    legacy = MockConfigEntry(
+        domain=DOMAIN,
+        title="user@example.com (test)",
+        unique_id="test:user@example.com",
+        minor_version=1,
+        data={
+            CONF_ENVIRONMENT: "test",
+            CONF_EMAIL: "user@example.com",
+            CONF_PASSWORD: "secret",
+            CONF_DEVICES: CLOUD_DEVICES,
+        },
+    )
+    legacy.add_to_hass(hass)
+    assert await hass.config_entries.async_setup(legacy.entry_id)
+    await hass.async_block_till_done()
+
+    assert legacy.unique_id == "test:user@example.com"
+    assert legacy.minor_version == 2
+    assert existing.unique_id == "test:Klyqapet:user@example.com"

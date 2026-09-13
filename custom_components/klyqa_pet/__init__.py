@@ -56,6 +56,23 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # have been created against the pet tenant; record it in the data too.
     cloud_app = entry.data.get(CONF_CLOUD_APP, CloudApp.KLYQAPET.value)
     new_unique_id = f"{environment}:{cloud_app}:{email}"
+    if any(
+        other.entry_id != entry.entry_id and other.unique_id == new_unique_id
+        for other in hass.config_entries.async_entries(DOMAIN)
+    ):
+        # Home Assistant only migrates entries it sets up, so a disabled or ignored
+        # legacy entry is skipped. If the same account was added fresh in the meantime
+        # and the legacy entry is enabled again later, the rewrite would land on an id
+        # that is already taken - which HA logs as an error and then carries on with,
+        # leaving two entries sharing one unique id. Leave the id alone in that case;
+        # the entry is a duplicate the user can remove.
+        _LOGGER.warning(
+            "Not migrating config entry unique id %s to %s: another entry already uses it",
+            unique_id,
+            new_unique_id,
+        )
+        hass.config_entries.async_update_entry(entry, minor_version=MINOR_VERSION)
+        return True
     _LOGGER.debug("Migrating config entry unique id %s to %s", unique_id, new_unique_id)
     hass.config_entries.async_update_entry(
         entry,
