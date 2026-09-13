@@ -209,7 +209,12 @@
       "filter_remaining": { "name": "Filter remaining time" },
       "total_run_time": { "name": "Total run time" },
       "air_volume": { "name": "Cleaned air volume" },
-      "pet_mode_time": { "name": "Pet mode time" }
+      "pet_mode_time": { "name": "Pet mode time" },
+      "strip_length": { "name": "Strip length" },
+      "light_mode": {
+        "name": "Light mode",
+        "state": { "rgb": "Colour", "cct": "White", "cmd": "Effect" }
+      }
     },
     "binary_sensor": {
       "water_tray_low": { "name": "Water tray low" },
@@ -284,7 +289,8 @@
       "stop_descaling": { "name": "Stop descaling" },
       "dispense_food": { "name": "Dispense food" },
       "play_voice_recording": { "name": "Play voice recording" },
-      "query_bowl_weight": { "name": "Query bowl weight" }
+      "query_bowl_weight": { "name": "Query bowl weight" },
+      "detect_length": { "name": "Detect strip length" }
     },
     "fan": {
       "air_purifier": {

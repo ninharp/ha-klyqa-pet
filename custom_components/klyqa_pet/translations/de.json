@@ -141,7 +141,12 @@
       "filter_remaining": { "name": "Filter-Restlaufzeit" },
       "total_run_time": { "name": "Gesamtlaufzeit" },
       "air_volume": { "name": "Gereinigtes Luftvolumen" },
-      "pet_mode_time": { "name": "Zeit im Haustiermodus" }
+      "pet_mode_time": { "name": "Zeit im Haustiermodus" },
+      "strip_length": { "name": "Streifenlänge" },
+      "light_mode": {
+        "name": "Lichtmodus",
+        "state": { "rgb": "Farbe", "cct": "Weiß", "cmd": "Effekt" }
+      }
     },
     "binary_sensor": {
       "water_tray_low": { "name": "Wasserschale leer" },
@@ -198,7 +203,8 @@
       "stop_descaling": { "name": "Entkalkung stoppen" },
       "dispense_food": { "name": "Futter ausgeben" },
       "play_voice_recording": { "name": "Sprachaufnahme abspielen" },
-      "query_bowl_weight": { "name": "Napfgewicht abfragen" }
+      "query_bowl_weight": { "name": "Napfgewicht abfragen" },
+      "detect_length": { "name": "Streifenlänge messen" }
     },
     "fan": {
       "air_purifier": {

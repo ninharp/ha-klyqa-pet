@@ -17,6 +17,7 @@ from homeassistant.const import (
     SIGNAL_STRENGTH_DECIBELS_MILLIWATT,
     EntityCategory,
     UnitOfDensity,
+    UnitOfLength,
     UnitOfMass,
     UnitOfTemperature,
     UnitOfTime,
@@ -38,6 +39,7 @@ from .const import (
     FOODY_MANUAL_REPORT,
     FOODY_SCHEDULED_REPORT,
     PURIFIER_AQI_GRADES,
+    STRYPE_LIGHT_MODES,
     WELLY_POWER_STATUS,
     WELLY_POWER_SUPPLY,
     WELLY_PUMP_STATUS,
@@ -354,11 +356,28 @@ PURIFIER_SENSORS: tuple[KlyqaSensorEntityDescription, ...] = (
     ),
 )
 
+STRYPE_SENSORS: tuple[KlyqaSensorEntityDescription, ...] = (
+    KlyqaSensorEntityDescription(
+        key="strip_length",
+        translation_key="strip_length",
+        native_unit_of_measurement=UnitOfLength.METERS,
+        device_class=SensorDeviceClass.DISTANCE,
+        value_fn=lambda data: data.strype.length_metres,
+    ),
+    KlyqaSensorEntityDescription(
+        key="light_mode",
+        translation_key="light_mode",
+        device_class=SensorDeviceClass.ENUM,
+        options=list(STRYPE_LIGHT_MODES),
+        value_fn=lambda data: data.strype.mode,
+    ),
+)
+
 SENSORS_BY_TYPE: dict[DeviceType, tuple[KlyqaSensorEntityDescription, ...]] = {
     DeviceType.WELLY: WELLY_SENSORS,
     DeviceType.FOODY: FOODY_SENSORS,
     DeviceType.AIRPURIFIER: PURIFIER_SENSORS,
-    DeviceType.STRYPE: (),
+    DeviceType.STRYPE: STRYPE_SENSORS,
 }
 
 

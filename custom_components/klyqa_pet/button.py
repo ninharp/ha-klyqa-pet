@@ -71,11 +71,19 @@ FOODY_BUTTONS: tuple[KlyqaButtonEntityDescription, ...] = (
     ),
 )
 
+STRYPE_BUTTONS: tuple[KlyqaButtonEntityDescription, ...] = (
+    KlyqaButtonEntityDescription(
+        key="detect_length",
+        translation_key="detect_length",
+        press_fn=lambda coordinator: coordinator.strype_device.detect_length(),
+    ),
+)
+
 BUTTONS_BY_TYPE: dict[DeviceType, tuple[KlyqaButtonEntityDescription, ...]] = {
     DeviceType.WELLY: WELLY_BUTTONS,
     DeviceType.FOODY: FOODY_BUTTONS,
     DeviceType.AIRPURIFIER: (),
-    DeviceType.STRYPE: (),
+    DeviceType.STRYPE: STRYPE_BUTTONS,
 }
 
 

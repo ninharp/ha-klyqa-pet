@@ -115,3 +115,5 @@ PURIFIER_AQI_GRADES: Final[dict[int, str]] = {
     3: "heavily_polluted",
 }
 PURIFIER_RUN_MODES: Final[dict[int, str]] = {0: "standalone", 1: "auto", 2: "night", 3: "pet"}
+
+STRYPE_LIGHT_MODES: Final = ("rgb", "cct", "cmd")

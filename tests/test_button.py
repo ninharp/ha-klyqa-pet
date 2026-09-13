@@ -64,3 +64,16 @@ async def test_button_presses(
     await press("button.klyqa_airpurifier_e85dfc_restart")
     mock_purifier.reboot.assert_awaited_once()
     mock_purifier.request.assert_not_called()
+
+
+@pytest.mark.usefixtures("entity_registry_enabled_by_default", "buttons")
+async def test_detect_length_button(
+    hass: HomeAssistant, mock_config_entry: MockConfigEntry, mock_strype: MagicMock
+) -> None:
+    await hass.services.async_call(
+        BUTTON_DOMAIN,
+        SERVICE_PRESS,
+        {ATTR_ENTITY_ID: "button.living_room_strip_detect_strip_length"},
+        blocking=True,
+    )
+    mock_strype.detect_length.assert_awaited_once()

@@ -402,6 +402,56 @@
     'state': 'unknown',
   })
 # ---
+# name: test_buttons[button.living_room_strip_detect_strip_length-entry]
+  EntityRegistryEntrySnapshot({
+    'aliases': list([
+      None,
+    ]),
+    'area_id': None,
+    'capabilities': None,
+    'config_entry_id': <ANY>,
+    'config_subentry_id': <ANY>,
+    'device_class': None,
+    'device_id': <ANY>,
+    'disabled_by': None,
+    'domain': 'button',
+    'entity_category': None,
+    'entity_id': 'button.living_room_strip_detect_strip_length',
+    'has_entity_name': True,
+    'hidden_by': None,
+    'icon': None,
+    'id': <ANY>,
+    'labels': set({
+    }),
+    'name': None,
+    'object_id_base': 'Detect strip length',
+    'options': dict({
+    }),
+    'original_device_class': None,
+    'original_icon': None,
+    'original_name': 'Detect strip length',
+    'platform': 'klyqa_pet',
+    'previous_unique_id': None,
+    'suggested_object_id': None,
+    'supported_features': 0,
+    'translation_key': 'detect_length',
+    'unique_id': '80659988019C_detect_length',
+    'unit_of_measurement': None,
+  })
+# ---
+# name: test_buttons[button.living_room_strip_detect_strip_length-state]
+  StateSnapshot({
+    'attributes': ReadOnlyDict({
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Living room strip Detect strip length',
+    }),
+    'context': <ANY>,
+    'entity_id': 'button.living_room_strip_detect_strip_length',
+    'last_changed': <ANY>,
+    'last_reported': <ANY>,
+    'last_updated': <ANY>,
+    'state': 'unknown',
+  })
+# ---
 # name: test_buttons[button.living_room_strip_restart-entry]
   EntityRegistryEntrySnapshot({
     'aliases': list([
