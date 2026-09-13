@@ -15,8 +15,10 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import json
 import os
 import sys
+import textwrap
 
 import aiohttp
 
@@ -24,7 +26,7 @@ from pyklyqa_pet import Environment, KlyqaAuthError, KlyqaCloudClient, KlyqaErro
 from pyklyqa_pet.const import CLOUD_BASE_URLS, CLOUD_ENVIRONMENT_NAME
 
 
-async def probe(email: str, password: str, environment_name: str) -> None:
+async def probe(email: str, password: str, environment_name: str, raw: bool) -> None:
     """Log in to every known environment and print the devices found."""
     async with aiohttp.ClientSession() as session:
         for environment in Environment:
@@ -49,6 +51,10 @@ async def probe(email: str, password: str, environment_name: str) -> None:
                 print("  no devices on this account")
             for device in devices:
                 print(f"  {device.local_device_id}  {device.product_id:32} {device.name}")
+                if raw:
+                    # The cloud record may carry more than the library keeps, e.g. a
+                    # last known local address - useful where mDNS cannot reach HA.
+                    print(textwrap.indent(json.dumps(device.raw, indent=2), "    "))
 
 
 def main() -> int:
@@ -59,6 +65,11 @@ def main() -> int:
         default=CLOUD_ENVIRONMENT_NAME,
         help="value sent as environmentName in the login payload",
     )
+    parser.add_argument(
+        "--raw",
+        action="store_true",
+        help="dump each device's full cloud record",
+    )
     args = parser.parse_args()
 
     email = os.environ.get("KLYQA_EMAIL")
@@ -67,7 +78,7 @@ def main() -> int:
         print("Set KLYQA_EMAIL and KLYQA_PASSWORD in the environment.", file=sys.stderr)
         return 2
 
-    asyncio.run(probe(email, password, args.environment_name))
+    asyncio.run(probe(email, password, args.environment_name, args.raw))
     return 0
 
 
