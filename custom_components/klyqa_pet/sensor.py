@@ -85,6 +85,25 @@ def _enum_description(
     )
 
 
+def _wifi_rssi_description(
+    value_fn: Callable[[KlyqaDeviceData], int | None],
+) -> KlyqaSensorEntityDescription:
+    """Return the Wi-Fi signal strength description every device family shares.
+
+    The key is part of the public entity ids and must stay "wifi_rssi".
+    """
+    return KlyqaSensorEntityDescription(
+        key="wifi_rssi",
+        translation_key="wifi_rssi",
+        device_class=SensorDeviceClass.SIGNAL_STRENGTH,
+        native_unit_of_measurement=SIGNAL_STRENGTH_DECIBELS_MILLIWATT,
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        entity_registry_enabled_default=False,
+        value_fn=value_fn,
+    )
+
+
 COMMON_SENSORS: tuple[KlyqaSensorEntityDescription, ...] = (
     KlyqaSensorEntityDescription(
         key="firmware_version",
@@ -111,16 +130,7 @@ COMMON_SENSORS: tuple[KlyqaSensorEntityDescription, ...] = (
 )
 
 WELLY_SENSORS: tuple[KlyqaSensorEntityDescription, ...] = (
-    KlyqaSensorEntityDescription(
-        key="wifi_rssi",
-        translation_key="wifi_rssi",
-        device_class=SensorDeviceClass.SIGNAL_STRENGTH,
-        native_unit_of_measurement=SIGNAL_STRENGTH_DECIBELS_MILLIWATT,
-        state_class=SensorStateClass.MEASUREMENT,
-        entity_category=EntityCategory.DIAGNOSTIC,
-        entity_registry_enabled_default=False,
-        value_fn=lambda data: data.welly.wifi_rssi,
-    ),
+    _wifi_rssi_description(lambda data: data.welly.wifi_rssi),
     KlyqaSensorEntityDescription(
         key="water_temperature",
         translation_key="water_temperature",
@@ -212,16 +222,7 @@ WELLY_SENSORS: tuple[KlyqaSensorEntityDescription, ...] = (
 )
 
 FOODY_SENSORS: tuple[KlyqaSensorEntityDescription, ...] = (
-    KlyqaSensorEntityDescription(
-        key="wifi_rssi",
-        translation_key="wifi_rssi",
-        device_class=SensorDeviceClass.SIGNAL_STRENGTH,
-        native_unit_of_measurement=SIGNAL_STRENGTH_DECIBELS_MILLIWATT,
-        state_class=SensorStateClass.MEASUREMENT,
-        entity_category=EntityCategory.DIAGNOSTIC,
-        entity_registry_enabled_default=False,
-        value_fn=lambda data: data.foody.wifi_rssi,
-    ),
+    _wifi_rssi_description(lambda data: data.foody.wifi_rssi),
     KlyqaSensorEntityDescription(
         key="bowl_remaining",
         translation_key="bowl_remaining",
@@ -290,16 +291,7 @@ FOODY_SENSORS: tuple[KlyqaSensorEntityDescription, ...] = (
 )
 
 PURIFIER_SENSORS: tuple[KlyqaSensorEntityDescription, ...] = (
-    KlyqaSensorEntityDescription(
-        key="wifi_rssi",
-        translation_key="wifi_rssi",
-        device_class=SensorDeviceClass.SIGNAL_STRENGTH,
-        native_unit_of_measurement=SIGNAL_STRENGTH_DECIBELS_MILLIWATT,
-        state_class=SensorStateClass.MEASUREMENT,
-        entity_category=EntityCategory.DIAGNOSTIC,
-        entity_registry_enabled_default=False,
-        value_fn=lambda data: data.purifier.wifi_rssi,
-    ),
+    _wifi_rssi_description(lambda data: data.purifier.wifi_rssi),
     KlyqaSensorEntityDescription(
         key="pm25",
         device_class=SensorDeviceClass.PM25,

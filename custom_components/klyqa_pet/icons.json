@@ -90,7 +90,8 @@
       "detect_length": { "default": "mdi:ruler-square" }
     },
     "light": {
-      "led": { "default": "mdi:led-strip-variant" }
+      "led": { "default": "mdi:led-strip-variant" },
+      "strip": { "default": "mdi:led-strip-variant", "state": { "off": "mdi:led-strip" } }
     }
   }
 }

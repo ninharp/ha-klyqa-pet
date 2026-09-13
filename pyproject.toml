@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "pyklyqa-pet"
 version = "0.2.0"
-description = "Async client for Klyqa pet devices (Welly, Foody, Airpurifier) using the local QConnex REST API"
+description = "Async client for Klyqa pet and lighting devices (Welly, Foody, Airpurifier, Strype) using the local QConnex REST API"
 readme = "README.md"
 requires-python = ">=3.13"
 license = "MIT"
