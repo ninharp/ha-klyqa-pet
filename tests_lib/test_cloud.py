@@ -25,9 +25,9 @@ async def test_login_success(session: aiohttp.ClientSession, api: FakeApi) -> No
     assert token == "acc-token"
     assert client.account_token == "acc-token"
     assert api.last_call().json == {
-        "email": "user@example.com", 
-        "password": "secret", 
-        "environmentName": "Klyqapet"
+        "email": "user@example.com",
+        "password": "secret",
+        "environmentName": "Klyqapet",
     }
 
 
