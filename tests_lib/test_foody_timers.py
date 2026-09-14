@@ -28,7 +28,7 @@ def test_from_dict_parses_the_real_capture() -> None:
     assert schedule.weekdays == frozenset(range(7))
     assert schedule.portions == 2
     assert timers.sleep_mode == SleepMode(
-        enabled=False, weekdays=frozenset(), start=time(0, 0), end=time(0, 0)
+        enabled=False, weekdays=frozenset(range(7)), start=time(22, 0), end=time(6, 0)
     )
 
 

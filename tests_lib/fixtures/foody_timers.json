@@ -1,6 +1,3 @@
 {"type": "timer",
- "schedules": [{"schedule_id": 0, "enable": true, "skip_once": false,
-                "execution_time": 630, "week_cycle": 127, "portions": 2,
-                "total_duration_sec": 0, "fresh_food_mode": false,
-                "auto_play_voice": true}],
- "sleep_mode": {"enable": false, "weekly_cycle": 0, "start_time": 0, "end_time": 0}}
+ "schedules": [{"schedule_id": 0, "enable": true, "skip_once": false, "execution_time": 630, "week_cycle": 127, "portions": 2, "total_duration_sec": 0, "fresh_food_mode": false, "auto_play_voice": true}],
+ "sleep_mode": {"enable": false, "weekly_cycle": 127, "start_time": 2200, "end_time": 600}}
