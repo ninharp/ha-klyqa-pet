@@ -3,15 +3,18 @@
 from datetime import time
 from unittest.mock import MagicMock, patch
 
+from homeassistant.components.switch import DOMAIN as SWITCH_DOMAIN
 from homeassistant.components.time import DOMAIN as TIME_DOMAIN
-from homeassistant.const import ATTR_ENTITY_ID, Platform
+from homeassistant.const import ATTR_ENTITY_ID, SERVICE_TURN_ON, Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
 import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry, snapshot_platform
 from syrupy.assertion import SnapshotAssertion
 
-from .conftest import setup_integration
+from pyklyqa_pet import FoodyTimers, SleepMode
+
+from .conftest import load_json, setup_integration
 
 
 @pytest.fixture
@@ -69,3 +72,71 @@ async def test_setting_the_sleep_end_preserves_the_start(
     assert sent.start == time(22, 0)
     assert sent.enabled is False
     assert sent.weekdays == frozenset(range(7))
+
+
+@pytest.fixture
+async def sleep_entities(
+    hass: HomeAssistant,
+    mock_config_entry: MockConfigEntry,
+    mock_cloud: MagicMock,
+    mock_devices: dict,
+) -> None:
+    """Load both platforms that write the sleep window, as a script would touch them."""
+    with patch("custom_components.klyqa_pet.PLATFORMS", [Platform.SWITCH, Platform.TIME]):
+        await setup_integration(hass, mock_config_entry)
+
+
+@pytest.mark.usefixtures("sleep_entities")
+async def test_back_to_back_sleep_writes_build_on_the_device_answer(
+    hass: HomeAssistant, mock_foody: MagicMock
+) -> None:
+    """A burst of sleep-window writes must not revert one another.
+
+    Each of these entities builds its write from the coordinator's copy of the sleep
+    window, and `async_request_refresh` is debounced, so a cache that is only refreshed
+    would still hold the pre-burst document for the second and third write. The write's
+    own answer - the complete document, as the firmware returns it - is published
+    instead, so every write starts from the one before it. The mock's answer carries a
+    weekday mask the cache never held, which only a published answer can pick up.
+    """
+    document = load_json("foody_timers.json")
+    workdays = 0b0111110
+
+    def _answer(sleep_mode: SleepMode) -> FoodyTimers:
+        return FoodyTimers.from_dict(
+            {
+                **document,
+                "sleep_mode": {**sleep_mode.to_dict(), "weekly_cycle": workdays},
+            }
+        )
+
+    mock_foody.set_sleep_mode.side_effect = _answer
+
+    await hass.services.async_call(
+        SWITCH_DOMAIN,
+        SERVICE_TURN_ON,
+        {ATTR_ENTITY_ID: "switch.feeder_sleep_mode"},
+        blocking=True,
+    )
+    await hass.services.async_call(
+        TIME_DOMAIN,
+        "set_value",
+        {ATTR_ENTITY_ID: "time.feeder_sleep_start", "time": "22:45:00"},
+        blocking=True,
+    )
+    await hass.services.async_call(
+        TIME_DOMAIN,
+        "set_value",
+        {ATTR_ENTITY_ID: "time.feeder_sleep_end", "time": "05:15:00"},
+        blocking=True,
+    )
+
+    third = mock_foody.set_sleep_mode.await_args.args[0]
+    assert third.end == time(5, 15)
+    # Both would fall back to the document the cache held before the burst - 22:00,
+    # disabled, every day - if the writes were not building on each other's answer.
+    assert third.start == time(22, 45)
+    assert third.enabled is True
+    assert third.weekdays == frozenset({1, 2, 3, 4, 5})
+    # Nothing was re-read: the answers alone kept the cache current.
+    mock_foody.get_timers.assert_awaited_once()

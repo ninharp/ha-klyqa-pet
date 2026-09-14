@@ -23,6 +23,7 @@ from pyklyqa_pet import (
     FoodyDevice,
     FoodySettings,
     FoodyState,
+    FoodyTimers,
     KlyqaAuthError,
     KlyqaConnectionError,
     KlyqaDevice,
@@ -35,7 +36,6 @@ from pyklyqa_pet import (
     WellySettings,
     WellyState,
 )
-from pyklyqa_pet.foody_timers import FoodyTimers
 
 from .const import (
     CONF_DEVICE_NAME,
@@ -313,6 +313,22 @@ class KlyqaDeviceCoordinator(DataUpdateCoordinator[KlyqaDeviceData]):
         refresh runs, without waiting for the next periodic timers poll.
         """
         self._timers = None
+
+    @callback
+    def async_publish_timers(self, timers: FoodyTimers) -> None:
+        """Publish the timer document a timer write returned.
+
+        The firmware answers every accepted timer write with the complete, freshly
+        serialised document (`device_timers_set_json` ends by calling
+        `device_timers_get_json`), so the write's own response is already the whole
+        truth and can be published straight away - no extra request, and no waiting for
+        a refresh that the request debouncer may swallow. Publishing also keeps the
+        cache authoritative: without it, a burst of writes within the debouncer's
+        cooldown would each be built from the same pre-burst snapshot and quietly undo
+        one another.
+        """
+        self._timers = timers
+        self.async_set_updated_data(replace(self.data, timers=timers))
 
     @property
     def strype_state(self) -> StrypeState | None:

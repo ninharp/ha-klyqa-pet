@@ -21,11 +21,12 @@ import voluptuous as vol
 
 from pyklyqa_pet import (
     DeviceType,
+    FeedingSchedule,
     KlyqaAuthError,
     KlyqaConnectionError,
     KlyqaDeviceError,
 )
-from pyklyqa_pet.foody_timers import MAX_FEEDING_SCHEDULES, MAX_PORTIONS, FeedingSchedule
+from pyklyqa_pet.foody_timers import MAX_FEEDING_SCHEDULES, MAX_PORTIONS
 
 from .const import DOMAIN, WEEKDAY_KEYS
 from .coordinator import KlyqaDeviceCoordinator
@@ -204,6 +205,26 @@ def _find(schedules: tuple[FeedingSchedule, ...], schedule_id: int, device: str)
     )
 
 
+async def _async_write(
+    coordinator: KlyqaDeviceCoordinator, command: Coroutine[Any, Any, Any]
+) -> Any:
+    """Await a timer write, dropping the cached document even when the write fails.
+
+    The firmware mutates its own shadow *before* the step that can fail: a delete clears
+    the slot and only then tells the MCU, and a set stores the entry and only then sends
+    it on (device_timers.c). A rejected write can therefore still have changed the
+    device, and keeping the pre-write document would leave the `feeding_schedules`
+    sensor listing a schedule that is already gone. Marking the cache stale lets the
+    next scheduled poll re-read it; the failure path deliberately does not force a
+    refresh, which would only put another request to a device that has just refused one.
+    """
+    try:
+        return await _async_device_call(coordinator, command)
+    except HomeAssistantError:
+        coordinator.mark_timers_stale()
+        raise
+
+
 async def _async_finish(coordinator: KlyqaDeviceCoordinator) -> None:
     """Make the change visible to the schedule sensor without waiting for the next poll."""
     coordinator.mark_timers_stale()
@@ -246,7 +267,7 @@ async def _async_add_feeding_schedule(call: ServiceCall) -> None:
             fresh_food_mode=call.data.get(ATTR_FRESH_FOOD_MODE, DEFAULT_FRESH_FOOD_MODE),
             auto_play_voice=call.data.get(ATTR_AUTO_PLAY_VOICE, DEFAULT_AUTO_PLAY_VOICE),
         )
-        await _async_device_call(
+        await _async_write(
             coordinator, coordinator.foody_device.set_schedule(schedule, create=True)
         )
         await _async_finish(coordinator)
@@ -277,7 +298,7 @@ async def _async_set_feeding_schedule(call: ServiceCall) -> None:
             if attribute in call.data:
                 changes[attribute] = call.data[attribute]
         schedule = dataclasses.replace(existing, **changes)
-        await _async_device_call(
+        await _async_write(
             coordinator, coordinator.foody_device.set_schedule(schedule, create=False)
         )
         await _async_finish(coordinator)
@@ -292,7 +313,7 @@ async def _async_delete_feeding_schedule(call: ServiceCall) -> None:
     async with coordinator.write_lock:
         schedules = await _async_read_schedules(coordinator)
         _find(schedules, schedule_id, coordinator.device_name)
-        await _async_device_call(coordinator, coordinator.foody_device.delete_schedule(schedule_id))
+        await _async_write(coordinator, coordinator.foody_device.delete_schedule(schedule_id))
         await _async_finish(coordinator)
 
 

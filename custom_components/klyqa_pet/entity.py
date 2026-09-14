@@ -13,13 +13,13 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from pyklyqa_pet import (
     FoodySettings,
+    FoodyTimers,
     KlyqaAuthError,
     KlyqaConnectionError,
     KlyqaDeviceError,
     StrypeState,
     WellySettings,
 )
-from pyklyqa_pet.foody_timers import FoodyTimers
 
 from .const import DOMAIN, MANUFACTURER
 from .coordinator import KlyqaDeviceCoordinator
@@ -90,11 +90,16 @@ class KlyqaPetEntity(CoordinatorEntity[KlyqaDeviceCoordinator]):
             # from before the write (see KlyqaDeviceCoordinator.mark_settings_stale).
             self.coordinator.mark_settings_stale()
         if isinstance(result, FoodyTimers):
-            # A timer write (schedule or sleep mode) already returns the fresh timer
-            # document; mark the coordinator's cache stale so the refresh below reloads
-            # it instead of reusing the copy from before the write (see
-            # KlyqaDeviceCoordinator.mark_timers_stale).
-            self.coordinator.mark_timers_stale()
+            # A timer write (schedule or sleep mode) is answered with the complete,
+            # freshly serialised timer document, so publish it instead of asking for a
+            # refresh. That matters beyond saving a request: the sleep-mode switch and
+            # the two sleep-window `time` entities each build their write from the
+            # cached document via `replace`, and `async_request_refresh` is debounced -
+            # in a burst of writes only the first one would actually re-read, so every
+            # later write would still be built from the pre-burst snapshot and silently
+            # revert its predecessor. Publishing makes each write authoritative at once.
+            self.coordinator.async_publish_timers(result)
+            return
         await self.coordinator.async_request_refresh()
 
 

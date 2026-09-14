@@ -169,11 +169,14 @@ device as a bitmask with **bit 0 meaning Sunday** (not Monday), running through 
 its `schedules` attribute, and the two feeding-schedule services below accept the
 same keys. The sleep window's own weekday selection, however, is not exposed as an
 entity or a service field at all — toggling `Sleep mode` or setting `Sleep
-start`/`Sleep end` builds its write from the coordinator's last-*polled* copy of the
-sleep window with only that one field changed, so the mask and every other field
-stay as they were at that last poll. A weekday change made in the Klyqa app between
-polls can therefore be silently overwritten if you touch one of these entities
-before the next poll catches up.
+start`/`Sleep end` builds its write from Home Assistant's copy of the sleep window
+with only that one field changed, so the mask and every other field are carried over
+unchanged. That copy is kept authoritative: the feeder answers every accepted write
+with the complete, current sleep window, and Home Assistant adopts that answer
+immediately, so back-to-back changes build on each other rather than on a stale
+snapshot. What remains is a one-write window against the Klyqa app: a weekday change
+made in the app after Home Assistant's last read of the window is overwritten by the
+next entity you touch here — from then on the app's change is visible again.
 
 A Foody holds at most 20 feeding schedules (`schedule_id` 0–19). `add_feeding_schedule`
 claims the lowest free id and fails with a clear error once the device is full;

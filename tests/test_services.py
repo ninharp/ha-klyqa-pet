@@ -377,12 +377,30 @@ async def test_a_write_marks_the_timers_stale_and_refreshes(
     assert refresh.await_count == 1
 
 
-async def test_a_failed_write_neither_marks_stale_nor_refreshes(
+async def test_a_failed_write_marks_the_cache_stale(
     hass: HomeAssistant, mock_foody: MagicMock, foody_device_id: str
 ) -> None:
+    """The firmware clears its own slot before it tells the MCU, so a rejected delete
+    may still have removed the schedule. The cached document can no longer be trusted."""
     mock_foody.delete_schedule.side_effect = KlyqaDeviceError(["nope"])
     with (
         patch.object(KlyqaDeviceCoordinator, "mark_timers_stale") as mark_stale,
+        pytest.raises(HomeAssistantError),
+    ):
+        await call(
+            hass,
+            SERVICE_DELETE_FEEDING_SCHEDULE,
+            {"device_id": foody_device_id, "schedule_id": 0},
+        )
+    assert mark_stale.call_count == 1
+
+
+async def test_a_failed_write_does_not_force_a_refresh(
+    hass: HomeAssistant, mock_foody: MagicMock, foody_device_id: str
+) -> None:
+    """Re-reading is left to the next scheduled poll; the device just refused a request."""
+    mock_foody.delete_schedule.side_effect = KlyqaDeviceError(["nope"])
+    with (
         patch.object(
             KlyqaDeviceCoordinator, "async_request_refresh", new_callable=AsyncMock
         ) as refresh,
@@ -393,7 +411,6 @@ async def test_a_failed_write_neither_marks_stale_nor_refreshes(
             SERVICE_DELETE_FEEDING_SCHEDULE,
             {"device_id": foody_device_id, "schedule_id": 0},
         )
-    mark_stale.assert_not_called()
     refresh.assert_not_awaited()
 
 
