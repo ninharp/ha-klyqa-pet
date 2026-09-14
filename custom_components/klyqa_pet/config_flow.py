@@ -50,6 +50,7 @@ from pyklyqa_pet import (
 )
 
 from .const import (
+    CLOUD_APP_OPTIONS,
     CONF_ACCESS_TOKEN,
     CONF_CLOUD_APP,
     CONF_DEVICE_NAME,
@@ -58,6 +59,7 @@ from .const import (
     CONF_MANUAL_DEVICES,
     CONF_PRODUCT_ID,
     CONF_PRODUCT_NAME,
+    DEFAULT_CLOUD_APP_OPTION,
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
     ENVIRONMENT_LOCAL,
@@ -87,9 +89,9 @@ STEP_USER_SCHEMA = vol.Schema(
                 translation_key=CONF_ENVIRONMENT,
             )
         ),
-        vol.Required(CONF_CLOUD_APP, default=CloudApp.KLYQAPET.value): SelectSelector(
+        vol.Required(CONF_CLOUD_APP, default=DEFAULT_CLOUD_APP_OPTION): SelectSelector(
             SelectSelectorConfig(
-                options=[app.value for app in CloudApp],
+                options=list(CLOUD_APP_OPTIONS),
                 mode=SelectSelectorMode.DROPDOWN,
                 translation_key=CONF_CLOUD_APP,
             )
@@ -174,18 +176,22 @@ class KlyqaPetConfigFlow(ConfigFlow, domain=DOMAIN):
         """Ask for environment and credentials."""
         errors: dict[str, str] = {}
         if user_input is not None:
+            # The form offers lower-case option keys (hassfest rejects anything else in a
+            # translation key); everything downstream - the login, the unique id, the
+            # title and the stored data - uses the tenant string the cloud expects.
+            cloud_app = CLOUD_APP_OPTIONS[user_input[CONF_CLOUD_APP]]
             devices = await self._async_try_login(
                 user_input[CONF_ENVIRONMENT],
                 user_input[CONF_EMAIL],
                 user_input[CONF_PASSWORD],
-                user_input[CONF_CLOUD_APP],
+                cloud_app,
                 errors,
             )
             if devices is not None:
                 await self.async_set_unique_id(
                     _account_unique_id(
                         user_input[CONF_ENVIRONMENT],
-                        user_input[CONF_CLOUD_APP],
+                        cloud_app,
                         user_input[CONF_EMAIL],
                     ),
                     raise_on_progress=False,
@@ -194,12 +200,11 @@ class KlyqaPetConfigFlow(ConfigFlow, domain=DOMAIN):
                 self._async_abort_stale_discoveries(devices)
                 return self.async_create_entry(
                     title=(
-                        f"{user_input[CONF_EMAIL]} "
-                        f"({user_input[CONF_CLOUD_APP]}, {user_input[CONF_ENVIRONMENT]})"
+                        f"{user_input[CONF_EMAIL]} ({cloud_app}, {user_input[CONF_ENVIRONMENT]})"
                     ),
                     data={
                         CONF_ENVIRONMENT: user_input[CONF_ENVIRONMENT],
-                        CONF_CLOUD_APP: user_input[CONF_CLOUD_APP],
+                        CONF_CLOUD_APP: cloud_app,
                         CONF_EMAIL: user_input[CONF_EMAIL],
                         CONF_PASSWORD: user_input[CONF_PASSWORD],
                         CONF_DEVICES: devices,

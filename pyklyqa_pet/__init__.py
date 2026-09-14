@@ -35,7 +35,7 @@ from .timecodes import (
 )
 from .welly import WellyDevice, WellyMode, WellySettings, WellyState
 
-__version__ = "0.3.0"
+__version__ = "0.3.1"
 
 _DEVICE_CLASSES: dict[DeviceType, type[KlyqaDevice]] = {
     DeviceType.WELLY: WellyDevice,
