@@ -157,8 +157,9 @@ class FoodyDevice(KlyqaDevice):
         """
         data = await self.request(method, "device/timer", payload)
         errors = data.get("error") or []
-        if errors:
-            raise KlyqaDeviceError([str(error) for error in errors])
+        error_msgs = [str(e) for e in errors] if isinstance(errors, list) else [str(errors)]
+        if error_msgs:
+            raise KlyqaDeviceError(error_msgs)
         return FoodyTimers.from_dict(data)
 
     async def get_timers(self) -> FoodyTimers:

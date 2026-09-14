@@ -180,3 +180,21 @@ async def test_an_empty_error_array_is_not_an_error(device: FoodyDevice, api: Fa
     api.add("POST", TIMER, 200, payload)
     result = await device.delete_schedule(0)
     assert result.schedules[0].schedule_id == 0
+
+
+async def test_a_non_list_numeric_error_still_raises(device: FoodyDevice, api: FakeApi) -> None:
+    payload = load_fixture("foody_timers.json") | {"error": 42}
+    api.add("POST", TIMER, 200, payload)
+    with pytest.raises(KlyqaDeviceError) as excinfo:
+        await device.delete_schedule(19)
+    assert excinfo.value.errors == ["42"]
+
+
+async def test_a_bare_string_error_is_not_iterated_per_character(
+    device: FoodyDevice, api: FakeApi
+) -> None:
+    payload = load_fixture("foody_timers.json") | {"error": "boom"}
+    api.add("POST", TIMER, 200, payload)
+    with pytest.raises(KlyqaDeviceError) as excinfo:
+        await device.delete_schedule(19)
+    assert excinfo.value.errors == ["boom"]
