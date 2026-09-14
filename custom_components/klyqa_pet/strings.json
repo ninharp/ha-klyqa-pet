@@ -121,8 +121,8 @@
     },
     "cloud_app": {
       "options": {
-        "Klyqapet": "Klyqa Pet",
-        "Klyqa": "Klyqa (lighting)"
+        "klyqapet": "Klyqa Pet",
+        "klyqa": "Klyqa (lighting)"
       }
     }
   },

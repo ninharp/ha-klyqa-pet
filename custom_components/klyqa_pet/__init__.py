@@ -6,6 +6,7 @@ import logging
 
 from homeassistant.config_entries import ConfigEntry, ConfigEntryState
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import translation
 from homeassistant.helpers.typing import ConfigType
@@ -29,6 +30,11 @@ from .services import async_setup_services
 _LOGGER = logging.getLogger(__name__)
 
 type KlyqaPetConfigEntry = ConfigEntry[KlyqaPetHub]
+
+
+# The integration is configured from the UI only; `async_setup` exists solely to
+# register the actions at startup, so hassfest wants this declared explicitly.
+CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:

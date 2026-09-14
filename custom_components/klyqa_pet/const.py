@@ -5,6 +5,8 @@ from typing import Final
 
 from homeassistant.const import Platform
 
+from pyklyqa_pet.const import CloudApp
+
 DOMAIN: Final = "klyqa_pet"
 MANUFACTURER: Final = "Klyqa"
 
@@ -134,3 +136,11 @@ STRYPE_LIGHT_MODES: Final = ("rgb", "cct", "cmd")
 # FeedingSchedule.weekdays and SleepMode.weekdays. Shared by the schedule sensor's
 # attributes and the feeding-schedule services.
 WEEKDAY_KEYS: Final = ("sun", "mon", "tue", "wed", "thu", "fri", "sat")
+
+
+# The cloud tenant is sent to the API with its own capitalisation ("Klyqapet"), but a
+# selector option doubles as a translation key and hassfest only accepts [a-z0-9-_].
+# The form therefore offers lower-case keys and the flow maps them back before anything
+# is stored, so config entry data and unique ids keep the tenant string unchanged.
+CLOUD_APP_OPTIONS: Final[dict[str, str]] = {app.value.lower(): app.value for app in CloudApp}
+DEFAULT_CLOUD_APP_OPTION: Final = CloudApp.KLYQAPET.value.lower()
