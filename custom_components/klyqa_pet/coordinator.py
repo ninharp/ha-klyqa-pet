@@ -180,7 +180,6 @@ class KlyqaDeviceCoordinator(DataUpdateCoordinator[KlyqaDeviceData]):
         # Assistant or the device's own buttons, and every write here refreshes them
         # directly, so there is no need to poll device/timer any more often than settings.
         self._timers: FoodyTimers | None = None
-        self._timers_stale = True
         self._poll_count = 0
         # Strype only: the last state published for this device. The lighting firmware
         # answers every request with a mode-dependent status message - `color` only in
@@ -305,7 +304,7 @@ class KlyqaDeviceCoordinator(DataUpdateCoordinator[KlyqaDeviceData]):
         sleep-mode change) so the change is reflected as soon as the write's automatic
         refresh runs, without waiting for the next periodic timers poll.
         """
-        self._timers_stale = True
+        self._timers = None
 
     @property
     def strype_state(self) -> StrypeState | None:
@@ -364,9 +363,8 @@ class KlyqaDeviceCoordinator(DataUpdateCoordinator[KlyqaDeviceData]):
                 # buttons, and every write here refreshes them directly via
                 # mark_timers_stale(), so there is no need to poll device/timer any
                 # more often than settings.
-                if self._timers_stale or self._poll_count % SETTINGS_POLL_INTERVAL == 0:
+                if self._timers is None or self._poll_count % SETTINGS_POLL_INTERVAL == 0:
                     self._timers = await self.foody_device.get_timers()
-                    self._timers_stale = False
                 timers = self._timers
         elif isinstance(self.device, AirPurifierDevice):
             state = await self.device.get_state()
