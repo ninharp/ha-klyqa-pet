@@ -22,6 +22,7 @@ from zeroconf.asyncio import AsyncServiceBrowser, AsyncServiceInfo
 from pyklyqa_pet import (
     DEFAULT_PORT,
     ZEROCONF_TYPE,
+    CloudApp,
     DiscoveredDevice,
     Environment,
     KlyqaAuthError,
@@ -34,6 +35,7 @@ from pyklyqa_pet import (
 
 from .const import (
     CONF_ACCESS_TOKEN,
+    CONF_CLOUD_APP,
     CONF_DEVICE_NAME,
     CONF_DEVICES,
     CONF_ENVIRONMENT,
@@ -53,11 +55,20 @@ type NewDeviceListener = Callable[[KlyqaDeviceCoordinator], None]
 
 
 async def async_fetch_cloud_devices(
-    hass: HomeAssistant, environment: str, email: str, password: str
+    hass: HomeAssistant,
+    environment: str,
+    email: str,
+    password: str,
+    cloud_app: str,
 ) -> dict[str, DeviceRecord]:
-    """Log in to the cloud and return device records keyed by local device id."""
+    """Log in to the cloud and return device records keyed by local device id.
+
+    `cloud_app` selects the tenant and has no safe default: silently falling back to
+    one would log the user into the wrong account's device list, so every caller has
+    to name it (as `_async_try_login` already does).
+    """
     client = KlyqaCloudClient(async_get_clientsession(hass), Environment(environment))
-    await client.login(email, password)
+    await client.login(email, password, environment_name=cloud_app)
     return {
         device.local_device_id: {
             CONF_ACCESS_TOKEN: device.access_token,
@@ -259,11 +270,13 @@ class KlyqaPetHub:
                 and now - self._last_token_refresh < TOKEN_REFRESH_COALESCE
             ):
                 return
+            cloud_app = self.entry.data.get(CONF_CLOUD_APP, CloudApp.KLYQAPET.value)
             fresh = await async_fetch_cloud_devices(
                 self.hass,
                 self.entry.data[CONF_ENVIRONMENT],
                 self.entry.data[CONF_EMAIL],
                 self.entry.data[CONF_PASSWORD],
+                cloud_app,
             )
             if not force:
                 self._last_token_refresh = dt_util.utcnow()

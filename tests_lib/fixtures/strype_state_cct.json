@@ -1,0 +1,16 @@
+{
+  "power_on": 0,
+  "active_scene": "",
+  "brightness": { "percentage": 70 },
+  "length_ret": 2,
+  "status": "on",
+  "transitionTime": 1000,
+  "fade": { "in": 1000, "out": 1000 },
+  "type": "status",
+  "active_command": 0,
+  "temperature": 4000,
+  "mode": "cct",
+  "error": [],
+  "reset_reason": 1,
+  "wifi_parameters": { "rssi": -48, "security": 3, "channel": 6 }
+}

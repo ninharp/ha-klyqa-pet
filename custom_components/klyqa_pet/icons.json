@@ -33,7 +33,9 @@
       "filter_remaining": { "default": "mdi:air-filter" },
       "total_run_time": { "default": "mdi:timer" },
       "air_volume": { "default": "mdi:weather-windy" },
-      "pet_mode_time": { "default": "mdi:paw" }
+      "pet_mode_time": { "default": "mdi:paw" },
+      "strip_length": { "default": "mdi:ruler" },
+      "light_mode": { "default": "mdi:palette" }
     },
     "binary_sensor": {
       "water_tray_low": { "default": "mdi:water-alert" },
@@ -84,10 +86,12 @@
       "stop_descaling": { "default": "mdi:water-check" },
       "dispense_food": { "default": "mdi:food-drumstick" },
       "play_voice_recording": { "default": "mdi:account-voice" },
-      "query_bowl_weight": { "default": "mdi:scale" }
+      "query_bowl_weight": { "default": "mdi:scale" },
+      "detect_length": { "default": "mdi:ruler-square" }
     },
     "light": {
-      "led": { "default": "mdi:led-strip-variant" }
+      "led": { "default": "mdi:led-strip-variant" },
+      "strip": { "default": "mdi:led-strip-variant", "state": { "off": "mdi:led-strip" } }
     }
   }
 }

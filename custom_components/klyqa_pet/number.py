@@ -141,6 +141,7 @@ NUMBERS_BY_TYPE: dict[DeviceType, tuple[KlyqaNumberEntityDescription, ...]] = {
     DeviceType.WELLY: WELLY_NUMBERS,
     DeviceType.FOODY: FOODY_NUMBERS,
     DeviceType.AIRPURIFIER: (),
+    DeviceType.STRYPE: (),
 }
 
 

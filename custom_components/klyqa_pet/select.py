@@ -68,6 +68,7 @@ SELECTS_BY_TYPE: dict[DeviceType, tuple[KlyqaSelectEntityDescription, ...]] = {
     DeviceType.WELLY: WELLY_SELECTS,
     DeviceType.FOODY: FOODY_SELECTS,
     DeviceType.AIRPURIFIER: (),
+    DeviceType.STRYPE: (),
 }
 
 

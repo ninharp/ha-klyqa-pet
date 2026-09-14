@@ -16,6 +16,7 @@ from pyklyqa_pet import (
     KlyqaAuthError,
     KlyqaConnectionError,
     KlyqaDeviceError,
+    StrypeState,
     WellySettings,
 )
 
@@ -74,6 +75,14 @@ class KlyqaPetEntity(CoordinatorEntity[KlyqaDeviceCoordinator]):
                 translation_key="cannot_connect",
                 translation_placeholders={"device": device},
             ) from err
+        if isinstance(result, StrypeState):
+            # A Strype write answers with the very same status message a read does, and
+            # the library has already merged it onto the coordinator's previous state
+            # (the caller passes it in as `previous=`). It is therefore a complete
+            # picture: publish it instead of polling the device again. There is no state
+            # GET to re-read from, so a refresh would only repeat this same request.
+            self.coordinator.async_publish_strype_state(result)
+            return
         if isinstance(result, WellySettings | FoodySettings):
             # A settings write already returns the fresh settings; mark the coordinator's
             # cache stale so the refresh below reloads it instead of reusing the copy

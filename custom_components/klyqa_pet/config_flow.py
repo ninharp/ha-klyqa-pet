@@ -32,6 +32,7 @@ import voluptuous as vol
 
 from pyklyqa_pet import (
     DEFAULT_PORT,
+    CloudApp,
     DiscoveredDevice,
     Environment,
     KlyqaAuthError,
@@ -44,6 +45,7 @@ from pyklyqa_pet import (
 
 from .const import (
     CONF_ACCESS_TOKEN,
+    CONF_CLOUD_APP,
     CONF_DEVICE_NAME,
     CONF_DEVICES,
     CONF_ENVIRONMENT,
@@ -54,6 +56,8 @@ from .const import (
     ENVIRONMENT_LOCAL,
     LOCAL_ENTRY_UNIQUE_ID,
 )
+from .const import MINOR_VERSION as ENTRY_MINOR_VERSION
+from .const import VERSION as ENTRY_VERSION
 from .hub import (
     DeviceRecord,
     async_fetch_cloud_devices,
@@ -74,6 +78,13 @@ STEP_USER_SCHEMA = vol.Schema(
                 translation_key=CONF_ENVIRONMENT,
             )
         ),
+        vol.Required(CONF_CLOUD_APP, default=CloudApp.KLYQAPET.value): SelectSelector(
+            SelectSelectorConfig(
+                options=[app.value for app in CloudApp],
+                mode=SelectSelectorMode.DROPDOWN,
+                translation_key=CONF_CLOUD_APP,
+            )
+        ),
         vol.Required(CONF_EMAIL): TextSelector(TextSelectorConfig(type=TextSelectorType.EMAIL)),
         vol.Required(CONF_PASSWORD): PASSWORD_SELECTOR,
     }
@@ -90,14 +101,15 @@ STEP_MANUAL_SCHEMA = vol.Schema(
 )
 
 
-def _account_unique_id(environment: str, email: str) -> str:
-    return f"{environment}:{email.strip().lower()}"
+def _account_unique_id(environment: str, cloud_app: str, email: str) -> str:
+    return f"{environment}:{cloud_app}:{email.strip().lower()}"
 
 
 class KlyqaPetConfigFlow(ConfigFlow, domain=DOMAIN):
     """Handle the account-based config flow."""
 
-    VERSION = 1
+    VERSION = ENTRY_VERSION
+    MINOR_VERSION = ENTRY_MINOR_VERSION
 
     def __init__(self) -> None:
         """Initialise flow state."""
@@ -110,11 +122,18 @@ class KlyqaPetConfigFlow(ConfigFlow, domain=DOMAIN):
         return KlyqaPetOptionsFlow()
 
     async def _async_try_login(
-        self, environment: str, email: str, password: str, errors: dict[str, str]
+        self,
+        environment: str,
+        email: str,
+        password: str,
+        cloud_app: str,
+        errors: dict[str, str],
     ) -> dict[str, DeviceRecord] | None:
         """Log in and return the device records, filling errors on failure."""
         try:
-            return await async_fetch_cloud_devices(self.hass, environment, email, password)
+            return await async_fetch_cloud_devices(
+                self.hass, environment, email, password, cloud_app
+            )
         except KlyqaAuthError:
             errors["base"] = "invalid_auth"
         except KlyqaConnectionError:
@@ -136,19 +155,28 @@ class KlyqaPetConfigFlow(ConfigFlow, domain=DOMAIN):
                 user_input[CONF_ENVIRONMENT],
                 user_input[CONF_EMAIL],
                 user_input[CONF_PASSWORD],
+                user_input[CONF_CLOUD_APP],
                 errors,
             )
             if devices is not None:
                 await self.async_set_unique_id(
-                    _account_unique_id(user_input[CONF_ENVIRONMENT], user_input[CONF_EMAIL]),
+                    _account_unique_id(
+                        user_input[CONF_ENVIRONMENT],
+                        user_input[CONF_CLOUD_APP],
+                        user_input[CONF_EMAIL],
+                    ),
                     raise_on_progress=False,
                 )
                 self._abort_if_unique_id_configured()
                 self._async_abort_stale_discoveries(devices)
                 return self.async_create_entry(
-                    title=f"{user_input[CONF_EMAIL]} ({user_input[CONF_ENVIRONMENT]})",
+                    title=(
+                        f"{user_input[CONF_EMAIL]} "
+                        f"({user_input[CONF_CLOUD_APP]}, {user_input[CONF_ENVIRONMENT]})"
+                    ),
                     data={
                         CONF_ENVIRONMENT: user_input[CONF_ENVIRONMENT],
+                        CONF_CLOUD_APP: user_input[CONF_CLOUD_APP],
                         CONF_EMAIL: user_input[CONF_EMAIL],
                         CONF_PASSWORD: user_input[CONF_PASSWORD],
                         CONF_DEVICES: devices,
@@ -318,6 +346,7 @@ class KlyqaPetConfigFlow(ConfigFlow, domain=DOMAIN):
                 entry.data[CONF_ENVIRONMENT],
                 entry.data[CONF_EMAIL],
                 user_input[CONF_PASSWORD],
+                entry.data.get(CONF_CLOUD_APP, CloudApp.KLYQAPET.value),
                 errors,
             )
             if devices is not None:
@@ -350,6 +379,7 @@ class KlyqaPetConfigFlow(ConfigFlow, domain=DOMAIN):
                 entry.data[CONF_ENVIRONMENT],
                 entry.data[CONF_EMAIL],
                 user_input[CONF_PASSWORD],
+                entry.data.get(CONF_CLOUD_APP, CloudApp.KLYQAPET.value),
                 errors,
             )
             if devices is not None:

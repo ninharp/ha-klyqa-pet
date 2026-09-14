@@ -64,3 +64,51 @@ async def test_button_presses(
     await press("button.klyqa_airpurifier_e85dfc_restart")
     mock_purifier.reboot.assert_awaited_once()
     mock_purifier.request.assert_not_called()
+
+
+@pytest.mark.usefixtures("entity_registry_enabled_by_default", "buttons")
+async def test_detect_length_button(
+    hass: HomeAssistant, mock_config_entry: MockConfigEntry, mock_strype: MagicMock
+) -> None:
+    await hass.services.async_call(
+        BUTTON_DOMAIN,
+        SERVICE_PRESS,
+        {ATTR_ENTITY_ID: "button.living_room_strip_detect_strip_length"},
+        blocking=True,
+    )
+    mock_strype.detect_length.assert_awaited_once()
+
+
+@pytest.mark.usefixtures("entity_registry_enabled_by_default")
+async def test_detect_length_button_threads_previous_and_publishes_the_result(
+    hass: HomeAssistant,
+    mock_config_entry: MockConfigEntry,
+    mock_cloud: MagicMock,
+    mock_devices: dict,
+    mock_strype: MagicMock,
+) -> None:
+    """The button must pass `previous=` and the response must reach the sensor.
+
+    `previous=` is an optional kwarg on `detect_length`, so dropping it breaks no
+    mypy check and no test that only checks the call count - it would silently
+    reintroduce the stale-colour bug on the button path. Assert the kwarg is actually
+    threaded through, and that pressing the button really updates the strip-length
+    sensor - not just that the device method was awaited.
+    """
+    with patch("custom_components.klyqa_pet.PLATFORMS", [Platform.BUTTON, Platform.SENSOR]):
+        await setup_integration(hass, mock_config_entry)
+
+    previous_state = mock_strype.get_state.return_value
+    assert hass.states.get("sensor.living_room_strip_strip_length").state == "3"
+
+    await hass.services.async_call(
+        BUTTON_DOMAIN,
+        SERVICE_PRESS,
+        {ATTR_ENTITY_ID: "button.living_room_strip_detect_strip_length"},
+        blocking=True,
+    )
+
+    mock_strype.detect_length.assert_awaited_once()
+    assert mock_strype.detect_length.await_args.kwargs["previous"] is previous_state
+
+    assert hass.states.get("sensor.living_room_strip_strip_length").state == "5"

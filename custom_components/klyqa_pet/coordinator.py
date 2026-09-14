@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime
 import logging
 from typing import TYPE_CHECKING, Any
@@ -26,6 +26,8 @@ from pyklyqa_pet import (
     KlyqaDevice,
     KlyqaDeviceError,
     KlyqaRateLimitError,
+    StrypeDevice,
+    StrypeState,
     SystemInfo,
     WellyDevice,
     WellySettings,
@@ -48,13 +50,14 @@ if TYPE_CHECKING:
 
 _LOGGER = logging.getLogger(__name__)
 
-type DeviceState = WellyState | FoodyState | AirPurifierState
+type DeviceState = WellyState | FoodyState | AirPurifierState | StrypeState
 type DeviceSettings = WellySettings | FoodySettings | None
 
 _DEFAULT_PRODUCT_NAMES = {
     DeviceType.WELLY: "Klyqa Welly",
     DeviceType.FOODY: "Klyqa Foody",
     DeviceType.AIRPURIFIER: "Klyqa Airpurifier",
+    DeviceType.STRYPE: "Klyqa Strype",
 }
 
 
@@ -94,6 +97,12 @@ class KlyqaDeviceData:
     def purifier(self) -> AirPurifierState:
         """Return the state as air purifier state."""
         assert isinstance(self.state, AirPurifierState)
+        return self.state
+
+    @property
+    def strype(self) -> StrypeState:
+        """Return the state as Strype state."""
+        assert isinstance(self.state, StrypeState)
         return self.state
 
 
@@ -141,6 +150,12 @@ class KlyqaDeviceCoordinator(DataUpdateCoordinator[KlyqaDeviceData]):
         # settings write marks this stale so the very next poll reloads it.
         self._settings: DeviceSettings = None
         self._poll_count = 0
+        # Strype only: the last state published for this device. The lighting firmware
+        # answers every request with a mode-dependent status message - `color` only in
+        # rgb mode, `temperature` only in cct mode, neither in cmd mode - and offers no
+        # endpoint that reports both, so each response is merged onto this one rather
+        # than replacing it (see StrypeState.from_dict).
+        self._strype_state: StrypeState | None = None
         # dt_util.utcnow() (not time.monotonic()) so tests can control this clock with
         # freezegun; monotonic() is untouched by freezegun and made the cache gate
         # untestable.
@@ -167,6 +182,12 @@ class KlyqaDeviceCoordinator(DataUpdateCoordinator[KlyqaDeviceData]):
     def purifier_device(self) -> AirPurifierDevice:
         """Return the device client as air purifier client."""
         assert isinstance(self.device, AirPurifierDevice)
+        return self.device
+
+    @property
+    def strype_device(self) -> StrypeDevice:
+        """Return the device client as Strype client."""
+        assert isinstance(self.device, StrypeDevice)
         return self.device
 
     async def _async_update_data(self) -> KlyqaDeviceData:
@@ -245,6 +266,23 @@ class KlyqaDeviceCoordinator(DataUpdateCoordinator[KlyqaDeviceData]):
         """
         self._settings = None
 
+    @property
+    def strype_state(self) -> StrypeState | None:
+        """Return the last known Strype state, to merge the next response onto."""
+        return self._strype_state
+
+    @callback
+    def async_publish_strype_state(self, state: StrypeState) -> None:
+        """Publish the state a Strype write returned.
+
+        The library has already merged the device's response onto the state passed in as
+        `previous=` (this coordinator's own), so `state` is a complete picture and can be
+        published straight away. That is both faster for the user and gentler on the
+        firmware's rate limit than following every write with another request.
+        """
+        self._strype_state = state
+        self.async_set_updated_data(replace(self.data, state=state))
+
     async def _async_recover_token(self) -> None:
         """Fetch fresh tokens from the cloud after the device rejected ours."""
         _LOGGER.debug(
@@ -280,6 +318,12 @@ class KlyqaDeviceCoordinator(DataUpdateCoordinator[KlyqaDeviceData]):
             settings = self._settings
         elif isinstance(self.device, AirPurifierDevice):
             state = await self.device.get_state()
+        elif isinstance(self.device, StrypeDevice):
+            # There is no state GET on the lighting firmware: a read is a command that
+            # carries no state-changing field, answered with the same mode-dependent
+            # status message a write returns. Merge it onto what we already knew.
+            state = await self.device.get_state(previous=self._strype_state)
+            self._strype_state = state
         else:  # pragma: no cover - guarded by create_device
             raise UpdateFailed(f"Unsupported device class {type(self.device).__name__}")
         return KlyqaDeviceData(system_info=self._system_info, state=state, settings=settings)

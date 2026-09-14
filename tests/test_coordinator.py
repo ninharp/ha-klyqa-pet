@@ -8,15 +8,17 @@ from homeassistant.components.switch import DOMAIN as SWITCH_DOMAIN
 from homeassistant.components.switch import SERVICE_TURN_ON
 from homeassistant.const import ATTR_ENTITY_ID
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.entity import EntityDescription
 from pytest_homeassistant_custom_component.common import (
     MockConfigEntry,
     async_fire_time_changed,
 )
 
 from custom_components.klyqa_pet.const import SCAN_INTERVAL
-from pyklyqa_pet import KlyqaConnectionError, KlyqaRateLimitError, WellySettings
+from custom_components.klyqa_pet.entity import KlyqaPetEntity
+from pyklyqa_pet import KlyqaConnectionError, KlyqaRateLimitError, StrypeState, WellySettings
 
-from .conftest import WELLY_ID, load_json, setup_integration
+from .conftest import STRYPE_ID, WELLY_ID, load_json, setup_integration
 
 
 async def test_update_failed_message_is_rendered(
@@ -126,3 +128,66 @@ async def test_settings_write_reloads_on_next_refresh(
     )
 
     assert mock_welly.get_settings.call_count == 2
+
+
+async def test_strype_poll_merges_onto_the_previous_state(
+    hass: HomeAssistant,
+    mock_config_entry: MockConfigEntry,
+    mock_cloud: MagicMock,
+    mock_devices: dict,
+    mock_strype: MagicMock,
+) -> None:
+    """Each poll hands the last known state to the library to merge the response onto."""
+    await setup_integration(hass, mock_config_entry)
+    coordinator = mock_config_entry.runtime_data.coordinators[STRYPE_ID]
+    assert coordinator.data.strype.length_metres == 3
+    # The first read has nothing to merge onto.
+    assert mock_strype.get_state.await_args.kwargs["previous"] is None
+
+    await coordinator.async_refresh()
+    assert mock_strype.get_state.await_count == 2
+    assert mock_strype.get_state.await_args.kwargs["previous"] is not None
+
+
+async def test_strype_write_is_published_without_another_poll(
+    hass: HomeAssistant,
+    mock_config_entry: MockConfigEntry,
+    mock_cloud: MagicMock,
+    mock_devices: dict,
+    mock_strype: MagicMock,
+) -> None:
+    """A write's response is already merged, so entity.py publishes it directly.
+
+    There is no state GET on this firmware, so refreshing after a write would only
+    repeat the same request; the merged result the write returned is complete.
+    """
+    await setup_integration(hass, mock_config_entry)
+    coordinator = mock_config_entry.runtime_data.coordinators[STRYPE_ID]
+    entity = KlyqaPetEntity(coordinator, EntityDescription(key="test"))
+
+    polled = coordinator.data.strype
+    assert polled.rgb == (255, 128, 0)
+    get_state_calls = mock_strype.get_state.await_count
+
+    # What a cmd-mode response to a power flip looks like once merged: neither colour
+    # field was reported, so both were carried forward from `polled`.
+    result = StrypeState.from_dict(
+        {"status": "off", "mode": "cmd", "brightness": {"percentage": 70}, "length_ret": 7},
+        polled,
+    )
+
+    async def _command() -> StrypeState:
+        return result
+
+    await entity._async_send(_command())
+    await hass.async_block_till_done()
+
+    assert mock_strype.get_state.await_count == get_state_calls
+    published = coordinator.data.strype
+    assert published.power_on is False
+    assert published.mode == "cmd"
+    assert published.rgb == (255, 128, 0)
+    assert published.temperature_kelvin == polled.temperature_kelvin
+    assert published.length_metres == 7
+    # The published state also becomes the base for the next poll's merge.
+    assert coordinator.strype_state == published

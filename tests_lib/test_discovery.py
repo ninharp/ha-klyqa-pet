@@ -23,7 +23,10 @@ from pyklyqa_pet.discovery import (
         ("@klyqa.airpurifier2-dev", DeviceType.AIRPURIFIER),
         ("@pfriendly.airpurifier", DeviceType.AIRPURIFIER),
         ("@klyqa.cleaning.airpurifier1", None),
-        ("@klyqa.lighting.kl-rgbc3.rgbcw", None),
+        ("@klyqa.lighting.kl-rgbc3.rgbcw", DeviceType.STRYPE),
+        ("@klyqa.lighting.kl-rgbc3.rgbcw-dev", DeviceType.STRYPE),
+        ("@klyqa.lighting.cw-ww.g95", None),
+        ("@klyqa.lighting.rgb-cw-ww.e27", None),
         ("", None),
     ],
 )
@@ -63,8 +66,16 @@ def test_parse_zeroconf_properties_str_and_default_port() -> None:
 
 
 def test_parse_zeroconf_properties_unknown_product() -> None:
-    props = {"productId": "@klyqa.lighting.kl-rgbc3.rgbcw", "localDeviceId": "80659988019C"}
+    props = {"productId": "@klyqa.lighting.cw-ww.g95", "localDeviceId": "80659988019C"}
     assert parse_zeroconf_properties("10.0.0.6", 3333, props) is None
+
+
+def test_parse_zeroconf_properties_strype() -> None:
+    props = {"productId": "@klyqa.lighting.kl-rgbc3.rgbcw", "localDeviceId": "80659988019C"}
+    result = parse_zeroconf_properties("10.0.0.6", 3333, props)
+    assert result is not None
+    assert result.device_type is DeviceType.STRYPE
+    assert result.local_device_id == "80659988019C"
 
 
 def test_parse_zeroconf_properties_missing_device_id() -> None:

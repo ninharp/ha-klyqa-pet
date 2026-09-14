@@ -41,3 +41,15 @@ async def test_sensor_values(
     assert hass.states.get("sensor.feeder_feeding_state").state == "idle"
     assert hass.states.get("sensor.klyqa_airpurifier_e85dfc_pm2_5").state == "12"
     assert hass.states.get("sensor.klyqa_airpurifier_e85dfc_air_quality").state == "good"
+
+
+async def test_strype_length_and_mode_sensors(
+    hass: HomeAssistant,
+    mock_config_entry: MockConfigEntry,
+    mock_cloud: MagicMock,
+    mock_devices: dict,
+) -> None:
+    with patch("custom_components.klyqa_pet.PLATFORMS", [Platform.SENSOR]):
+        await setup_integration(hass, mock_config_entry)
+    assert hass.states.get("sensor.living_room_strip_strip_length").state == "3"
+    assert hass.states.get("sensor.living_room_strip_light_mode").state == "rgb"

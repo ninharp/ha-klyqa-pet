@@ -17,6 +17,7 @@ from homeassistant.const import (
     SIGNAL_STRENGTH_DECIBELS_MILLIWATT,
     EntityCategory,
     UnitOfDensity,
+    UnitOfLength,
     UnitOfMass,
     UnitOfTemperature,
     UnitOfTime,
@@ -38,6 +39,7 @@ from .const import (
     FOODY_MANUAL_REPORT,
     FOODY_SCHEDULED_REPORT,
     PURIFIER_AQI_GRADES,
+    STRYPE_LIGHT_MODES,
     WELLY_POWER_STATUS,
     WELLY_POWER_SUPPLY,
     WELLY_PUMP_STATUS,
@@ -83,8 +85,14 @@ def _enum_description(
     )
 
 
-COMMON_SENSORS: tuple[KlyqaSensorEntityDescription, ...] = (
-    KlyqaSensorEntityDescription(
+def _wifi_rssi_description(
+    value_fn: Callable[[KlyqaDeviceData], int | None],
+) -> KlyqaSensorEntityDescription:
+    """Return the Wi-Fi signal strength description every device family shares.
+
+    The key is part of the public entity ids and must stay "wifi_rssi".
+    """
+    return KlyqaSensorEntityDescription(
         key="wifi_rssi",
         translation_key="wifi_rssi",
         device_class=SensorDeviceClass.SIGNAL_STRENGTH,
@@ -92,8 +100,11 @@ COMMON_SENSORS: tuple[KlyqaSensorEntityDescription, ...] = (
         state_class=SensorStateClass.MEASUREMENT,
         entity_category=EntityCategory.DIAGNOSTIC,
         entity_registry_enabled_default=False,
-        value_fn=lambda data: data.state.wifi_rssi,
-    ),
+        value_fn=value_fn,
+    )
+
+
+COMMON_SENSORS: tuple[KlyqaSensorEntityDescription, ...] = (
     KlyqaSensorEntityDescription(
         key="firmware_version",
         translation_key="firmware_version",
@@ -119,6 +130,7 @@ COMMON_SENSORS: tuple[KlyqaSensorEntityDescription, ...] = (
 )
 
 WELLY_SENSORS: tuple[KlyqaSensorEntityDescription, ...] = (
+    _wifi_rssi_description(lambda data: data.welly.wifi_rssi),
     KlyqaSensorEntityDescription(
         key="water_temperature",
         translation_key="water_temperature",
@@ -210,6 +222,7 @@ WELLY_SENSORS: tuple[KlyqaSensorEntityDescription, ...] = (
 )
 
 FOODY_SENSORS: tuple[KlyqaSensorEntityDescription, ...] = (
+    _wifi_rssi_description(lambda data: data.foody.wifi_rssi),
     KlyqaSensorEntityDescription(
         key="bowl_remaining",
         translation_key="bowl_remaining",
@@ -278,6 +291,7 @@ FOODY_SENSORS: tuple[KlyqaSensorEntityDescription, ...] = (
 )
 
 PURIFIER_SENSORS: tuple[KlyqaSensorEntityDescription, ...] = (
+    _wifi_rssi_description(lambda data: data.purifier.wifi_rssi),
     KlyqaSensorEntityDescription(
         key="pm25",
         device_class=SensorDeviceClass.PM25,
@@ -334,10 +348,29 @@ PURIFIER_SENSORS: tuple[KlyqaSensorEntityDescription, ...] = (
     ),
 )
 
+STRYPE_SENSORS: tuple[KlyqaSensorEntityDescription, ...] = (
+    KlyqaSensorEntityDescription(
+        key="strip_length",
+        translation_key="strip_length",
+        native_unit_of_measurement=UnitOfLength.METERS,
+        device_class=SensorDeviceClass.DISTANCE,
+        value_fn=lambda data: data.strype.length_metres,
+    ),
+    KlyqaSensorEntityDescription(
+        key="light_mode",
+        translation_key="light_mode",
+        device_class=SensorDeviceClass.ENUM,
+        options=list(STRYPE_LIGHT_MODES),
+        value_fn=lambda data: data.strype.mode,
+    ),
+    _wifi_rssi_description(lambda data: data.strype.wifi_rssi),
+)
+
 SENSORS_BY_TYPE: dict[DeviceType, tuple[KlyqaSensorEntityDescription, ...]] = {
     DeviceType.WELLY: WELLY_SENSORS,
     DeviceType.FOODY: FOODY_SENSORS,
     DeviceType.AIRPURIFIER: PURIFIER_SENSORS,
+    DeviceType.STRYPE: STRYPE_SENSORS,
 }
 
 

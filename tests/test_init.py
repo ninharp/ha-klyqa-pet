@@ -9,7 +9,7 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry
 from custom_components.klyqa_pet.const import CONF_ACCESS_TOKEN, CONF_DEVICES, DOMAIN
 from pyklyqa_pet import CloudDevice, KlyqaAuthError, KlyqaConnectionError
 
-from .conftest import FOODY_ID, MANUAL_ID, PURIFIER_ID, WELLY_ID, setup_integration
+from .conftest import FOODY_ID, MANUAL_ID, PURIFIER_ID, STRYPE_ID, WELLY_ID, setup_integration
 
 
 async def test_setup_and_unload(
@@ -22,9 +22,11 @@ async def test_setup_and_unload(
     await setup_integration(hass, mock_config_entry)
     assert mock_config_entry.state is ConfigEntryState.LOADED
     hub = mock_config_entry.runtime_data
-    assert set(hub.coordinators) == {WELLY_ID, FOODY_ID, PURIFIER_ID}
+    assert set(hub.coordinators) == {WELLY_ID, FOODY_ID, PURIFIER_ID, STRYPE_ID}
     assert hub.coordinators[WELLY_ID].last_update_success is True
-    mock_cloud.login.assert_awaited_once_with("user@example.com", "secret")
+    mock_cloud.login.assert_awaited_once_with(
+        "user@example.com", "secret", environment_name="Klyqapet"
+    )
     mock_zeroconf_browser.assert_called_once()
 
     await hass.config_entries.async_unload(mock_config_entry.entry_id)
@@ -86,7 +88,7 @@ async def test_setup_cloud_unreachable_uses_stored_tokens(
     mock_cloud.login.side_effect = KlyqaConnectionError("down")
     await setup_integration(hass, mock_config_entry)
     assert mock_config_entry.state is ConfigEntryState.LOADED
-    assert len(mock_config_entry.runtime_data.coordinators) == 3
+    assert len(mock_config_entry.runtime_data.coordinators) == 4
 
 
 async def test_setup_cloud_unreachable_without_devices_retries(

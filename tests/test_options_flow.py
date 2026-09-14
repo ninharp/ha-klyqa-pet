@@ -86,7 +86,7 @@ async def test_add_manual_device_releases_it_from_owning_account_entry(
         (KlyqaConnectionError("down"), "@klyqa.welly-dev", "cannot_connect"),
         (KlyqaDeviceError("error body"), "@klyqa.welly-dev", "cannot_connect"),
         (RuntimeError("boom"), "@klyqa.welly-dev", "unknown"),
-        (None, "@klyqa.lighting.kl-rgbc3.rgbcw", "not_supported"),
+        (None, "@klyqa.lighting.cw-ww.g95", "not_supported"),
     ],
 )
 async def test_add_manual_device_errors(

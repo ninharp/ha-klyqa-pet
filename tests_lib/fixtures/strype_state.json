@@ -1,0 +1,22 @@
+{
+  "power_on": 0,
+  "active_scene": "103",
+  "brightness": { "percentage": 100 },
+  "length_ret": 2,
+  "status": "on",
+  "transitionTime": 1000,
+  "fade": { "in": 1000, "out": 1000 },
+  "type": "status",
+  "active_command": 103,
+  "mode": "cmd",
+  "error": [],
+  "external": {
+    "port": 65501,
+    "channel": 1,
+    "universe": 1,
+    "autoreset": 5000,
+    "mode": "EXT_UDP"
+  },
+  "reset_reason": 1,
+  "wifi_parameters": { "rssi": -48, "security": 3, "channel": 6 }
+}

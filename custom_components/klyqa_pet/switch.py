@@ -99,6 +99,7 @@ SWITCHES_BY_TYPE: dict[DeviceType, tuple[KlyqaSwitchEntityDescription, ...]] = {
     DeviceType.WELLY: WELLY_SWITCHES,
     DeviceType.FOODY: FOODY_SWITCHES,
     DeviceType.AIRPURIFIER: PURIFIER_SWITCHES,
+    DeviceType.STRYPE: (),
 }
 
 

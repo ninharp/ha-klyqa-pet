@@ -110,6 +110,7 @@ BINARY_SENSORS_BY_TYPE: dict[DeviceType, tuple[KlyqaBinarySensorEntityDescriptio
     DeviceType.WELLY: WELLY_BINARY_SENSORS,
     DeviceType.FOODY: FOODY_BINARY_SENSORS,
     DeviceType.AIRPURIFIER: PURIFIER_BINARY_SENSORS,
+    DeviceType.STRYPE: (),
 }
 
 

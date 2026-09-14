@@ -21,12 +21,19 @@ that the integration never depends on the cloud being reachable.
 | `@klyqa.foody-dev` | Foody feeder (development firmware) | Supported |
 | `@klyqa.airpurifier2` | Airpurifier (2nd generation) | Supported |
 | `@klyqa.airpurifier2-dev` | Airpurifier (2nd generation, development firmware) | Supported |
+| `@klyqa.lighting.kl-rgbc3.rgbcw` | Strype LED strip | Supported |
+| `@klyqa.lighting.kl-rgbc3.rgbcw-dev` | Strype LED strip (development firmware) | Supported |
 | `@pfriendly.water-fountain` / `-dev` | Welly, rebranded product ID | Recognised, untested |
 | `@pfriendly.foody` / `-dev` | Foody, rebranded product ID | Recognised, untested |
 | `@pfriendly.airpurifier` / `-dev` | Airpurifier, rebranded product ID | Recognised, untested |
 
 The `@pfriendly.*` product IDs map to the same device classes as their `@klyqa.*`
 counterparts but have not been verified against real hardware.
+
+The Strype belongs to Klyqa's lighting line rather than the pet range. Its
+devices live under a different cloud tenant, so a cloud account is added once
+per product line — pick "Klyqa (lighting)" when adding the account. Other
+lighting products (E27, G95) are not supported.
 
 ## Installation
 

@@ -8,6 +8,12 @@ from homeassistant.const import Platform
 DOMAIN: Final = "klyqa_pet"
 MANUFACTURER: Final = "Klyqa"
 
+# Config entry schema version. The minor version is bumped for backwards-compatible
+# changes handled by async_migrate_entry; minor 2 made the cloud tenant part of a
+# cloud entry's unique id ("<env>:<tenant>:<email>" instead of "<env>:<email>").
+VERSION: Final = 1
+MINOR_VERSION: Final = 2
+
 # A local-only entry (devices added by IP + token, no cloud account) is recognised by
 # entry.data[CONF_ENVIRONMENT] == ENVIRONMENT_LOCAL. It is not a value pyklyqa_pet's
 # Environment enum knows about - it never reaches KlyqaCloudClient/Environment(...).
@@ -17,6 +23,7 @@ ENVIRONMENT_LOCAL: Final = "local"
 LOCAL_ENTRY_UNIQUE_ID: Final = "local"
 
 CONF_ENVIRONMENT: Final = "environment"
+CONF_CLOUD_APP: Final = "cloud_app"
 CONF_DEVICES: Final = "devices"
 CONF_MANUAL_DEVICES: Final = "manual_devices"
 CONF_LOCAL_DEVICE_ID: Final = "local_device_id"
@@ -114,3 +121,5 @@ PURIFIER_AQI_GRADES: Final[dict[int, str]] = {
     3: "heavily_polluted",
 }
 PURIFIER_RUN_MODES: Final[dict[int, str]] = {0: "standalone", 1: "auto", 2: "night", 3: "pet"}
+
+STRYPE_LIGHT_MODES: Final = ("rgb", "cct", "cmd")

@@ -6,7 +6,14 @@ import aiohttp
 
 from .airpurifier import AirPurifierDevice, AirPurifierRunMode, AirPurifierState
 from .cloud import CloudDevice, KlyqaCloudClient
-from .const import DEFAULT_PORT, DEV_ACCESS_TOKEN, ZEROCONF_TYPE, DeviceType, Environment
+from .const import (
+    DEFAULT_PORT,
+    DEV_ACCESS_TOKEN,
+    ZEROCONF_TYPE,
+    CloudApp,
+    DeviceType,
+    Environment,
+)
 from .device import KlyqaDevice, SystemInfo
 from .discovery import DiscoveredDevice, device_type_from_product_id, parse_zeroconf_properties
 from .exceptions import (
@@ -17,14 +24,16 @@ from .exceptions import (
     KlyqaRateLimitError,
 )
 from .foody import FoodyDevice, FoodySettings, FoodyState
+from .strype import StrypeDevice, StrypeState
 from .welly import WellyDevice, WellyMode, WellySettings, WellyState
 
-__version__ = "0.1.5"
+__version__ = "0.2.0"
 
 _DEVICE_CLASSES: dict[DeviceType, type[KlyqaDevice]] = {
     DeviceType.WELLY: WellyDevice,
     DeviceType.FOODY: FoodyDevice,
     DeviceType.AIRPURIFIER: AirPurifierDevice,
+    DeviceType.STRYPE: StrypeDevice,
 }
 
 
@@ -46,6 +55,7 @@ __all__ = [
     "AirPurifierDevice",
     "AirPurifierRunMode",
     "AirPurifierState",
+    "CloudApp",
     "CloudDevice",
     "DeviceType",
     "DiscoveredDevice",
@@ -60,6 +70,8 @@ __all__ = [
     "KlyqaDeviceError",
     "KlyqaError",
     "KlyqaRateLimitError",
+    "StrypeDevice",
+    "StrypeState",
     "SystemInfo",
     "WellyDevice",
     "WellyMode",
