@@ -28,7 +28,7 @@ from .foody_timers import FeedingSchedule, FoodyTimers, SleepMode
 from .strype import StrypeDevice, StrypeState
 from .welly import WellyDevice, WellyMode, WellySettings, WellyState
 
-__version__ = "0.3.0"
+__version__ = "0.3.1"
 
 _DEVICE_CLASSES: dict[DeviceType, type[KlyqaDevice]] = {
     DeviceType.WELLY: WellyDevice,
