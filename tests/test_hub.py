@@ -24,8 +24,8 @@ from custom_components.klyqa_pet.const import (
     CONF_MANUAL_DEVICES,
     CONF_PRODUCT_ID,
     CONF_PRODUCT_NAME,
+    DEFAULT_SCAN_INTERVAL,
     DOMAIN,
-    SCAN_INTERVAL,
     SYSTEM_INFO_INTERVAL,
     TOKEN_RECOVERY_BACKOFF,
 )
@@ -233,7 +233,7 @@ async def test_device_401_triggers_token_refresh(
     # A coordinator only polls while an entity listens to it.
     mock_config_entry.runtime_data.coordinators[WELLY_ID].async_add_listener(lambda: None)
 
-    freezer.tick(SCAN_INTERVAL + timedelta(seconds=1))
+    freezer.tick(DEFAULT_SCAN_INTERVAL + timedelta(seconds=1))
     async_fire_time_changed(hass)
     await hass.async_block_till_done()
 
@@ -257,10 +257,10 @@ async def test_persistent_401_marks_device_unavailable(
     # A coordinator only polls while an entity listens to it.
     mock_config_entry.runtime_data.coordinators[WELLY_ID].async_add_listener(lambda: None)
 
-    freezer.tick(SCAN_INTERVAL + timedelta(seconds=1))
+    freezer.tick(DEFAULT_SCAN_INTERVAL + timedelta(seconds=1))
     async_fire_time_changed(hass)
     await hass.async_block_till_done()
-    freezer.tick(SCAN_INTERVAL + timedelta(seconds=1))
+    freezer.tick(DEFAULT_SCAN_INTERVAL + timedelta(seconds=1))
     async_fire_time_changed(hass)
     await hass.async_block_till_done()
 
@@ -295,7 +295,7 @@ async def test_concurrent_401s_coalesce_into_one_login(
     mock_config_entry.runtime_data.coordinators[WELLY_ID].async_add_listener(lambda: None)
     mock_config_entry.runtime_data.coordinators[FOODY_ID].async_add_listener(lambda: None)
 
-    freezer.tick(SCAN_INTERVAL + timedelta(seconds=1))
+    freezer.tick(DEFAULT_SCAN_INTERVAL + timedelta(seconds=1))
     async_fire_time_changed(hass)
     await hass.async_block_till_done()
 
@@ -317,13 +317,13 @@ async def test_recovery_backoff_limits_repeated_logins(
     # A coordinator only polls while an entity listens to it.
     mock_config_entry.runtime_data.coordinators[WELLY_ID].async_add_listener(lambda: None)
 
-    freezer.tick(SCAN_INTERVAL + timedelta(seconds=1))
+    freezer.tick(DEFAULT_SCAN_INTERVAL + timedelta(seconds=1))
     async_fire_time_changed(hass)
     await hass.async_block_till_done()
     assert mock_cloud.login.await_count == 1
 
     # Still well inside the backoff window: no further login attempt for this device.
-    freezer.tick(SCAN_INTERVAL + timedelta(seconds=1))
+    freezer.tick(DEFAULT_SCAN_INTERVAL + timedelta(seconds=1))
     async_fire_time_changed(hass)
     await hass.async_block_till_done()
     assert mock_cloud.login.await_count == 1
@@ -350,7 +350,7 @@ async def test_cloud_auth_error_during_recovery_starts_reauth(
     # A coordinator only polls while an entity listens to it.
     mock_config_entry.runtime_data.coordinators[WELLY_ID].async_add_listener(lambda: None)
 
-    freezer.tick(SCAN_INTERVAL + timedelta(seconds=1))
+    freezer.tick(DEFAULT_SCAN_INTERVAL + timedelta(seconds=1))
     async_fire_time_changed(hass)
     await hass.async_block_till_done()
 
@@ -684,7 +684,7 @@ async def test_manual_device_401_does_not_start_reauth(
     # A coordinator only polls while an entity listens to it.
     hub.coordinators[MANUAL_ID].async_add_listener(lambda: None)
 
-    freezer.tick(SCAN_INTERVAL + timedelta(seconds=1))
+    freezer.tick(DEFAULT_SCAN_INTERVAL + timedelta(seconds=1))
     async_fire_time_changed(hass)
     await hass.async_block_till_done()
 
@@ -707,7 +707,7 @@ async def test_401_recovery_cloud_unreachable_fails_update(
     # A coordinator only polls while an entity listens to it.
     mock_config_entry.runtime_data.coordinators[WELLY_ID].async_add_listener(lambda: None)
 
-    freezer.tick(SCAN_INTERVAL + timedelta(seconds=1))
+    freezer.tick(DEFAULT_SCAN_INTERVAL + timedelta(seconds=1))
     async_fire_time_changed(hass)
     await hass.async_block_till_done()
 
@@ -730,7 +730,7 @@ async def test_system_info_cached_between_polls(
     # A coordinator only polls while an entity listens to it.
     hub.coordinators[WELLY_ID].async_add_listener(lambda: None)
 
-    freezer.tick(SCAN_INTERVAL + timedelta(seconds=1))
+    freezer.tick(DEFAULT_SCAN_INTERVAL + timedelta(seconds=1))
     async_fire_time_changed(hass)
     await hass.async_block_till_done()
     assert mock_welly.get_system_info.await_count == 1

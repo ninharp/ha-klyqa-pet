@@ -6,7 +6,7 @@ from unittest.mock import MagicMock
 from freezegun.api import FrozenDateTimeFactory
 from homeassistant.components.switch import DOMAIN as SWITCH_DOMAIN
 from homeassistant.components.switch import SERVICE_TURN_ON
-from homeassistant.const import ATTR_ENTITY_ID
+from homeassistant.const import ATTR_ENTITY_ID, CONF_SCAN_INTERVAL
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import EntityDescription
 from pytest_homeassistant_custom_component.common import (
@@ -14,7 +14,7 @@ from pytest_homeassistant_custom_component.common import (
     async_fire_time_changed,
 )
 
-from custom_components.klyqa_pet.const import SCAN_INTERVAL
+from custom_components.klyqa_pet.const import DEFAULT_SCAN_INTERVAL
 from custom_components.klyqa_pet.entity import KlyqaPetEntity
 from pyklyqa_pet import KlyqaConnectionError, KlyqaRateLimitError, StrypeState, WellySettings
 
@@ -43,7 +43,7 @@ async def test_update_failed_message_is_rendered(
     # A coordinator only polls while an entity listens to it.
     mock_config_entry.runtime_data.coordinators[WELLY_ID].async_add_listener(lambda: None)
 
-    freezer.tick(SCAN_INTERVAL + timedelta(seconds=1))
+    freezer.tick(DEFAULT_SCAN_INTERVAL + timedelta(seconds=1))
     async_fire_time_changed(hass)
     await hass.async_block_till_done()
 
@@ -68,7 +68,7 @@ async def test_rate_limit_message_is_rendered(
     mock_welly.get_state.side_effect = KlyqaRateLimitError("rate limited")
     mock_config_entry.runtime_data.coordinators[WELLY_ID].async_add_listener(lambda: None)
 
-    freezer.tick(SCAN_INTERVAL + timedelta(seconds=1))
+    freezer.tick(DEFAULT_SCAN_INTERVAL + timedelta(seconds=1))
     async_fire_time_changed(hass)
     await hass.async_block_till_done()
 
@@ -95,12 +95,12 @@ async def test_settings_fetched_every_fourth_poll(
     assert mock_welly.get_settings.call_count == 1
 
     for _ in range(2):
-        freezer.tick(SCAN_INTERVAL + timedelta(seconds=1))
+        freezer.tick(DEFAULT_SCAN_INTERVAL + timedelta(seconds=1))
         async_fire_time_changed(hass)
         await hass.async_block_till_done()
     assert mock_welly.get_settings.call_count == 1
 
-    freezer.tick(SCAN_INTERVAL + timedelta(seconds=1))
+    freezer.tick(DEFAULT_SCAN_INTERVAL + timedelta(seconds=1))
     async_fire_time_changed(hass)
     await hass.async_block_till_done()
     assert mock_welly.get_settings.call_count == 2
@@ -191,3 +191,35 @@ async def test_strype_write_is_published_without_another_poll(
     assert published.length_metres == 7
     # The published state also becomes the base for the next poll's merge.
     assert coordinator.strype_state == published
+
+
+async def test_coordinator_uses_default_scan_interval_without_option(
+    hass: HomeAssistant,
+    mock_config_entry: MockConfigEntry,
+    mock_cloud: MagicMock,
+    mock_devices: dict,
+    mock_welly: MagicMock,
+) -> None:
+    """An entry with no stored scan_interval option polls at the 30 s default."""
+    assert CONF_SCAN_INTERVAL not in mock_config_entry.options
+    await setup_integration(hass, mock_config_entry)
+    coordinator = mock_config_entry.runtime_data.coordinators[WELLY_ID]
+    assert coordinator.update_interval == DEFAULT_SCAN_INTERVAL
+
+
+async def test_coordinator_uses_configured_scan_interval(
+    hass: HomeAssistant,
+    mock_config_entry: MockConfigEntry,
+    mock_cloud: MagicMock,
+    mock_devices: dict,
+    mock_welly: MagicMock,
+) -> None:
+    """An entry with a stored scan_interval option polls at that interval instead."""
+    mock_config_entry.add_to_hass(hass)
+    hass.config_entries.async_update_entry(
+        mock_config_entry, options={**mock_config_entry.options, CONF_SCAN_INTERVAL: 120}
+    )
+    await hass.config_entries.async_setup(mock_config_entry.entry_id)
+    await hass.async_block_till_done()
+    coordinator = mock_config_entry.runtime_data.coordinators[WELLY_ID]
+    assert coordinator.update_interval == timedelta(seconds=120)

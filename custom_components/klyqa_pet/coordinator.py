@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
-from datetime import datetime
+from datetime import datetime, timedelta
 import logging
 from typing import TYPE_CHECKING, Any
 
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import CONF_SCAN_INTERVAL
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers import device_registry as dr
@@ -38,8 +39,8 @@ from .const import (
     CONF_DEVICE_NAME,
     CONF_PRODUCT_ID,
     CONF_PRODUCT_NAME,
+    DEFAULT_SCAN_INTERVAL,
     DOMAIN,
-    SCAN_INTERVAL,
     SETTINGS_POLL_INTERVAL,
     SYSTEM_INFO_INTERVAL,
     TOKEN_RECOVERY_BACKOFF,
@@ -124,12 +125,18 @@ class KlyqaDeviceCoordinator(DataUpdateCoordinator[KlyqaDeviceData]):
         is_manual: bool,
     ) -> None:
         """Initialise the coordinator for one device."""
+        scan_interval_seconds = entry.options.get(CONF_SCAN_INTERVAL)
+        update_interval = (
+            timedelta(seconds=scan_interval_seconds)
+            if scan_interval_seconds is not None
+            else DEFAULT_SCAN_INTERVAL
+        )
         super().__init__(
             hass,
             _LOGGER,
             config_entry=entry,
             name=f"{DOMAIN} {local_device_id}",
-            update_interval=SCAN_INTERVAL,
+            update_interval=update_interval,
         )
         self.hub = hub
         self.local_device_id = local_device_id

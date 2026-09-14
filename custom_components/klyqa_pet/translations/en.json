@@ -72,12 +72,25 @@
   "options": {
     "step": {
       "init": {
+        "menu_options": {
+          "add_device": "Add a device manually",
+          "polling": "Polling interval"
+        }
+      },
+      "add_device": {
         "title": "Add a device manually",
         "description": "Add a Klyqa device by IP address and access token, for example a development device that is not paired with the cloud account.",
         "data": {
           "host": "IP address or hostname",
           "port": "Port",
           "access_token": "Device access token"
+        }
+      },
+      "polling": {
+        "title": "Polling interval",
+        "description": "Set how often, in seconds, each device is polled for its current state. Settings are refreshed less often, every 4th poll.",
+        "data": {
+          "scan_interval": "Scan interval"
         }
       }
     },

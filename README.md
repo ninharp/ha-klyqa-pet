@@ -178,10 +178,13 @@ Assistant, or black if none has been seen yet.
 
 Each device is polled independently through its own `DataUpdateCoordinator`:
 
-- Device state is refreshed every **15 seconds**.
-- Settings (Welly/Foody) are refreshed every **4th poll (60 seconds)**, since they
-  change far less often than state; a settings change made through Home Assistant is
-  reflected immediately, without waiting for the next scheduled settings poll.
+- Device state is refreshed every **30 seconds** by default. This polling interval is
+  configurable per entry from **10 to 600 seconds** in the integration's options, under
+  "Polling interval".
+- Settings (Welly/Foody) are refreshed every **4th poll**, since they change far less
+  often than state; that's every 2 minutes at the default interval, scaling with it. A
+  settings change made through Home Assistant is reflected immediately, without waiting
+  for the next scheduled settings poll.
 - System information (firmware/SDK version, last boot, etc.) is refreshed every
   **5 minutes**, since it changes far less often.
 - Devices are also discovered passively via mDNS (`_qcxrest._tcp`). If a known
