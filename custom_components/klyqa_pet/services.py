@@ -26,7 +26,7 @@ from pyklyqa_pet import (
     KlyqaConnectionError,
     KlyqaDeviceError,
 )
-from pyklyqa_pet.foody_timers import MAX_FEEDING_SCHEDULES, MAX_PORTIONS
+from pyklyqa_pet.foody_timers import MAX_DURATION_SEC, MAX_FEEDING_SCHEDULES, MAX_PORTIONS
 
 from .const import DOMAIN, WEEKDAY_KEYS
 from .coordinator import KlyqaDeviceCoordinator
@@ -42,6 +42,7 @@ ATTR_DEVICE_ID: Final = "device_id"
 ATTR_SCHEDULE_ID: Final = "schedule_id"
 ATTR_TIME: Final = "time"
 ATTR_PORTIONS: Final = "portions"
+ATTR_DURATION: Final = "duration"
 ATTR_WEEKDAYS: Final = "weekdays"
 ATTR_ENABLED: Final = "enabled"
 ATTR_SKIP_ONCE: Final = "skip_once"
@@ -51,11 +52,13 @@ ATTR_AUTO_PLAY_VOICE: Final = "auto_play_voice"
 _PORTIONS = vol.All(vol.Coerce(int), vol.Range(min=1, max=MAX_PORTIONS))
 _WEEKDAYS = vol.All(cv.ensure_list, vol.Length(min=1), [vol.In(WEEKDAY_KEYS)])
 _SCHEDULE_ID = vol.All(vol.Coerce(int), vol.Range(min=0, max=MAX_FEEDING_SCHEDULES - 1))
+_DURATION = vol.All(vol.Coerce(int), vol.Range(min=0, max=MAX_DURATION_SEC))
 
 # Every flag is optional in both write services: `add` falls back to the defaults below,
 # `set` leaves anything the caller omitted exactly as the device has it.
 _OPTIONAL_FIELDS: Final[dict[Any, Any]] = {
     vol.Optional(ATTR_WEEKDAYS): _WEEKDAYS,
+    vol.Optional(ATTR_DURATION): _DURATION,
     vol.Optional(ATTR_ENABLED): cv.boolean,
     vol.Optional(ATTR_SKIP_ONCE): cv.boolean,
     vol.Optional(ATTR_FRESH_FOOD_MODE): cv.boolean,
@@ -88,11 +91,13 @@ DELETE_SCHEMA: Final = vol.Schema(
     }
 )
 
-# Defaults of a newly created schedule: on, not skipped, every day, dry food, silent.
+# Defaults of a newly created schedule: on, not skipped, every day, mode flag off,
+# silent, and no duration - which is what every captured schedule carries.
 DEFAULT_ENABLED: Final = True
 DEFAULT_SKIP_ONCE: Final = False
 DEFAULT_FRESH_FOOD_MODE: Final = False
 DEFAULT_AUTO_PLAY_VOICE: Final = False
+DEFAULT_DURATION_SEC: Final = 0
 
 
 def _decode_weekdays(keys: list[str]) -> frozenset[int]:
@@ -261,9 +266,10 @@ async def _async_add_feeding_schedule(call: ServiceCall) -> None:
             execution_time=call.data[ATTR_TIME],
             weekdays=_decode_weekdays(weekdays) if weekdays else frozenset(range(7)),
             portions=call.data[ATTR_PORTIONS],
-            # Only the fresh-food (wet food) mode uses a duration; a normal schedule
-            # dispenses portions and reports 0 here, as every captured schedule does.
-            total_duration_sec=0,
+            # The firmware only bounds this to 0-10800 and forwards it to the MCU; what
+            # the feeder makes of it is not verified, and every captured schedule
+            # carries 0, which stays the default.
+            total_duration_sec=call.data.get(ATTR_DURATION, DEFAULT_DURATION_SEC),
             fresh_food_mode=call.data.get(ATTR_FRESH_FOOD_MODE, DEFAULT_FRESH_FOOD_MODE),
             auto_play_voice=call.data.get(ATTR_AUTO_PLAY_VOICE, DEFAULT_AUTO_PLAY_VOICE),
         )
@@ -289,6 +295,8 @@ async def _async_set_feeding_schedule(call: ServiceCall) -> None:
             changes["portions"] = portions
         if (weekdays := call.data.get(ATTR_WEEKDAYS)) is not None:
             changes["weekdays"] = _decode_weekdays(weekdays)
+        if (duration := call.data.get(ATTR_DURATION)) is not None:
+            changes["total_duration_sec"] = duration
         for attribute in (
             ATTR_ENABLED,
             ATTR_SKIP_ONCE,

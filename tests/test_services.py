@@ -28,7 +28,12 @@ from custom_components.klyqa_pet.services import (
     SET_SCHEMA,
 )
 from pyklyqa_pet import KlyqaAuthError, KlyqaConnectionError, KlyqaDeviceError
-from pyklyqa_pet.foody_timers import MAX_FEEDING_SCHEDULES, MAX_PORTIONS, FoodyTimers
+from pyklyqa_pet.foody_timers import (
+    MAX_DURATION_SEC,
+    MAX_FEEDING_SCHEDULES,
+    MAX_PORTIONS,
+    FoodyTimers,
+)
 
 from .conftest import FOODY_ID, WELLY_ID, load_json, setup_integration
 
@@ -245,6 +250,7 @@ async def test_add_takes_every_field(
             "skip_once": True,
             "fresh_food_mode": True,
             "auto_play_voice": True,
+            "duration": 900,
         },
     )
     schedule = mock_foody.set_schedule.await_args.args[0]
@@ -255,6 +261,41 @@ async def test_add_takes_every_field(
     assert schedule.skip_once is True
     assert schedule.fresh_food_mode is True
     assert schedule.auto_play_voice is True
+    assert schedule.total_duration_sec == 900
+
+
+async def test_set_leaves_the_duration_alone_unless_it_is_given(
+    hass: HomeAssistant, mock_foody: MagicMock, foody_device_id: str
+) -> None:
+    """`duration` is bounded by the library's limit and omitted means unchanged."""
+    document = load_json("foody_timers.json")
+    document["schedules"][0]["total_duration_sec"] = 600
+    mock_foody.get_timers.return_value = FoodyTimers.from_dict(document)
+
+    await call(
+        hass,
+        SERVICE_SET_FEEDING_SCHEDULE,
+        {"device_id": foody_device_id, "schedule_id": 0, "portions": 3},
+    )
+    assert mock_foody.set_schedule.await_args.args[0].total_duration_sec == 600
+
+    await call(
+        hass,
+        SERVICE_SET_FEEDING_SCHEDULE,
+        {"device_id": foody_device_id, "schedule_id": 0, "duration": 0},
+    )
+    assert mock_foody.set_schedule.await_args.args[0].total_duration_sec == 0
+
+    with pytest.raises(vol.Invalid):
+        await call(
+            hass,
+            SERVICE_SET_FEEDING_SCHEDULE,
+            {
+                "device_id": foody_device_id,
+                "schedule_id": 0,
+                "duration": MAX_DURATION_SEC + 1,
+            },
+        )
 
 
 async def test_add_picks_the_lowest_free_slot(
@@ -577,6 +618,9 @@ def test_services_yaml_matches_the_schemas_and_the_strings(
     for name in (SERVICE_SET_FEEDING_SCHEDULE, SERVICE_DELETE_FEEDING_SCHEDULE):
         schedule_id = described[name]["fields"]["schedule_id"]["selector"]["number"]
         assert (schedule_id["min"], schedule_id["max"]) == (0, MAX_FEEDING_SCHEDULES - 1), name
+    for name in (SERVICE_ADD_FEEDING_SCHEDULE, SERVICE_SET_FEEDING_SCHEDULE):
+        duration = described[name]["fields"]["duration"]["selector"]["number"]
+        assert (duration["min"], duration["max"]) == (0, MAX_DURATION_SEC), name
 
 
 def test_the_weekday_selector_offers_exactly_the_known_keys() -> None:

@@ -119,6 +119,10 @@
           "name": "Portionen",
           "description": "Anzahl der Portionen, die ausgegeben werden, 1 bis 40."
         },
+        "duration": {
+          "name": "Dauer",
+          "description": "Dauer in Sekunden, die der Automat zu diesem Plan speichert, 0 bis 10800. Der Automat übernimmt den Wert und gibt ihn an seine Futtereinheit weiter; die Wirkung ist nicht verifiziert."
+        },
         "weekdays": {
           "name": "Wochentage",
           "description": "Tage, an denen der Plan läuft. Leer gelassen, läuft er täglich."
@@ -133,7 +137,7 @@
         },
         "fresh_food_mode": {
           "name": "Frischfutter-Modus",
-          "description": "In mehreren kleinen Gaben ausgeben, damit das Futter frisch bleibt."
+          "description": "Ein Modus-Schalter des Plans, den der Automat an seine Futtereinheit weitergibt. Die Wirkung ist nicht verifiziert, lass ihn also aus, solange du ihn nicht brauchst."
         },
         "auto_play_voice": {
           "name": "Sprachaufnahme abspielen",
@@ -161,6 +165,10 @@
           "name": "Portionen",
           "description": "Neue Anzahl der Portionen, die ausgegeben werden, 1 bis 40."
         },
+        "duration": {
+          "name": "Dauer",
+          "description": "Neue Dauer in Sekunden, die zu diesem Plan gespeichert wird, 0 bis 10800. Der Automat übernimmt den Wert und gibt ihn an seine Futtereinheit weiter; die Wirkung ist nicht verifiziert."
+        },
         "weekdays": {
           "name": "Wochentage",
           "description": "Neue Tage, an denen der Plan läuft."
@@ -175,7 +183,7 @@
         },
         "fresh_food_mode": {
           "name": "Frischfutter-Modus",
-          "description": "In mehreren kleinen Gaben ausgeben, damit das Futter frisch bleibt."
+          "description": "Ein Modus-Schalter des Plans, den der Automat an seine Futtereinheit weitergibt. Die Wirkung ist nicht verifiziert, lass ihn also aus, solange du ihn nicht brauchst."
         },
         "auto_play_voice": {
           "name": "Sprachaufnahme abspielen",

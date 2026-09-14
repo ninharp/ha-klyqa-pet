@@ -222,6 +222,14 @@ Replace `device_id` above with your own Foody's device id (Settings → Devices 
 services → Klyqa Pet → your device → the three dots → Device info); `schedule_id`
 is the id shown in the `Feeding schedules` sensor's attributes.
 
+Two of the fields are passed to the feeder without Home Assistant knowing what it
+does with them: `fresh_food_mode`, a per-schedule mode flag, and `duration`, a value
+in seconds (0–10800) stored alongside the schedule. The firmware validates both and
+forwards them to the feeder's own control unit; their effect has not been verified
+against hardware here. Every schedule captured from a real device carries
+`fresh_food_mode: false` and `duration: 0`, which is what `add_feeding_schedule`
+uses when you leave them out.
+
 ### Airpurifier
 
 | Platform | Entity | Notes |

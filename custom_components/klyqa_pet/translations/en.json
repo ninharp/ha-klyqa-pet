@@ -143,6 +143,10 @@
           "name": "Portions",
           "description": "Number of portions to dispense, 1 to 40."
         },
+        "duration": {
+          "name": "Duration",
+          "description": "Duration in seconds the feeder stores with this schedule, 0 to 10800. The feeder accepts the value and passes it on to its feeding unit; its effect is not verified."
+        },
         "weekdays": {
           "name": "Weekdays",
           "description": "Days the schedule runs on. Left empty, it runs every day."
@@ -157,7 +161,7 @@
         },
         "fresh_food_mode": {
           "name": "Fresh food mode",
-          "description": "Dispense in several small helpings so the food stays fresh."
+          "description": "A per-schedule mode flag the feeder passes on to its feeding unit. Its effect is not verified, so leave it off unless you know you need it."
         },
         "auto_play_voice": {
           "name": "Play voice recording",
@@ -185,6 +189,10 @@
           "name": "Portions",
           "description": "New number of portions to dispense, 1 to 40."
         },
+        "duration": {
+          "name": "Duration",
+          "description": "New duration in seconds to store with this schedule, 0 to 10800. The feeder accepts the value and passes it on to its feeding unit; its effect is not verified."
+        },
         "weekdays": {
           "name": "Weekdays",
           "description": "New set of days the schedule runs on."
@@ -199,7 +207,7 @@
         },
         "fresh_food_mode": {
           "name": "Fresh food mode",
-          "description": "Dispense in several small helpings so the food stays fresh."
+          "description": "A per-schedule mode flag the feeder passes on to its feeding unit. Its effect is not verified, so leave it off unless you know you need it."
         },
         "auto_play_voice": {
           "name": "Play voice recording",
