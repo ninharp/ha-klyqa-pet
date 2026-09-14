@@ -60,6 +60,7 @@
       "telemetry": { "default": "mdi:cloud-upload" },
       "quiet_time": { "default": "mdi:sleep", "state": { "off": "mdi:sleep-off" } },
       "quiet_time_water": { "default": "mdi:water", "state": { "off": "mdi:water-off" } },
+      "descaling_reminder": { "default": "mdi:spray-bottle" },
       "app_led": { "default": "mdi:led-on" },
       "app_pet_lock": { "default": "mdi:paw" },
       "beep_switch": { "default": "mdi:volume-high" },

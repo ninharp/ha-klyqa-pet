@@ -92,6 +92,20 @@ WELLY_SWITCHES: tuple[KlyqaSwitchEntityDescription, ...] = (
         ),
         writes_timers=True,
     ),
+    KlyqaSwitchEntityDescription(
+        key="descaling_reminder",
+        translation_key="descaling_reminder",
+        entity_category=EntityCategory.CONFIG,
+        is_on_fn=lambda data: data.welly_timers.descaling.enabled,
+        # Only `enabled` comes from this switch; `interval_days` and `last_descale`
+        # are set elsewhere (the app, or the `descaling_interval` number) and must
+        # survive a toggle untouched, so the write is built from the coordinator's own
+        # cached descaling reminder via `replace`, not from scratch.
+        set_fn=lambda coordinator, on: coordinator.welly_device.set_descaling_reminder(
+            replace(coordinator.data.welly_timers.descaling, enabled=on)
+        ),
+        writes_timers=True,
+    ),
 )
 
 FOODY_SWITCHES: tuple[KlyqaSwitchEntityDescription, ...] = (

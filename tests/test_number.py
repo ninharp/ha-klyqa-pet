@@ -70,6 +70,23 @@ async def test_number_commands(
 
 
 @pytest.mark.usefixtures("numbers")
+async def test_descaling_interval_number_preserves_the_rest(
+    hass: HomeAssistant, mock_welly: MagicMock
+) -> None:
+    """Setting the interval must leave `enabled` and `last_descale` untouched."""
+    await hass.services.async_call(
+        NUMBER_DOMAIN,
+        SERVICE_SET_VALUE,
+        {ATTR_ENTITY_ID: "number.kitchen_fountain_descaling_interval", ATTR_VALUE: 20},
+        blocking=True,
+    )
+    sent = mock_welly.set_descaling_reminder.await_args.args[0]
+    assert sent.interval_days == 20
+    assert sent.enabled is True
+    assert sent.last_descale is None
+
+
+@pytest.mark.usefixtures("numbers")
 async def test_portions_number_is_local(
     hass: HomeAssistant, mock_config_entry: MockConfigEntry, mock_foody: MagicMock
 ) -> None:

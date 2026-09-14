@@ -195,6 +195,32 @@ async def test_quiet_time_water_switch_preserves_other_fields(
 
 
 @pytest.mark.usefixtures("switches")
+async def test_descaling_reminder_switch_preserves_interval(
+    hass: HomeAssistant, mock_welly: MagicMock
+) -> None:
+    """Toggling `descaling_reminder` must leave the interval untouched."""
+    await hass.services.async_call(
+        SWITCH_DOMAIN,
+        SERVICE_TURN_ON,
+        {ATTR_ENTITY_ID: "switch.kitchen_fountain_descaling_reminder"},
+        blocking=True,
+    )
+    sent = mock_welly.set_descaling_reminder.await_args.args[0]
+    assert sent.enabled is True
+    assert sent.interval_days == 15
+
+    await hass.services.async_call(
+        SWITCH_DOMAIN,
+        SERVICE_TURN_OFF,
+        {ATTR_ENTITY_ID: "switch.kitchen_fountain_descaling_reminder"},
+        blocking=True,
+    )
+    sent_off = mock_welly.set_descaling_reminder.await_args.args[0]
+    assert sent_off.enabled is False
+    assert sent_off.interval_days == 15
+
+
+@pytest.mark.usefixtures("switches")
 async def test_switch_command_error(hass: HomeAssistant, mock_welly: MagicMock) -> None:
     mock_welly.set_heating.side_effect = KlyqaDeviceError(["Invalid heating value"])
     with pytest.raises(HomeAssistantError, match="rejected the command"):

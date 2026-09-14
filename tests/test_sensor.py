@@ -1,5 +1,6 @@
 """Tests for the sensor platform."""
 
+from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from homeassistant.const import Platform
@@ -10,6 +11,7 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry, snapsh
 from syrupy.assertion import SnapshotAssertion
 
 from pyklyqa_pet.foody_timers import FoodyTimers
+from pyklyqa_pet.welly_timers import WellyTimers
 
 from .conftest import load_json, setup_integration
 
@@ -148,3 +150,45 @@ async def test_schedule_sensor_with_no_schedules(
     state = hass.states.get("sensor.feeder_feeding_schedules")
     assert state.state == "0"
     assert state.attributes["schedules"] == []
+
+
+async def test_descaling_sensors_unknown_when_never_descaled(
+    hass: HomeAssistant,
+    mock_config_entry: MockConfigEntry,
+    mock_cloud: MagicMock,
+    mock_devices: dict,
+) -> None:
+    """The real capture's `last_descale_time` of 0 means "never" - both are unknown."""
+    with patch("custom_components.klyqa_pet.PLATFORMS", [Platform.SENSOR]):
+        await setup_integration(hass, mock_config_entry)
+    assert hass.states.get("sensor.kitchen_fountain_last_descaling").state == "unknown"
+    assert hass.states.get("sensor.kitchen_fountain_next_descaling").state == "unknown"
+
+
+async def test_next_descaling_from_last_descale_and_interval(
+    hass: HomeAssistant,
+    mock_config_entry: MockConfigEntry,
+    mock_cloud: MagicMock,
+    mock_devices: dict,
+    mock_welly: MagicMock,
+) -> None:
+    """With a recorded descaling, `next_descaling` is `last_descale + interval_days`."""
+    mock_welly.get_timers = AsyncMock(
+        return_value=WellyTimers.from_dict(
+            {
+                **load_json("welly_timers.json"),
+                "dm_timer": {
+                    "enabled": True,
+                    "interval": 15,
+                    "last_descale_time": 1788615614,
+                },
+            }
+        )
+    )
+    with patch("custom_components.klyqa_pet.PLATFORMS", [Platform.SENSOR]):
+        await setup_integration(hass, mock_config_entry)
+    last_descaling = hass.states.get("sensor.kitchen_fountain_last_descaling")
+    next_descaling = hass.states.get("sensor.kitchen_fountain_next_descaling")
+    assert last_descaling.state != "unknown"
+    expected = datetime.fromtimestamp(1788615614, tz=UTC) + timedelta(days=15)
+    assert datetime.fromisoformat(next_descaling.state) == expected

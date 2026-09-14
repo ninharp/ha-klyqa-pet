@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any
 
 from homeassistant.components.sensor import (
@@ -66,6 +66,18 @@ def _timestamp(seconds: int) -> datetime | None:
 
 def _battery(level: int | None) -> int | None:
     return None if level is None or level < 0 else level
+
+
+def _next_descaling(data: KlyqaDeviceData) -> datetime | None:
+    """Return when the next descaling is due, or None if it cannot be known.
+
+    The device has never recorded a descaling until the app or a `start_descaling`
+    button press sets `last_descale`, so there is nothing to add the interval to yet.
+    """
+    last_descale = data.welly_timers.descaling.last_descale
+    if last_descale is None:
+        return None
+    return last_descale + timedelta(days=data.welly_timers.descaling.interval_days)
 
 
 def _enum(mapping: dict[int, str], value: int) -> str | None:
@@ -248,6 +260,18 @@ WELLY_SENSORS: tuple[KlyqaSensorEntityDescription, ...] = (
         entity_category=EntityCategory.DIAGNOSTIC,
         entity_registry_enabled_default=False,
         value_fn=lambda data: data.welly.light_id,
+    ),
+    KlyqaSensorEntityDescription(
+        key="last_descaling",
+        translation_key="last_descaling",
+        device_class=SensorDeviceClass.TIMESTAMP,
+        value_fn=lambda data: data.welly_timers.descaling.last_descale,
+    ),
+    KlyqaSensorEntityDescription(
+        key="next_descaling",
+        translation_key="next_descaling",
+        device_class=SensorDeviceClass.TIMESTAMP,
+        value_fn=_next_descaling,
     ),
 )
 

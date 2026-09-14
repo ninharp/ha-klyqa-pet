@@ -258,6 +258,8 @@
       "total_consumption": { "name": "Total consumption" },
       "last_drinking": { "name": "Last drinking" },
       "filter_life": { "name": "Filter life" },
+      "last_descaling": { "name": "Last descaling" },
+      "next_descaling": { "name": "Next descaling" },
       "pump_status": {
         "name": "Pump status",
         "state": {
@@ -373,6 +375,7 @@
       "telemetry": { "name": "Telemetry" },
       "quiet_time": { "name": "Quiet time" },
       "quiet_time_water": { "name": "Quiet time water" },
+      "descaling_reminder": { "name": "Descaling reminder" },
       "app_led": { "name": "Indicator LED" },
       "app_pet_lock": { "name": "Pet lock" },
       "beep_switch": { "name": "Beep" },
@@ -389,6 +392,7 @@
       "circulation_pump_speed": { "name": "Circulation pump speed" },
       "threshold_clean_tank_low": { "name": "Clean tank low threshold" },
       "threshold_dirty_tank_full": { "name": "Dirty tank full threshold" },
+      "descaling_interval": { "name": "Descaling interval" },
       "portions": { "name": "Portions" },
       "feed_audio_volume": { "name": "Feed audio volume" }
     },

@@ -234,6 +234,8 @@
       "total_consumption": { "name": "Gesamtverbrauch" },
       "last_drinking": { "name": "Zuletzt getrunken" },
       "filter_life": { "name": "Filterlebensdauer" },
+      "last_descaling": { "name": "Letzte Entkalkung" },
+      "next_descaling": { "name": "Nächste Entkalkung" },
       "pump_status": {
         "name": "Pumpenstatus",
         "state": { "normal": "Normal", "low_water": "Wenig Wasser", "abnormal": "Störung", "overweight": "Übergewicht", "no_clean_water": "Kein Frischwasser" }
@@ -303,6 +305,7 @@
       "telemetry": { "name": "Telemetrie" },
       "quiet_time": { "name": "Ruhezeit" },
       "quiet_time_water": { "name": "Wasser während der Ruhezeit" },
+      "descaling_reminder": { "name": "Entkalkungserinnerung" },
       "app_led": { "name": "Anzeige-LED" },
       "app_pet_lock": { "name": "Tiersperre" },
       "beep_switch": { "name": "Signalton" },
@@ -319,6 +322,7 @@
       "circulation_pump_speed": { "name": "Umwälzpumpen-Leistung" },
       "threshold_clean_tank_low": { "name": "Schwelle Frischwasser niedrig" },
       "threshold_dirty_tank_full": { "name": "Schwelle Abwassertank voll" },
+      "descaling_interval": { "name": "Entkalkungsintervall" },
       "portions": { "name": "Portionen" },
       "feed_audio_volume": { "name": "Lautstärke Fütterungs-Audio" }
     },
