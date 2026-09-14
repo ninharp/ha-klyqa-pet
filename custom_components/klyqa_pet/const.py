@@ -41,6 +41,7 @@ PLATFORMS: Final = [
     Platform.SELECT,
     Platform.SENSOR,
     Platform.SWITCH,
+    Platform.TIME,
 ]
 
 # The scan interval is user-configurable (options flow, CONF_SCAN_INTERVAL from

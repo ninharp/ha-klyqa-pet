@@ -76,6 +76,10 @@
       "portions": { "default": "mdi:counter" },
       "feed_audio_volume": { "default": "mdi:volume-medium" }
     },
+    "time": {
+      "sleep_start": { "default": "mdi:sleep" },
+      "sleep_end": { "default": "mdi:sleep-off" }
+    },
     "select": {
       "mode": { "default": "mdi:water-sync" },
       "custom_button_function": { "default": "mdi:gesture-tap-button" },

@@ -198,6 +198,10 @@
       "portions": { "name": "Portionen" },
       "feed_audio_volume": { "name": "Lautstärke Fütterungs-Audio" }
     },
+    "time": {
+      "sleep_start": { "name": "Schlafbeginn" },
+      "sleep_end": { "name": "Schlafende" }
+    },
     "select": {
       "mode": {
         "name": "Modus",
