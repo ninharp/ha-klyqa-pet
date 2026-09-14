@@ -99,7 +99,7 @@
     },
     "environment": { "options": { "prod": "Produktion", "test": "Test" } },
     "cloud_app": {
-      "options": { "Klyqapet": "Klyqa Pet", "Klyqa": "Klyqa (Beleuchtung)" }
+      "options": { "klyqapet": "Klyqa Pet", "klyqa": "Klyqa (Beleuchtung)" }
     }
   },
   "services": {

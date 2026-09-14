@@ -1,6 +1,7 @@
 """Tests for the config flow."""
 
 from ipaddress import ip_address
+import re
 from typing import Any
 from unittest.mock import AsyncMock, patch
 
@@ -13,10 +14,12 @@ import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.klyqa_pet.const import (
+    CLOUD_APP_OPTIONS,
     CONF_CLOUD_APP,
     CONF_DEVICES,
     CONF_ENVIRONMENT,
     CONF_MANUAL_DEVICES,
+    DEFAULT_CLOUD_APP_OPTION,
     DOMAIN,
     ENVIRONMENT_LOCAL,
     LOCAL_ENTRY_UNIQUE_ID,
@@ -34,9 +37,11 @@ from .conftest import (
     setup_integration,
 )
 
+# The form offers lower-case option keys; the tenant string the cloud expects is what
+# ends up stored, which the assertions below check.
 USER_INPUT = {
     CONF_ENVIRONMENT: "test",
-    CONF_CLOUD_APP: "Klyqapet",
+    CONF_CLOUD_APP: "klyqapet",
     CONF_EMAIL: "user@example.com",
     CONF_PASSWORD: "secret",
 }
@@ -112,7 +117,13 @@ async def test_user_flow_success(
     await hass.async_block_till_done()
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["title"] == "user@example.com (Klyqapet, test)"
-    assert result["data"] == {**USER_INPUT, CONF_DEVICES: CLOUD_DEVICES}
+    # The lower-case form key is mapped to the tenant string the cloud expects before
+    # anything is stored, so the entry keeps "Klyqapet" and the unique id below matches.
+    assert result["data"] == {
+        **USER_INPUT,
+        CONF_CLOUD_APP: "Klyqapet",
+        CONF_DEVICES: CLOUD_DEVICES,
+    }
     assert result["result"].unique_id == "test:Klyqapet:user@example.com"
     mock_fetch.assert_awaited_once_with(hass, "test", "user@example.com", "secret", "Klyqapet")
     mock_setup_entry.assert_called_once()
@@ -591,7 +602,7 @@ async def test_the_same_account_can_be_added_under_both_tenants(
     assert pet["type"] is FlowResultType.CREATE_ENTRY
     assert pet["result"].unique_id == "test:Klyqapet:user@example.com"
 
-    lighting = await _run_cloud_flow(hass, {**USER_INPUT, CONF_CLOUD_APP: "Klyqa"})
+    lighting = await _run_cloud_flow(hass, {**USER_INPUT, CONF_CLOUD_APP: "klyqa"})
     assert lighting["type"] is FlowResultType.CREATE_ENTRY
     assert lighting["result"].unique_id == "test:Klyqa:user@example.com"
     assert lighting["title"] == "user@example.com (Klyqa, test)"
@@ -774,3 +785,20 @@ async def test_migration_does_not_take_a_unique_id_another_entry_holds(
     assert legacy.unique_id == "test:user@example.com"
     assert legacy.minor_version == 2
     assert existing.unique_id == "test:Klyqapet:user@example.com"
+
+
+def test_every_cloud_app_option_is_a_valid_translation_key() -> None:
+    """hassfest rejects a selector option that is not [a-z0-9-_].
+
+    The options are derived from the tenant strings, so a future tenant whose name
+    carries a space or a capital would silently produce an invalid key and only fail
+    in CI. This pins it at the source.
+    """
+    for key in CLOUD_APP_OPTIONS:
+        assert re.fullmatch(r"[a-z0-9]([a-z0-9_-]*[a-z0-9])?", key), key
+
+
+def test_cloud_app_options_map_to_the_tenant_strings() -> None:
+    """The stored value must stay exactly what the cloud expects."""
+    assert CLOUD_APP_OPTIONS == {"klyqapet": "Klyqapet", "klyqa": "Klyqa"}
+    assert DEFAULT_CLOUD_APP_OPTION in CLOUD_APP_OPTIONS
