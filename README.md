@@ -159,6 +159,21 @@ mains power, since the device never reports a battery level in that configuratio
 | sensor | PM2.5, Air quality, Filter remaining, Filter life (%), Total run time, Air volume, Pet mode time | |
 | binary_sensor | Tilted, Filter removed, Ionizer active | |
 
+### Strype (LED strip)
+
+| Platform | Entity | Notes |
+|---|---|---|
+| light | Strip | On/off, brightness, RGB colour and colour temperature (2700–6500 K) in one entity; supports transitions |
+| sensor | Strip length | Length in metres, re-measured by the button below |
+| sensor | Light mode | The mode the device reports: colour, white or command |
+| button | Detect strip length | Triggers a physical re-measurement |
+
+The Strype reports colour **or** colour temperature depending on the mode it is
+in, never both, so Home Assistant's active colour mode follows the device. A
+strip running an effect reports the `command` mode, in which it reports neither
+value; the light then falls back to RGB and shows the last colour known to Home
+Assistant, or black if none has been seen yet.
+
 ## Data updates
 
 Each device is polled independently through its own `DataUpdateCoordinator`:
