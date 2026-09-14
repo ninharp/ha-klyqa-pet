@@ -142,15 +142,80 @@ except where noted):
 |---|---|---|
 | number | Portions | Local helper (1–40) that sets how much the Dispense food button dispenses |
 | button | Dispense food, Play voice recording, Query bowl weight | |
-| switch | Indicator LED, Pet lock, Beep, Feeding audio, Telemetry | Config category |
+| switch | Indicator LED, Pet lock, Beep, Feeding audio, Telemetry, Sleep mode | Config category |
+| time | Sleep start, Sleep end | Config category; the sleep window's weekday selection is not exposed here, see [Feeding schedules](#feeding-schedules) |
 | number | Feed audio volume | Config category |
 | select | Custom button function, Battery mode, Charging protection | Config category |
-| sensor | Bowl remaining, Real-time weight, Feeding state, Bowl state, Food bin, Error state, Last manual feeding, Last manual portions, Last scheduled feeding, Last scheduled portions, Next scheduled feeding | |
+| sensor | Bowl remaining, Real-time weight, Feeding state, Bowl state, Food bin, Error state, Last manual feeding, Last manual portions, Last scheduled feeding, Last scheduled portions, Next scheduled feeding, Feeding schedules | Feeding schedules is the number of *enabled* schedules; the full list is in its attributes |
 | sensor | Battery, MCU firmware version | Diagnostic category |
 | binary_sensor | Power, Power adapter, Problem, Food low, Bowl removed | |
 
 The Foody's built-in battery sensor reports "unknown" on units that run only on
 mains power, since the device never reports a battery level in that configuration.
+
+### Feeding schedules
+
+The Foody itself, not Home Assistant, is the source of truth for its feeding
+schedules: the schedule list lives in the ESP's shadow of the feeder's MCU, and the
+firmware has no way to re-derive that list from the MCU if it were ever lost. That
+also means a schedule's slot id is a position, not a stable identity — the Klyqa app
+is free to reuse an id you just freed for an unrelated schedule. To stay correct
+under that constraint, the three services below always re-read the device's current
+schedule list immediately before writing, rather than trusting a cached one.
+
+Schedules and the sleep window both carry a weekday selection, encoded by the
+device as a bitmask with **bit 0 meaning Sunday** (not Monday), running through bit
+6 for Saturday. The `Feeding schedules` sensor decodes this to `sun`..`sat` keys in
+its `schedules` attribute, and the two feeding-schedule services below accept and
+return the same keys. The sleep window's own weekday selection, however, is not
+exposed as an entity or a service field at all — if you set it in the Klyqa app,
+every write this integration makes to the sleep window (toggling `Sleep mode`, or
+setting `Sleep start`/`Sleep end`) reads the mask back from the device first and
+writes it back unchanged, so it survives.
+
+A Foody holds at most 20 feeding schedules (`schedule_id` 0–19). `add_feeding_schedule`
+claims the lowest free id and fails with a clear error once the device is full;
+delete one first. All three services target a device by its Home Assistant device
+id, and are registered once when the integration is set up rather than per config
+entry, so calling one against a device whose config entry happens not to be loaded
+fails with a `device_not_available` error instead of Home Assistant's generic
+unknown-service error.
+
+Add a schedule:
+
+```yaml
+action: klyqa_pet.add_feeding_schedule
+data:
+  device_id: 3fa2c1e4b5a6d7e8f9a0b1c2d3e4f5a6
+  time: "07:00:00"
+  portions: 2
+  weekdays: ["mon", "wed", "fri"]
+```
+
+Change an existing schedule — only the fields you set are touched, everything else
+on that schedule is left as it was:
+
+```yaml
+action: klyqa_pet.set_feeding_schedule
+data:
+  device_id: 3fa2c1e4b5a6d7e8f9a0b1c2d3e4f5a6
+  schedule_id: 0
+  portions: 3
+  enabled: false
+```
+
+Delete a schedule by its slot id:
+
+```yaml
+action: klyqa_pet.delete_feeding_schedule
+data:
+  device_id: 3fa2c1e4b5a6d7e8f9a0b1c2d3e4f5a6
+  schedule_id: 0
+```
+
+Replace `device_id` above with your own Foody's device id (Settings → Devices &
+services → Klyqa Pet → your device → the three dots → Device info); `schedule_id`
+is the id shown in the `Feeding schedules` sensor's attributes.
 
 ### Airpurifier
 
@@ -253,10 +318,10 @@ and adjust the entity ids (or use the visual card editor's entity picker instead
 
 ## Known limitations
 
-- Feeding schedules/timers, pet tags, scale calibration, firmware updates and
-  uploading custom voice recordings are not exposed by this integration. The
-  device's local REST API does not expose all of these, and some (like firmware
-  updates) are intentionally left to the manufacturer's app.
+- Pet tags, scale calibration, firmware updates and uploading custom voice
+  recordings are not exposed by this integration. The device's local REST API
+  does not expose all of these, and some (like firmware updates) are
+  intentionally left to the manufacturer's app.
 - The first-generation Klyqa air purifier (`@klyqa.cleaning.airpurifier1`) uses a
   different local API and is not supported.
 - On Foody units that run on mains power only, the battery sensor stays "unknown"
