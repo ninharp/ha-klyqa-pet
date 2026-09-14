@@ -166,12 +166,14 @@ schedule list immediately before writing, rather than trusting a cached one.
 Schedules and the sleep window both carry a weekday selection, encoded by the
 device as a bitmask with **bit 0 meaning Sunday** (not Monday), running through bit
 6 for Saturday. The `Feeding schedules` sensor decodes this to `sun`..`sat` keys in
-its `schedules` attribute, and the two feeding-schedule services below accept and
-return the same keys. The sleep window's own weekday selection, however, is not
-exposed as an entity or a service field at all — if you set it in the Klyqa app,
-every write this integration makes to the sleep window (toggling `Sleep mode`, or
-setting `Sleep start`/`Sleep end`) reads the mask back from the device first and
-writes it back unchanged, so it survives.
+its `schedules` attribute, and the two feeding-schedule services below accept the
+same keys. The sleep window's own weekday selection, however, is not exposed as an
+entity or a service field at all — toggling `Sleep mode` or setting `Sleep
+start`/`Sleep end` builds its write from the coordinator's last-*polled* copy of the
+sleep window with only that one field changed, so the mask and every other field
+stay as they were at that last poll. A weekday change made in the Klyqa app between
+polls can therefore be silently overwritten if you touch one of these entities
+before the next poll catches up.
 
 A Foody holds at most 20 feeding schedules (`schedule_id` 0–19). `add_feeding_schedule`
 claims the lowest free id and fails with a clear error once the device is full;
