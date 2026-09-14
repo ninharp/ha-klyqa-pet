@@ -21,6 +21,7 @@ from pyklyqa_pet import (
     StrypeState,
     WellySettings,
 )
+from pyklyqa_pet.welly_timers import WellyTimers
 
 from .const import DOMAIN, MANUFACTURER
 from .coordinator import KlyqaDeviceCoordinator
@@ -75,16 +76,16 @@ class KlyqaPetEntity(CoordinatorEntity[KlyqaDeviceCoordinator]):
     ) -> None:
         """Run a device command, translate library errors and publish or refresh.
 
-        `writes_timers` marks the commands that write the Foody's timer document. A
-        rejected one still needs handling, because the firmware mutates its own copy
-        before the step that can fail - the sleep branch stores enable, the weekday mask
-        and both times and only then calls feeder_com_send_sleep_mode_ctrl, exactly as
-        the schedule branches do (device_timers.c). So a failed write may already have
-        moved the device while the published document still shows the old window, and
-        nothing else would notice: the success path publishes rather than refreshes.
-        Dropping the cached document leaves the re-read to the next scheduled poll; as
-        in the services, the failure path deliberately does not force a refresh at a
-        device that has just refused a request.
+        `writes_timers` marks the commands that write the Foody's or the Welly's timer
+        document. A rejected one still needs handling, because the firmware mutates its
+        own copy before the step that can fail - the sleep branch stores enable, the
+        weekday mask and both times and only then calls feeder_com_send_sleep_mode_ctrl,
+        exactly as the schedule branches do (device_timers.c). So a failed write may
+        already have moved the device while the published document still shows the old
+        window, and nothing else would notice: the success path publishes rather than
+        refreshes. Dropping the cached document leaves the re-read to the next scheduled
+        poll; as in the services, the failure path deliberately does not force a refresh
+        at a device that has just refused a request.
         """
         try:
             result = await command
@@ -105,15 +106,16 @@ class KlyqaPetEntity(CoordinatorEntity[KlyqaDeviceCoordinator]):
             # cache stale so the refresh below reloads it instead of reusing the copy
             # from before the write (see KlyqaDeviceCoordinator.mark_settings_stale).
             self.coordinator.mark_settings_stale()
-        if isinstance(result, FoodyTimers):
-            # A timer write (schedule or sleep mode) is answered with the complete,
-            # freshly serialised timer document, so publish it instead of asking for a
-            # refresh. That matters beyond saving a request: the sleep-mode switch and
-            # the two sleep-window `time` entities each build their write from the
-            # cached document via `replace`, and `async_request_refresh` is debounced -
-            # in a burst of writes only the first one would actually re-read, so every
-            # later write would still be built from the pre-burst snapshot and silently
-            # revert its predecessor. Publishing makes each write authoritative at once.
+        if isinstance(result, FoodyTimers | WellyTimers):
+            # A timer write (Foody schedule/sleep mode, or Welly quiet-time/descaling/
+            # water-change) is answered with the complete, freshly serialised timer
+            # document, so publish it instead of asking for a refresh. That matters
+            # beyond saving a request: the sleep-mode switch and the two sleep-window
+            # `time` entities each build their write from the cached document via
+            # `replace`, and `async_request_refresh` is debounced - in a burst of writes
+            # only the first one would actually re-read, so every later write would
+            # still be built from the pre-burst snapshot and silently revert its
+            # predecessor. Publishing makes each write authoritative at once.
             self.coordinator.async_publish_timers(result)
             return
         await self.coordinator.async_request_refresh()

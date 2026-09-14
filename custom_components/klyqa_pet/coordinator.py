@@ -36,6 +36,7 @@ from pyklyqa_pet import (
     WellySettings,
     WellyState,
 )
+from pyklyqa_pet.welly_timers import WellyTimers
 
 from .const import (
     CONF_DEVICE_NAME,
@@ -73,7 +74,7 @@ class KlyqaDeviceData:
     system_info: SystemInfo
     state: DeviceState
     settings: DeviceSettings
-    timers: FoodyTimers | None
+    timers: FoodyTimers | WellyTimers | None
 
     @property
     def welly(self) -> WellyState:
@@ -103,6 +104,12 @@ class KlyqaDeviceData:
     def foody_timers(self) -> FoodyTimers:
         """Return the cached timer document as Foody timers."""
         assert isinstance(self.timers, FoodyTimers)
+        return self.timers
+
+    @property
+    def welly_timers(self) -> WellyTimers:
+        """Return the cached timer document as Welly timers."""
+        assert isinstance(self.timers, WellyTimers)
         return self.timers
 
     @property
@@ -176,11 +183,12 @@ class KlyqaDeviceCoordinator(DataUpdateCoordinator[KlyqaDeviceData]):
         # SETTINGS_POLL_INTERVAL polls (see _async_fetch) to reduce REST pressure; a
         # settings write marks this stale so the very next poll reloads it.
         self._settings: DeviceSettings = None
-        # Cached timer document for Foody devices only, refreshed on the same cadence as
-        # settings (see _async_fetch): timers change rarely and only through the app, Home
-        # Assistant or the device's own buttons, and every write here refreshes them
-        # directly, so there is no need to poll device/timer any more often than settings.
-        self._timers: FoodyTimers | None = None
+        # Cached timer document for Welly and Foody devices only, refreshed on the same
+        # cadence as settings (see _async_fetch): timers change rarely and only through
+        # the app, Home Assistant or the device's own buttons, and every write here
+        # refreshes them directly, so there is no need to poll device/timer any more
+        # often than settings.
+        self._timers: FoodyTimers | WellyTimers | None = None
         self._poll_count = 0
         # Strype only: the last state published for this device. The lighting firmware
         # answers every request with a mode-dependent status message - `color` only in
@@ -322,7 +330,7 @@ class KlyqaDeviceCoordinator(DataUpdateCoordinator[KlyqaDeviceData]):
         self._timers = None
 
     @callback
-    def async_publish_timers(self, timers: FoodyTimers) -> None:
+    def async_publish_timers(self, timers: FoodyTimers | WellyTimers) -> None:
         """Publish the timer document a timer write returned.
 
         The firmware answers every accepted timer write with the complete, freshly
@@ -380,7 +388,7 @@ class KlyqaDeviceCoordinator(DataUpdateCoordinator[KlyqaDeviceData]):
             self._async_update_device_registry(self._system_info)
 
         settings: DeviceSettings = None
-        timers: FoodyTimers | None = None
+        timers: FoodyTimers | WellyTimers | None = None
         state: DeviceState
         if isinstance(self.device, WellyDevice | FoodyDevice):
             state = await self.device.get_state()
@@ -388,17 +396,17 @@ class KlyqaDeviceCoordinator(DataUpdateCoordinator[KlyqaDeviceData]):
             if self._settings is None or self._poll_count % SETTINGS_POLL_INTERVAL == 0:
                 self._settings = await self.device.get_settings()
             settings = self._settings
-            if self.device_type is DeviceType.FOODY:
+            if self.device_type in (DeviceType.FOODY, DeviceType.WELLY):
                 # Timers ride the same infrequent cadence as settings: they change
                 # rarely and only through the app, Home Assistant or the device's own
                 # buttons, and a write from here never waits for this poll to be seen -
-                # the schedule services mark the cache stale and refresh, the sleep
-                # entities publish the document the device returned with their write.
-                # Only a failed write, or a change made in the Klyqa app, leaves
-                # anything for this poll to pick up, so there is no need to read
+                # the schedule/timer services mark the cache stale and refresh, the
+                # sleep/timer entities publish the document the device returned with
+                # their write. Only a failed write, or a change made in the Klyqa app,
+                # leaves anything for this poll to pick up, so there is no need to read
                 # device/timer any more often than settings.
                 if self._timers is None or self._poll_count % SETTINGS_POLL_INTERVAL == 0:
-                    self._timers = await self.foody_device.get_timers()
+                    self._timers = await self.device.get_timers()
                 timers = self._timers
         elif isinstance(self.device, AirPurifierDevice):
             state = await self.device.get_state()

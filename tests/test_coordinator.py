@@ -22,8 +22,9 @@ from custom_components.klyqa_pet.const import (
 )
 from custom_components.klyqa_pet.entity import KlyqaPetEntity
 from pyklyqa_pet import KlyqaConnectionError, KlyqaRateLimitError, StrypeState, WellySettings
+from pyklyqa_pet.welly_timers import WellyTimers
 
-from .conftest import FOODY_ID, STRYPE_ID, WELLY_ID, load_json, setup_integration
+from .conftest import FOODY_ID, PURIFIER_ID, STRYPE_ID, WELLY_ID, load_json, setup_integration
 
 
 @pytest.mark.parametrize(
@@ -315,11 +316,90 @@ async def test_other_device_types_have_no_timers(
     mock_config_entry: MockConfigEntry,
     mock_cloud: MagicMock,
     mock_devices: dict,
-    mock_welly: MagicMock,
+    mock_purifier: MagicMock,
 ) -> None:
-    """A Welly coordinator exposes timers as None, not an empty document."""
+    """An air purifier coordinator exposes timers as None, not an empty document."""
     await setup_integration(hass, mock_config_entry)
-    coordinator = mock_config_entry.runtime_data.coordinators[WELLY_ID]
+    coordinator = mock_config_entry.runtime_data.coordinators[PURIFIER_ID]
 
     assert coordinator.data.timers is None
-    assert not hasattr(mock_welly, "get_timers") or mock_welly.get_timers.call_count == 0
+    assert not hasattr(mock_purifier, "get_timers") or mock_purifier.get_timers.call_count == 0
+
+
+async def test_welly_timers_fetched_every_fourth_poll(
+    hass: HomeAssistant,
+    freezer: FrozenDateTimeFactory,
+    mock_config_entry: MockConfigEntry,
+    mock_cloud: MagicMock,
+    mock_devices: dict,
+    mock_welly: MagicMock,
+) -> None:
+    """Timers ride the settings cadence: fetched at setup, then every fourth poll."""
+    await setup_integration(hass, mock_config_entry)
+    coordinator = mock_config_entry.runtime_data.coordinators[WELLY_ID]
+    coordinator.async_add_listener(lambda: None)
+
+    assert mock_welly.get_timers.call_count == 1
+
+    for _ in range(2):
+        freezer.tick(DEFAULT_SCAN_INTERVAL + timedelta(seconds=1))
+        async_fire_time_changed(hass)
+        await hass.async_block_till_done()
+    assert mock_welly.get_timers.call_count == 1
+
+    freezer.tick(DEFAULT_SCAN_INTERVAL + timedelta(seconds=1))
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done()
+    assert mock_welly.get_timers.call_count == 2
+
+
+async def test_marking_welly_timers_stale_reloads_on_the_next_refresh(
+    hass: HomeAssistant,
+    mock_config_entry: MockConfigEntry,
+    mock_cloud: MagicMock,
+    mock_devices: dict,
+    mock_welly: MagicMock,
+) -> None:
+    """mark_timers_stale() forces the refresh it triggers to re-read device/timer."""
+    await setup_integration(hass, mock_config_entry)
+    coordinator = mock_config_entry.runtime_data.coordinators[WELLY_ID]
+    assert mock_welly.get_timers.call_count == 1
+
+    coordinator.mark_timers_stale()
+    await coordinator.async_refresh()
+
+    assert mock_welly.get_timers.call_count == 2
+
+
+async def test_a_welly_timer_write_publishes_without_refetching(
+    hass: HomeAssistant,
+    mock_config_entry: MockConfigEntry,
+    mock_cloud: MagicMock,
+    mock_devices: dict,
+    mock_welly: MagicMock,
+) -> None:
+    """The library already re-read; the entity path must not poll a third time.
+
+    `WellyDevice`'s five timer-write methods each perform their own follow-up
+    GET and return the fresh `WellyTimers`, exactly like the Foody's timer
+    writes. entity.py's `_async_send` must publish that result directly
+    instead of asking the coordinator to refresh - a refresh is debounced and
+    would silently swallow a later write in a burst.
+    """
+    await setup_integration(hass, mock_config_entry)
+    coordinator = mock_config_entry.runtime_data.coordinators[WELLY_ID]
+    entity = KlyqaPetEntity(coordinator, EntityDescription(key="test"))
+
+    get_timers_calls = mock_welly.get_timers.call_count
+
+    result = WellyTimers.from_dict(load_json("welly_timers.json"))
+
+    async def _command() -> WellyTimers:
+        return result
+
+    await entity._async_send(_command(), writes_timers=True)
+    await hass.async_block_till_done()
+
+    assert mock_welly.get_timers.call_count == get_timers_calls
+    assert coordinator.data.timers is result
+    assert coordinator.data.welly_timers is result
