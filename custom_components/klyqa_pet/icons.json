@@ -25,6 +25,7 @@
       "last_scheduled_portions": { "default": "mdi:counter" },
       "next_feed_time": { "default": "mdi:timer-sand" },
       "mcu_firmware_version": { "default": "mdi:chip" },
+      "feeding_schedules": { "default": "mdi:calendar-clock" },
       "firmware_version": { "default": "mdi:chip" },
       "sdk_version": { "default": "mdi:package-variant" },
       "last_boot": { "default": "mdi:clock-start" },
@@ -61,6 +62,7 @@
       "app_pet_lock": { "default": "mdi:paw" },
       "beep_switch": { "default": "mdi:volume-high" },
       "feed_audio_enable": { "default": "mdi:account-voice" },
+      "sleep_mode": { "default": "mdi:sleep", "state": { "off": "mdi:sleep-off" } },
       "ionizer": { "default": "mdi:atom" },
       "child_lock": { "default": "mdi:lock" },
       "key_tone": { "default": "mdi:volume-high" }
@@ -74,6 +76,10 @@
       "threshold_dirty_tank_full": { "default": "mdi:water-plus" },
       "portions": { "default": "mdi:counter" },
       "feed_audio_volume": { "default": "mdi:volume-medium" }
+    },
+    "time": {
+      "sleep_start": { "default": "mdi:sleep" },
+      "sleep_end": { "default": "mdi:sleep-off" }
     },
     "select": {
       "mode": { "default": "mdi:water-sync" },
@@ -93,5 +99,10 @@
       "led": { "default": "mdi:led-strip-variant" },
       "strip": { "default": "mdi:led-strip-variant", "state": { "off": "mdi:led-strip" } }
     }
+  },
+  "services": {
+    "add_feeding_schedule": "mdi:calendar-plus",
+    "set_feeding_schedule": "mdi:calendar-edit",
+    "delete_feeding_schedule": "mdi:calendar-remove"
   }
 }

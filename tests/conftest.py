@@ -44,6 +44,7 @@ from pyklyqa_pet import (
     WellySettings,
     WellyState,
 )
+from pyklyqa_pet.foody_timers import FoodyTimers
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
@@ -140,6 +141,9 @@ def mock_foody() -> MagicMock:
     device.get_state = AsyncMock(return_value=FoodyState.from_dict(load_json("foody_state.json")))
     device.get_settings = AsyncMock(
         return_value=FoodySettings.from_dict(load_json("foody_settings.json"))
+    )
+    device.get_timers = AsyncMock(
+        return_value=FoodyTimers.from_dict(load_json("foody_timers.json"))
     )
     return device
 

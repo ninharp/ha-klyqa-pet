@@ -1,0 +1,4 @@
+{"_comment": "Constructed scenario for the feeding-schedule sensor tests, not a device capture. Exercises the zero-schedules path.",
+ "type": "timer",
+ "schedules": [],
+ "sleep_mode": {"enable": false, "weekly_cycle": 127, "start_time": 2200, "end_time": 600}}

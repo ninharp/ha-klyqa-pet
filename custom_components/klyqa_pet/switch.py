@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Coroutine
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any
 
 from homeassistant.components.switch import SwitchEntity, SwitchEntityDescription
@@ -26,6 +26,9 @@ class KlyqaSwitchEntityDescription(SwitchEntityDescription):
 
     is_on_fn: Callable[[KlyqaDeviceData], bool]
     set_fn: Callable[[KlyqaDeviceCoordinator, bool], Coroutine[Any, Any, Any]]
+    # Set on the switches whose `set_fn` writes the Foody's timer document, so a failed
+    # write drops the cached copy - see KlyqaPetEntity._async_send.
+    writes_timers: bool = False
 
 
 def _welly_setting(key: str) -> KlyqaSwitchEntityDescription:
@@ -70,6 +73,20 @@ FOODY_SWITCHES: tuple[KlyqaSwitchEntityDescription, ...] = (
     _foody_setting("beep_switch"),
     _foody_setting("feed_audio_enable"),
     _foody_setting("telemetry"),
+    KlyqaSwitchEntityDescription(
+        key="sleep_mode",
+        translation_key="sleep_mode",
+        entity_category=EntityCategory.CONFIG,
+        is_on_fn=lambda data: data.foody_timers.sleep_mode.enabled,
+        # Only the `enabled` flag comes from this switch; weekdays and the start/end
+        # times are set elsewhere (the app, or the `time` entities added in a later
+        # task) and must survive a toggle untouched, so the write is built from the
+        # coordinator's own cached sleep mode via `replace`, not from scratch.
+        set_fn=lambda coordinator, on: coordinator.foody_device.set_sleep_mode(
+            replace(coordinator.data.foody_timers.sleep_mode, enabled=on)
+        ),
+        writes_timers=True,
+    ),
 )
 
 PURIFIER_SWITCHES: tuple[KlyqaSwitchEntityDescription, ...] = (
@@ -131,8 +148,14 @@ class KlyqaSwitch(KlyqaPetEntity, SwitchEntity):
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn the setting on."""
-        await self._async_send(self.entity_description.set_fn(self.coordinator, True))
+        await self._async_send(
+            self.entity_description.set_fn(self.coordinator, True),
+            writes_timers=self.entity_description.writes_timers,
+        )
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the setting off."""
-        await self._async_send(self.entity_description.set_fn(self.coordinator, False))
+        await self._async_send(
+            self.entity_description.set_fn(self.coordinator, False),
+            writes_timers=self.entity_description.writes_timers,
+        )

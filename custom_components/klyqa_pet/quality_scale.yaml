@@ -1,8 +1,13 @@
 rules:
   # Bronze
   action-setup:
-    status: exempt
-    comment: The integration does not register custom actions.
+    status: done
+    comment: >
+      The three feeding-schedule actions are registered in async_setup, so they
+      exist whenever the integration is loaded, independent of config entries.
+      Each call resolves its target device at call time and raises a translated
+      ServiceValidationError (device_not_available) when no loaded entry owns
+      it.
   appropriate-polling: done
   brands:
     status: done
@@ -16,8 +21,10 @@ rules:
   config-flow-test-coverage: done
   dependency-transparency: done
   docs-actions:
-    status: exempt
-    comment: No custom actions.
+    status: done
+    comment: >
+      README.md, section "Feeding schedules": describes all three actions with
+      their slot-id semantics and a YAML example each.
   docs-high-level-description: done
   docs-installation-instructions: done
   docs-removal-instructions: done

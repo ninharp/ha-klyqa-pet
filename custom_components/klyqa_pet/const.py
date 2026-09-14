@@ -41,6 +41,7 @@ PLATFORMS: Final = [
     Platform.SELECT,
     Platform.SENSOR,
     Platform.SWITCH,
+    Platform.TIME,
 ]
 
 # The scan interval is user-configurable (options flow, CONF_SCAN_INTERVAL from
@@ -128,3 +129,8 @@ PURIFIER_AQI_GRADES: Final[dict[int, str]] = {
 PURIFIER_RUN_MODES: Final[dict[int, str]] = {0: "standalone", 1: "auto", 2: "night", 3: "pet"}
 
 STRYPE_LIGHT_MODES: Final = ("rgb", "cct", "cmd")
+
+# Weekday keys in bitmask order: bit 0 = Sunday .. bit 6 = Saturday, matching
+# FeedingSchedule.weekdays and SleepMode.weekdays. Shared by the schedule sensor's
+# attributes and the feeding-schedule services.
+WEEKDAY_KEYS: Final = ("sun", "mon", "tue", "wed", "thu", "fri", "sat")

@@ -8,6 +8,7 @@ from homeassistant.config_entries import ConfigEntry, ConfigEntryState
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import translation
+from homeassistant.helpers.typing import ConfigType
 
 from pyklyqa_pet import CloudApp
 
@@ -23,10 +24,24 @@ from .const import (
     PLATFORMS,
 )
 from .hub import KlyqaPetHub
+from .services import async_setup_services
 
 _LOGGER = logging.getLogger(__name__)
 
 type KlyqaPetConfigEntry = ConfigEntry[KlyqaPetHub]
+
+
+async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+    """Register the integration's actions.
+
+    They live here rather than in async_setup_entry so they exist as soon as the
+    integration is loaded, even while no config entry is set up (or an entry is retrying
+    after a ConfigEntryNotReady). Each call resolves its target device itself and
+    explains that the device is unavailable, which is more useful than an action that is
+    simply missing.
+    """
+    async_setup_services(hass)
+    return True
 
 
 async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:

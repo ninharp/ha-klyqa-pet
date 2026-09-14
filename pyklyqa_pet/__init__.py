@@ -24,6 +24,7 @@ from .exceptions import (
     KlyqaRateLimitError,
 )
 from .foody import FoodyDevice, FoodySettings, FoodyState
+from .foody_timers import FeedingSchedule, FoodyTimers, SleepMode
 from .strype import StrypeDevice, StrypeState
 from .welly import WellyDevice, WellyMode, WellySettings, WellyState
 
@@ -60,9 +61,11 @@ __all__ = [
     "DeviceType",
     "DiscoveredDevice",
     "Environment",
+    "FeedingSchedule",
     "FoodyDevice",
     "FoodySettings",
     "FoodyState",
+    "FoodyTimers",
     "KlyqaAuthError",
     "KlyqaCloudClient",
     "KlyqaConnectionError",
@@ -70,6 +73,7 @@ __all__ = [
     "KlyqaDeviceError",
     "KlyqaError",
     "KlyqaRateLimitError",
+    "SleepMode",
     "StrypeDevice",
     "StrypeState",
     "SystemInfo",

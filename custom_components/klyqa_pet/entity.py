@@ -13,9 +13,11 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from pyklyqa_pet import (
     FoodySettings,
+    FoodyTimers,
     KlyqaAuthError,
     KlyqaConnectionError,
     KlyqaDeviceError,
+    KlyqaError,
     StrypeState,
     WellySettings,
 )
@@ -52,29 +54,44 @@ class KlyqaPetEntity(CoordinatorEntity[KlyqaDeviceCoordinator]):
             hw_version=str(info.hw_revision) if info and info.hw_revision else None,
         )
 
-    async def _async_send(self, command: Coroutine[Any, Any, Any]) -> None:
-        """Run a device command, translate library errors and refresh the coordinator."""
-        device = self.coordinator.device_name
+    def _command_error(self, err: KlyqaError) -> HomeAssistantError:
+        """Translate a library error into the message the user is shown."""
+        placeholders = {"device": self.coordinator.device_name}
+        if isinstance(err, KlyqaAuthError):
+            key = "auth_failed"
+        elif isinstance(err, KlyqaDeviceError):
+            key = "device_rejected"
+            placeholders["error"] = str(err)
+        else:
+            key = "cannot_connect"
+        return HomeAssistantError(
+            translation_domain=DOMAIN,
+            translation_key=key,
+            translation_placeholders=placeholders,
+        )
+
+    async def _async_send(
+        self, command: Coroutine[Any, Any, Any], *, writes_timers: bool = False
+    ) -> None:
+        """Run a device command, translate library errors and publish or refresh.
+
+        `writes_timers` marks the commands that write the Foody's timer document. A
+        rejected one still needs handling, because the firmware mutates its own copy
+        before the step that can fail - the sleep branch stores enable, the weekday mask
+        and both times and only then calls feeder_com_send_sleep_mode_ctrl, exactly as
+        the schedule branches do (device_timers.c). So a failed write may already have
+        moved the device while the published document still shows the old window, and
+        nothing else would notice: the success path publishes rather than refreshes.
+        Dropping the cached document leaves the re-read to the next scheduled poll; as
+        in the services, the failure path deliberately does not force a refresh at a
+        device that has just refused a request.
+        """
         try:
             result = await command
-        except KlyqaAuthError as err:
-            raise HomeAssistantError(
-                translation_domain=DOMAIN,
-                translation_key="auth_failed",
-                translation_placeholders={"device": device},
-            ) from err
-        except KlyqaDeviceError as err:
-            raise HomeAssistantError(
-                translation_domain=DOMAIN,
-                translation_key="device_rejected",
-                translation_placeholders={"device": device, "error": str(err)},
-            ) from err
-        except KlyqaConnectionError as err:
-            raise HomeAssistantError(
-                translation_domain=DOMAIN,
-                translation_key="cannot_connect",
-                translation_placeholders={"device": device},
-            ) from err
+        except (KlyqaAuthError, KlyqaDeviceError, KlyqaConnectionError) as err:
+            if writes_timers:
+                self.coordinator.mark_timers_stale()
+            raise self._command_error(err) from err
         if isinstance(result, StrypeState):
             # A Strype write answers with the very same status message a read does, and
             # the library has already merged it onto the coordinator's previous state
@@ -88,6 +105,17 @@ class KlyqaPetEntity(CoordinatorEntity[KlyqaDeviceCoordinator]):
             # cache stale so the refresh below reloads it instead of reusing the copy
             # from before the write (see KlyqaDeviceCoordinator.mark_settings_stale).
             self.coordinator.mark_settings_stale()
+        if isinstance(result, FoodyTimers):
+            # A timer write (schedule or sleep mode) is answered with the complete,
+            # freshly serialised timer document, so publish it instead of asking for a
+            # refresh. That matters beyond saving a request: the sleep-mode switch and
+            # the two sleep-window `time` entities each build their write from the
+            # cached document via `replace`, and `async_request_refresh` is debounced -
+            # in a burst of writes only the first one would actually re-read, so every
+            # later write would still be built from the pre-burst snapshot and silently
+            # revert its predecessor. Publishing makes each write authoritative at once.
+            self.coordinator.async_publish_timers(result)
+            return
         await self.coordinator.async_request_refresh()
 
 

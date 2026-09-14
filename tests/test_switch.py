@@ -1,5 +1,6 @@
 """Tests for the switch platform."""
 
+from datetime import time
 from unittest.mock import MagicMock, patch
 
 from homeassistant.components.switch import DOMAIN as SWITCH_DOMAIN
@@ -97,6 +98,36 @@ async def test_switch_commands(
         SWITCH_DOMAIN, SERVICE_TURN_OFF, {ATTR_ENTITY_ID: entity_id}, blocking=True
     )
     getattr(mock, method).assert_awaited_with(**off_kwargs)
+
+
+@pytest.mark.usefixtures("switches")
+async def test_sleep_mode_switch_writes_the_whole_object(
+    hass: HomeAssistant, mock_foody: MagicMock
+) -> None:
+    """Toggling preserves weekdays and times; only `enabled` changes."""
+    await hass.services.async_call(
+        SWITCH_DOMAIN,
+        SERVICE_TURN_ON,
+        {ATTR_ENTITY_ID: "switch.feeder_sleep_mode"},
+        blocking=True,
+    )
+    sent = mock_foody.set_sleep_mode.await_args.args[0]
+    assert sent.enabled is True
+    assert sent.start == time(22, 0)
+    assert sent.end == time(6, 0)
+    assert sent.weekdays == frozenset(range(7))
+
+    await hass.services.async_call(
+        SWITCH_DOMAIN,
+        SERVICE_TURN_OFF,
+        {ATTR_ENTITY_ID: "switch.feeder_sleep_mode"},
+        blocking=True,
+    )
+    sent_off = mock_foody.set_sleep_mode.await_args.args[0]
+    assert sent_off.enabled is False
+    assert sent_off.start == time(22, 0)
+    assert sent_off.end == time(6, 0)
+    assert sent_off.weekdays == frozenset(range(7))
 
 
 @pytest.mark.usefixtures("switches")
