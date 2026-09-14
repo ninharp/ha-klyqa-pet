@@ -53,6 +53,18 @@ def test_decode_hhmm_rejects_impossible_values(raw: int) -> None:
         decode_hhmm(raw)
 
 
+@pytest.mark.parametrize("raw", [9999, -1, 1060])
+def test_from_dict_degrades_an_impossible_execution_time_to_midnight(raw: int) -> None:
+    """The firmware bounds start/end times but validates execution_time only as a number
+    (device_timers.c), so a GET can return one no clock has - parsing must stay total."""
+    document = json.loads(json.dumps(FIXTURE))
+    document["schedules"][0]["execution_time"] = raw
+    schedule = FoodyTimers.from_dict(document).schedules[0]
+    assert schedule.execution_time == time(0, 0)
+    assert schedule.portions == 2
+    assert schedule.raw["execution_time"] == raw
+
+
 @pytest.mark.parametrize(
     ("mask", "days"),
     [

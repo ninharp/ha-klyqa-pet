@@ -35,6 +35,23 @@ def decode_hhmm(value: int) -> time:
     return time(hours, minutes)
 
 
+def _decode_hhmm_lenient(value: int) -> time:
+    """Decode an HHMM integer, falling back to midnight on an impossible value.
+
+    Every `from_dict` in this library is total: `_as_int`/`_as_bool` substitute a
+    default rather than raise, so a surprising device response degrades one field
+    instead of failing the whole poll. The times need the same treatment, because the
+    firmware bounds `start_time`/`end_time` to 0-2359 but validates a schedule's
+    `execution_time` only as "is a number" (device_timers.c), so any other client - or
+    a corrupted NVS blob - can leave an out-of-range value there for the next GET to
+    return. `decode_hhmm` stays strict for callers that want the validation.
+    """
+    try:
+        return decode_hhmm(value)
+    except ValueError:
+        return time(0, 0)
+
+
 def encode_hhmm(t: time) -> int:
     """Encode a time object to an HHMM integer."""
     return t.hour * 100 + t.minute
@@ -78,7 +95,7 @@ class FeedingSchedule:
             schedule_id=_as_int(data.get("schedule_id")),
             enabled=_as_bool(data.get("enable")),
             skip_once=_as_bool(data.get("skip_once")),
-            execution_time=decode_hhmm(_as_int(data.get("execution_time"))),
+            execution_time=_decode_hhmm_lenient(_as_int(data.get("execution_time"))),
             weekdays=decode_weekdays(_as_int(data.get("week_cycle"))),
             portions=_as_int(data.get("portions")),
             total_duration_sec=_as_int(data.get("total_duration_sec")),
@@ -118,8 +135,8 @@ class SleepMode:
         return cls(
             enabled=_as_bool(data.get("enable")),
             weekdays=decode_weekdays(_as_int(data.get("weekly_cycle"))),
-            start=decode_hhmm(_as_int(data.get("start_time"))),
-            end=decode_hhmm(_as_int(data.get("end_time"))),
+            start=_decode_hhmm_lenient(_as_int(data.get("start_time"))),
+            end=_decode_hhmm_lenient(_as_int(data.get("end_time"))),
             raw=data,
         )
 
