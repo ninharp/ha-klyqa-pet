@@ -23,7 +23,7 @@ from custom_components.klyqa_pet.const import (
 from custom_components.klyqa_pet.entity import KlyqaPetEntity
 from pyklyqa_pet import KlyqaConnectionError, KlyqaRateLimitError, StrypeState, WellySettings
 
-from .conftest import STRYPE_ID, WELLY_ID, load_json, setup_integration
+from .conftest import FOODY_ID, STRYPE_ID, WELLY_ID, load_json, setup_integration
 
 
 @pytest.mark.parametrize(
@@ -263,3 +263,63 @@ async def test_coordinator_uses_configured_scan_interval(
     await hass.async_block_till_done()
     coordinator = mock_config_entry.runtime_data.coordinators[WELLY_ID]
     assert coordinator.update_interval == timedelta(seconds=120)
+
+
+async def test_foody_timers_fetched_every_fourth_poll(
+    hass: HomeAssistant,
+    freezer: FrozenDateTimeFactory,
+    mock_config_entry: MockConfigEntry,
+    mock_cloud: MagicMock,
+    mock_devices: dict,
+    mock_foody: MagicMock,
+) -> None:
+    """Timers ride the settings cadence: fetched at setup, then every fourth poll."""
+    await setup_integration(hass, mock_config_entry)
+    coordinator = mock_config_entry.runtime_data.coordinators[FOODY_ID]
+    coordinator.async_add_listener(lambda: None)
+
+    assert mock_foody.get_timers.call_count == 1
+
+    for _ in range(2):
+        freezer.tick(DEFAULT_SCAN_INTERVAL + timedelta(seconds=1))
+        async_fire_time_changed(hass)
+        await hass.async_block_till_done()
+    assert mock_foody.get_timers.call_count == 1
+
+    freezer.tick(DEFAULT_SCAN_INTERVAL + timedelta(seconds=1))
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done()
+    assert mock_foody.get_timers.call_count == 2
+
+
+async def test_marking_timers_stale_reloads_on_the_next_refresh(
+    hass: HomeAssistant,
+    mock_config_entry: MockConfigEntry,
+    mock_cloud: MagicMock,
+    mock_devices: dict,
+    mock_foody: MagicMock,
+) -> None:
+    """mark_timers_stale() forces the refresh it triggers to re-read device/timer."""
+    await setup_integration(hass, mock_config_entry)
+    coordinator = mock_config_entry.runtime_data.coordinators[FOODY_ID]
+    assert mock_foody.get_timers.call_count == 1
+
+    coordinator.mark_timers_stale()
+    await coordinator.async_refresh()
+
+    assert mock_foody.get_timers.call_count == 2
+
+
+async def test_other_device_types_have_no_timers(
+    hass: HomeAssistant,
+    mock_config_entry: MockConfigEntry,
+    mock_cloud: MagicMock,
+    mock_devices: dict,
+    mock_welly: MagicMock,
+) -> None:
+    """A Welly coordinator exposes timers as None, not an empty document."""
+    await setup_integration(hass, mock_config_entry)
+    coordinator = mock_config_entry.runtime_data.coordinators[WELLY_ID]
+
+    assert coordinator.data.timers is None
+    assert not hasattr(mock_welly, "get_timers") or mock_welly.get_timers.call_count == 0

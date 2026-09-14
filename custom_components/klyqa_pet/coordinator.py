@@ -34,6 +34,7 @@ from pyklyqa_pet import (
     WellySettings,
     WellyState,
 )
+from pyklyqa_pet.foody_timers import FoodyTimers
 
 from .const import (
     CONF_DEVICE_NAME,
@@ -71,6 +72,7 @@ class KlyqaDeviceData:
     system_info: SystemInfo
     state: DeviceState
     settings: DeviceSettings
+    timers: FoodyTimers | None
 
     @property
     def welly(self) -> WellyState:
@@ -95,6 +97,12 @@ class KlyqaDeviceData:
         """Return the settings as Foody settings."""
         assert isinstance(self.settings, FoodySettings)
         return self.settings
+
+    @property
+    def foody_timers(self) -> FoodyTimers:
+        """Return the cached timer document as Foody timers."""
+        assert isinstance(self.timers, FoodyTimers)
+        return self.timers
 
     @property
     def purifier(self) -> AirPurifierState:
@@ -167,6 +175,12 @@ class KlyqaDeviceCoordinator(DataUpdateCoordinator[KlyqaDeviceData]):
         # SETTINGS_POLL_INTERVAL polls (see _async_fetch) to reduce REST pressure; a
         # settings write marks this stale so the very next poll reloads it.
         self._settings: DeviceSettings = None
+        # Cached timer document for Foody devices only, refreshed on the same cadence as
+        # settings (see _async_fetch): timers change rarely and only through the app, Home
+        # Assistant or the device's own buttons, and every write here refreshes them
+        # directly, so there is no need to poll device/timer any more often than settings.
+        self._timers: FoodyTimers | None = None
+        self._timers_stale = True
         self._poll_count = 0
         # Strype only: the last state published for this device. The lighting firmware
         # answers every request with a mode-dependent status message - `color` only in
@@ -284,6 +298,15 @@ class KlyqaDeviceCoordinator(DataUpdateCoordinator[KlyqaDeviceData]):
         """
         self._settings = None
 
+    def mark_timers_stale(self) -> None:
+        """Force the next poll to reload the timer document instead of the cached copy.
+
+        Called after a timer write (a new/changed schedule, a deleted schedule, or a
+        sleep-mode change) so the change is reflected as soon as the write's automatic
+        refresh runs, without waiting for the next periodic timers poll.
+        """
+        self._timers_stale = True
+
     @property
     def strype_state(self) -> StrypeState | None:
         """Return the last known Strype state, to merge the next response onto."""
@@ -327,6 +350,7 @@ class KlyqaDeviceCoordinator(DataUpdateCoordinator[KlyqaDeviceData]):
             self._async_update_device_registry(self._system_info)
 
         settings: DeviceSettings = None
+        timers: FoodyTimers | None = None
         state: DeviceState
         if isinstance(self.device, WellyDevice | FoodyDevice):
             state = await self.device.get_state()
@@ -334,6 +358,16 @@ class KlyqaDeviceCoordinator(DataUpdateCoordinator[KlyqaDeviceData]):
             if self._settings is None or self._poll_count % SETTINGS_POLL_INTERVAL == 0:
                 self._settings = await self.device.get_settings()
             settings = self._settings
+            if self.device_type is DeviceType.FOODY:
+                # Timers ride the same infrequent cadence as settings: they change
+                # rarely and only through the app, Home Assistant or the device's own
+                # buttons, and every write here refreshes them directly via
+                # mark_timers_stale(), so there is no need to poll device/timer any
+                # more often than settings.
+                if self._timers_stale or self._poll_count % SETTINGS_POLL_INTERVAL == 0:
+                    self._timers = await self.foody_device.get_timers()
+                    self._timers_stale = False
+                timers = self._timers
         elif isinstance(self.device, AirPurifierDevice):
             state = await self.device.get_state()
         elif isinstance(self.device, StrypeDevice):
@@ -344,7 +378,9 @@ class KlyqaDeviceCoordinator(DataUpdateCoordinator[KlyqaDeviceData]):
             self._strype_state = state
         else:  # pragma: no cover - guarded by create_device
             raise UpdateFailed(f"Unsupported device class {type(self.device).__name__}")
-        return KlyqaDeviceData(system_info=self._system_info, state=state, settings=settings)
+        return KlyqaDeviceData(
+            system_info=self._system_info, state=state, settings=settings, timers=timers
+        )
 
     @callback
     def _async_update_device_registry(self, info: SystemInfo) -> None:
