@@ -1,5 +1,6 @@
 """Tests for the Foody feeding-schedule services."""
 
+import asyncio
 from datetime import time
 import json
 from pathlib import Path
@@ -10,6 +11,7 @@ from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.helpers import device_registry as dr
+from homeassistant.setup import async_setup_component
 import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 import voluptuous as vol
@@ -26,7 +28,7 @@ from custom_components.klyqa_pet.services import (
     SET_SCHEMA,
 )
 from pyklyqa_pet import KlyqaAuthError, KlyqaConnectionError, KlyqaDeviceError
-from pyklyqa_pet.foody_timers import MAX_FEEDING_SCHEDULES, FoodyTimers
+from pyklyqa_pet.foody_timers import MAX_FEEDING_SCHEDULES, MAX_PORTIONS, FoodyTimers
 
 from .conftest import FOODY_ID, WELLY_ID, load_json, setup_integration
 
@@ -103,12 +105,13 @@ async def test_delete_rereads_before_writing(
     assert [name for name, *_ in mock_foody.mock_calls][:2] == ["get_timers", "delete_schedule"]
     assert mock_foody.delete_schedule.await_args.args == (3,)
 
-    with pytest.raises(ServiceValidationError):
+    with pytest.raises(ServiceValidationError) as err:
         await call(
             hass,
             SERVICE_DELETE_FEEDING_SCHEDULE,
             {"device_id": foody_device_id, "schedule_id": 0},
         )
+    assert err.value.translation_key == "unknown_schedule"
 
 
 async def test_add_surfaces_a_full_device(
@@ -127,45 +130,49 @@ async def test_add_surfaces_a_full_device(
 async def test_set_rejects_an_unknown_schedule_id(
     hass: HomeAssistant, mock_foody: MagicMock, foody_device_id: str
 ) -> None:
-    with pytest.raises(ServiceValidationError):
+    with pytest.raises(ServiceValidationError) as err:
         await call(
             hass,
             SERVICE_SET_FEEDING_SCHEDULE,
             {"device_id": foody_device_id, "schedule_id": 7, "portions": 3},
         )
+    assert err.value.translation_key == "unknown_schedule"
     mock_foody.set_schedule.assert_not_awaited()
 
 
 async def test_delete_rejects_an_unknown_schedule_id(
     hass: HomeAssistant, mock_foody: MagicMock, foody_device_id: str
 ) -> None:
-    with pytest.raises(ServiceValidationError):
+    with pytest.raises(ServiceValidationError) as err:
         await call(
             hass,
             SERVICE_DELETE_FEEDING_SCHEDULE,
             {"device_id": foody_device_id, "schedule_id": 7},
         )
+    assert err.value.translation_key == "unknown_schedule"
     mock_foody.delete_schedule.assert_not_awaited()
 
 
 async def test_a_service_on_a_welly_is_rejected(
     hass: HomeAssistant, mock_welly: MagicMock, welly_device_id: str
 ) -> None:
-    with pytest.raises(ServiceValidationError):
+    with pytest.raises(ServiceValidationError) as err:
         await call(
             hass,
             SERVICE_ADD_FEEDING_SCHEDULE,
             {"device_id": welly_device_id, "time": "07:00:00", "portions": 1},
         )
+    assert err.value.translation_key == "not_a_foody"
 
 
 async def test_an_unknown_device_is_rejected(hass: HomeAssistant, integration: None) -> None:
-    with pytest.raises(ServiceValidationError):
+    with pytest.raises(ServiceValidationError) as err:
         await call(
             hass,
             SERVICE_ADD_FEEDING_SCHEDULE,
             {"device_id": "does-not-exist", "time": "07:00:00", "portions": 1},
         )
+    assert err.value.translation_key == "device_not_found"
 
 
 async def test_a_device_of_another_integration_is_rejected(
@@ -176,12 +183,13 @@ async def test_a_device_of_another_integration_is_rejected(
     device = dr.async_get(hass).async_get_or_create(
         config_entry_id=other.entry_id, identifiers={("other", "thing")}
     )
-    with pytest.raises(ServiceValidationError):
+    with pytest.raises(ServiceValidationError) as err:
         await call(
             hass,
             SERVICE_ADD_FEEDING_SCHEDULE,
             {"device_id": device.id, "time": "07:00:00", "portions": 1},
         )
+    assert err.value.translation_key == "device_not_klyqa"
 
 
 async def test_a_device_of_an_unloaded_entry_is_rejected(
@@ -193,12 +201,13 @@ async def test_a_device_of_an_unloaded_entry_is_rejected(
     device = dr.async_get(hass).async_get_or_create(
         config_entry_id=other.entry_id, identifiers={(DOMAIN, "AABBCCDDEEFF")}
     )
-    with pytest.raises(ServiceValidationError):
+    with pytest.raises(ServiceValidationError) as err:
         await call(
             hass,
             SERVICE_ADD_FEEDING_SCHEDULE,
             {"device_id": device.id, "time": "07:00:00", "portions": 1},
         )
+    assert err.value.translation_key == "device_not_available"
 
 
 async def test_add_uses_the_defaults_for_omitted_fields(
@@ -272,12 +281,13 @@ async def test_add_rejects_a_full_device_before_asking_the_firmware(
 ) -> None:
     """All 20 slots taken is a validation error, not a firmware round trip."""
     mock_foody.get_timers.return_value = make_timers(MAX_FEEDING_SCHEDULES)
-    with pytest.raises(ServiceValidationError):
+    with pytest.raises(ServiceValidationError) as err:
         await call(
             hass,
             SERVICE_ADD_FEEDING_SCHEDULE,
             {"device_id": foody_device_id, "time": "07:00:00", "portions": 1},
         )
+    assert err.value.translation_key == "no_free_schedule_slot"
     mock_foody.set_schedule.assert_not_awaited()
 
 
@@ -436,27 +446,75 @@ async def test_the_schema_rejects_impossible_values(
         await call(hass, service, {"device_id": foody_device_id, **data})
 
 
-async def test_the_services_outlive_a_second_entry(
+async def test_the_services_exist_without_a_config_entry(
     hass: HomeAssistant,
-    integration: None,
-    mock_local_config_entry: MockConfigEntry,
-    mock_devices: dict,
     mock_config_entry: MockConfigEntry,
+    mock_cloud: MagicMock,
+    mock_devices: dict,
 ) -> None:
-    """Unloading one entry must not strip the services from the other."""
-    with patch("custom_components.klyqa_pet.PLATFORMS", [Platform.SENSOR]):
-        await setup_integration(hass, mock_local_config_entry)
-    assert hass.services.has_service(DOMAIN, SERVICE_ADD_FEEDING_SCHEDULE)
-
-    await hass.config_entries.async_unload(mock_local_config_entry.entry_id)
+    """Registered in async_setup, so neither setting up nor unloading an entry moves them."""
+    assert await async_setup_component(hass, DOMAIN, {})
     await hass.async_block_till_done()
-    assert hass.services.has_service(DOMAIN, SERVICE_ADD_FEEDING_SCHEDULE)
+    for service in (
+        SERVICE_ADD_FEEDING_SCHEDULE,
+        SERVICE_SET_FEEDING_SCHEDULE,
+        SERVICE_DELETE_FEEDING_SCHEDULE,
+    ):
+        assert hass.services.has_service(DOMAIN, service)
 
+    with patch("custom_components.klyqa_pet.PLATFORMS", [Platform.SENSOR]):
+        await setup_integration(hass, mock_config_entry)
     await hass.config_entries.async_unload(mock_config_entry.entry_id)
     await hass.async_block_till_done()
-    assert not hass.services.has_service(DOMAIN, SERVICE_ADD_FEEDING_SCHEDULE)
-    assert not hass.services.has_service(DOMAIN, SERVICE_SET_FEEDING_SCHEDULE)
-    assert not hass.services.has_service(DOMAIN, SERVICE_DELETE_FEEDING_SCHEDULE)
+    for service in (
+        SERVICE_ADD_FEEDING_SCHEDULE,
+        SERVICE_SET_FEEDING_SCHEDULE,
+        SERVICE_DELETE_FEEDING_SCHEDULE,
+    ):
+        assert hass.services.has_service(DOMAIN, service)
+
+
+async def test_two_parallel_adds_claim_different_slots(
+    hass: HomeAssistant, mock_foody: MagicMock, foody_device_id: str
+) -> None:
+    """Read and write are one sequence: the second add must see the first one's slot taken.
+
+    The device mock keeps the schedule list it is given and yields at every await, so an
+    implementation that does not hold the coordinator's write lock across read and write
+    lets both calls read the same list and claim the same free slot.
+    """
+    document = load_json("foody_timers.json")
+    schedules = list(document["schedules"])
+
+    async def _get_timers() -> FoodyTimers:
+        await asyncio.sleep(0)
+        return FoodyTimers.from_dict({**document, "schedules": list(schedules)})
+
+    async def _set_schedule(schedule: Any, *, create: bool) -> FoodyTimers:
+        await asyncio.sleep(0)
+        schedules.append(schedule.to_dict())
+        return FoodyTimers.from_dict({**document, "schedules": list(schedules)})
+
+    mock_foody.get_timers.side_effect = _get_timers
+    mock_foody.set_schedule.side_effect = _set_schedule
+
+    await asyncio.gather(
+        call(
+            hass,
+            SERVICE_ADD_FEEDING_SCHEDULE,
+            {"device_id": foody_device_id, "time": "07:00:00", "portions": 1},
+        ),
+        call(
+            hass,
+            SERVICE_ADD_FEEDING_SCHEDULE,
+            {"device_id": foody_device_id, "time": "18:00:00", "portions": 2},
+        ),
+    )
+    claimed = sorted(
+        written.args[0].schedule_id for written in mock_foody.set_schedule.await_args_list
+    )
+    # Slot 0 comes from foody_timers.json, so the two adds take 1 and 2.
+    assert claimed == [1, 2]
 
 
 COMPONENT = Path(__file__).parent.parent / "custom_components" / "klyqa_pet"
@@ -495,6 +553,13 @@ def test_services_yaml_matches_the_schemas_and_the_strings(
         fields = set(described[name]["fields"])
         assert fields == {str(key) for key in schema.schema}, name
         assert set(strings[name]["fields"]) == fields, name
+    # The numeric bounds are duplicated in YAML; keep them tied to the library's limits.
+    for name in (SERVICE_ADD_FEEDING_SCHEDULE, SERVICE_SET_FEEDING_SCHEDULE):
+        portions = described[name]["fields"]["portions"]["selector"]["number"]
+        assert (portions["min"], portions["max"]) == (1, MAX_PORTIONS), name
+    for name in (SERVICE_SET_FEEDING_SCHEDULE, SERVICE_DELETE_FEEDING_SCHEDULE):
+        schedule_id = described[name]["fields"]["schedule_id"]["selector"]["number"]
+        assert (schedule_id["min"], schedule_id["max"]) == (0, MAX_FEEDING_SCHEDULES - 1), name
 
 
 def test_the_weekday_selector_offers_exactly_the_known_keys() -> None:

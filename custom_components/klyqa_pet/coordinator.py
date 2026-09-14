@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from dataclasses import dataclass, replace
 from datetime import datetime, timedelta
 import logging
@@ -192,6 +193,13 @@ class KlyqaDeviceCoordinator(DataUpdateCoordinator[KlyqaDeviceData]):
         # untestable.
         self._system_info_time: datetime = datetime.min.replace(tzinfo=dt_util.UTC)
         self._token_warned = False
+        # Serialises a read-modify-write sequence against this device. The library only
+        # serialises individual requests, so two services that each read the timer
+        # document, compute from it and write it back would interleave at their awaits -
+        # two parallel schedule adds would claim the same free slot, and two parallel
+        # changes to one slot would each overwrite the other's. Whoever reads in order to
+        # write holds this across the whole sequence.
+        self.write_lock = asyncio.Lock()
         # Set after a cloud token recovery still leaves the device rejecting its token;
         # until this passes, a 401 fails the update directly without asking the hub for
         # another cloud login (see async_refresh_tokens coalescing on the hub side too).

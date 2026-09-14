@@ -1,12 +1,13 @@
 rules:
   # Bronze
   action-setup:
-    status: todo
+    status: done
     comment: >
-      The three feeding-schedule actions are registered in async_setup_entry
-      (and removed when the last entry unloads) rather than in async_setup,
-      because they resolve a target device to a live coordinator and have
-      nothing to validate against while no entry is loaded.
+      The three feeding-schedule actions are registered in async_setup, so they
+      exist whenever the integration is loaded, independent of config entries.
+      Each call resolves its target device at call time and raises a translated
+      ServiceValidationError (device_not_available) when no loaded entry owns
+      it.
   appropriate-polling: done
   brands:
     status: done

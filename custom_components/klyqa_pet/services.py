@@ -213,71 +213,87 @@ async def _async_finish(coordinator: KlyqaDeviceCoordinator) -> None:
 async def _async_add_feeding_schedule(call: ServiceCall) -> None:
     """Create a feeding schedule in the lowest free slot."""
     coordinator = _async_resolve_coordinator(call.hass, call.data[ATTR_DEVICE_ID])
-    schedules = await _async_read_schedules(coordinator)
-    used = {schedule.schedule_id for schedule in schedules}
-    schedule_id = next((slot for slot in range(MAX_FEEDING_SCHEDULES) if slot not in used), None)
-    if schedule_id is None:
-        # Claiming a free slot is this service's job, so a full device is answered here
-        # with a clear message instead of the firmware's terse rejection.
-        raise ServiceValidationError(
-            translation_domain=DOMAIN,
-            translation_key="no_free_schedule_slot",
-            translation_placeholders={
-                "device": coordinator.device_name,
-                "maximum": str(MAX_FEEDING_SCHEDULES),
-            },
+    # The free slot is derived from the list that was just read, so nothing else may
+    # write to this device between the read and the write that claims the slot.
+    async with coordinator.write_lock:
+        schedules = await _async_read_schedules(coordinator)
+        used = {schedule.schedule_id for schedule in schedules}
+        schedule_id = next(
+            (slot for slot in range(MAX_FEEDING_SCHEDULES) if slot not in used), None
         )
-    weekdays = call.data.get(ATTR_WEEKDAYS)
-    schedule = FeedingSchedule(
-        schedule_id=schedule_id,
-        enabled=call.data.get(ATTR_ENABLED, DEFAULT_ENABLED),
-        skip_once=call.data.get(ATTR_SKIP_ONCE, DEFAULT_SKIP_ONCE),
-        execution_time=call.data[ATTR_TIME],
-        weekdays=_decode_weekdays(weekdays) if weekdays else frozenset(range(7)),
-        portions=call.data[ATTR_PORTIONS],
-        # Only the fresh-food (wet food) mode uses a duration; a normal schedule
-        # dispenses portions and reports 0 here, as every captured schedule does.
-        total_duration_sec=0,
-        fresh_food_mode=call.data.get(ATTR_FRESH_FOOD_MODE, DEFAULT_FRESH_FOOD_MODE),
-        auto_play_voice=call.data.get(ATTR_AUTO_PLAY_VOICE, DEFAULT_AUTO_PLAY_VOICE),
-    )
-    await _async_device_call(
-        coordinator, coordinator.foody_device.set_schedule(schedule, create=True)
-    )
-    await _async_finish(coordinator)
+        if schedule_id is None:
+            # Claiming a free slot is this service's job, so a full device is answered
+            # here with a clear message instead of the firmware's terse rejection.
+            raise ServiceValidationError(
+                translation_domain=DOMAIN,
+                translation_key="no_free_schedule_slot",
+                translation_placeholders={
+                    "device": coordinator.device_name,
+                    "maximum": str(MAX_FEEDING_SCHEDULES),
+                },
+            )
+        weekdays = call.data.get(ATTR_WEEKDAYS)
+        schedule = FeedingSchedule(
+            schedule_id=schedule_id,
+            enabled=call.data.get(ATTR_ENABLED, DEFAULT_ENABLED),
+            skip_once=call.data.get(ATTR_SKIP_ONCE, DEFAULT_SKIP_ONCE),
+            execution_time=call.data[ATTR_TIME],
+            weekdays=_decode_weekdays(weekdays) if weekdays else frozenset(range(7)),
+            portions=call.data[ATTR_PORTIONS],
+            # Only the fresh-food (wet food) mode uses a duration; a normal schedule
+            # dispenses portions and reports 0 here, as every captured schedule does.
+            total_duration_sec=0,
+            fresh_food_mode=call.data.get(ATTR_FRESH_FOOD_MODE, DEFAULT_FRESH_FOOD_MODE),
+            auto_play_voice=call.data.get(ATTR_AUTO_PLAY_VOICE, DEFAULT_AUTO_PLAY_VOICE),
+        )
+        await _async_device_call(
+            coordinator, coordinator.foody_device.set_schedule(schedule, create=True)
+        )
+        await _async_finish(coordinator)
 
 
 async def _async_set_feeding_schedule(call: ServiceCall) -> None:
     """Change an existing feeding schedule, leaving omitted fields as they are."""
     coordinator = _async_resolve_coordinator(call.hass, call.data[ATTR_DEVICE_ID])
     schedule_id: int = call.data[ATTR_SCHEDULE_ID]
-    schedules = await _async_read_schedules(coordinator)
-    existing = _find(schedules, schedule_id, coordinator.device_name)
-    changes: dict[str, Any] = {}
-    if (execution_time := call.data.get(ATTR_TIME)) is not None:
-        changes["execution_time"] = execution_time
-    if (portions := call.data.get(ATTR_PORTIONS)) is not None:
-        changes["portions"] = portions
-    if (weekdays := call.data.get(ATTR_WEEKDAYS)) is not None:
-        changes["weekdays"] = _decode_weekdays(weekdays)
-    for attribute in (ATTR_ENABLED, ATTR_SKIP_ONCE, ATTR_FRESH_FOOD_MODE, ATTR_AUTO_PLAY_VOICE):
-        if attribute in call.data:
-            changes[attribute] = call.data[attribute]
-    schedule = dataclasses.replace(existing, **changes)
-    await _async_device_call(
-        coordinator, coordinator.foody_device.set_schedule(schedule, create=False)
-    )
-    await _async_finish(coordinator)
+    # The write is the schedule that was just read with a few fields replaced, so a
+    # change landing in between would be silently dropped by this one.
+    async with coordinator.write_lock:
+        schedules = await _async_read_schedules(coordinator)
+        existing = _find(schedules, schedule_id, coordinator.device_name)
+        changes: dict[str, Any] = {}
+        if (execution_time := call.data.get(ATTR_TIME)) is not None:
+            changes["execution_time"] = execution_time
+        if (portions := call.data.get(ATTR_PORTIONS)) is not None:
+            changes["portions"] = portions
+        if (weekdays := call.data.get(ATTR_WEEKDAYS)) is not None:
+            changes["weekdays"] = _decode_weekdays(weekdays)
+        for attribute in (
+            ATTR_ENABLED,
+            ATTR_SKIP_ONCE,
+            ATTR_FRESH_FOOD_MODE,
+            ATTR_AUTO_PLAY_VOICE,
+        ):
+            if attribute in call.data:
+                changes[attribute] = call.data[attribute]
+        schedule = dataclasses.replace(existing, **changes)
+        await _async_device_call(
+            coordinator, coordinator.foody_device.set_schedule(schedule, create=False)
+        )
+        await _async_finish(coordinator)
 
 
 async def _async_delete_feeding_schedule(call: ServiceCall) -> None:
     """Delete a feeding schedule by its slot id."""
     coordinator = _async_resolve_coordinator(call.hass, call.data[ATTR_DEVICE_ID])
     schedule_id: int = call.data[ATTR_SCHEDULE_ID]
-    schedules = await _async_read_schedules(coordinator)
-    _find(schedules, schedule_id, coordinator.device_name)
-    await _async_device_call(coordinator, coordinator.foody_device.delete_schedule(schedule_id))
-    await _async_finish(coordinator)
+    # The id is only known to mean what the user meant for as long as the list that was
+    # just read still stands, so the delete belongs inside the same lock.
+    async with coordinator.write_lock:
+        schedules = await _async_read_schedules(coordinator)
+        _find(schedules, schedule_id, coordinator.device_name)
+        await _async_device_call(coordinator, coordinator.foody_device.delete_schedule(schedule_id))
+        await _async_finish(coordinator)
 
 
 _SERVICES: Final = (
@@ -289,14 +305,14 @@ _SERVICES: Final = (
 
 @callback
 def async_setup_services(hass: HomeAssistant) -> None:
-    """Register the feeding-schedule services once, no matter how many entries exist."""
+    """Register the feeding-schedule services.
+
+    Called from async_setup, so the actions exist as soon as the integration is loaded
+    and stay for the lifetime of Home Assistant - independent of how many config entries
+    there are and whether any of them is currently loaded. A call always resolves its
+    target device at call time and answers with `device_not_available` when no loaded
+    entry owns it, which is the clear message an unregistered action could not give.
+    """
     for name, handler, schema in _SERVICES:
         if not hass.services.has_service(DOMAIN, name):
             hass.services.async_register(DOMAIN, name, handler, schema=schema)
-
-
-@callback
-def async_unload_services(hass: HomeAssistant) -> None:
-    """Remove the feeding-schedule services; only the last entry to unload may do this."""
-    for name, _handler, _schema in _SERVICES:
-        hass.services.async_remove(DOMAIN, name)
