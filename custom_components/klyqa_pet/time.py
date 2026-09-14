@@ -90,4 +90,8 @@ class KlyqaTime(KlyqaPetEntity, TimeEntity):
 
     async def async_set_value(self, value: datetime.time) -> None:
         """Send the new value to the device."""
-        await self._async_send(self.entity_description.set_fn(self.coordinator, value))
+        # Every time entity on a Klyqa device writes the Foody's sleep window, so a
+        # failed write always drops the cached timer document.
+        await self._async_send(
+            self.entity_description.set_fn(self.coordinator, value), writes_timers=True
+        )

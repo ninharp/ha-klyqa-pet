@@ -308,9 +308,16 @@ class KlyqaDeviceCoordinator(DataUpdateCoordinator[KlyqaDeviceData]):
     def mark_timers_stale(self) -> None:
         """Force the next poll to reload the timer document instead of the cached copy.
 
-        Called after a timer write (a new/changed schedule, a deleted schedule, or a
-        sleep-mode change) so the change is reflected as soon as the write's automatic
-        refresh runs, without waiting for the next periodic timers poll.
+        Two callers. The feeding-schedule services call it after a successful write and
+        then request a refresh, so the new schedule list is on screen without waiting
+        for the next periodic timers poll. Both they and the entities also call it when
+        a write *fails*: the firmware changes its own copy before the step that can fail
+        (device_timers.c), so a rejected write may already have moved the device, and
+        the cached document can no longer be trusted. That path asks for no refresh -
+        the re-read is left to the next scheduled poll.
+
+        A successful entity write does not come through here at all: it publishes the
+        document the device returned (see async_publish_timers).
         """
         self._timers = None
 
@@ -384,9 +391,12 @@ class KlyqaDeviceCoordinator(DataUpdateCoordinator[KlyqaDeviceData]):
             if self.device_type is DeviceType.FOODY:
                 # Timers ride the same infrequent cadence as settings: they change
                 # rarely and only through the app, Home Assistant or the device's own
-                # buttons, and every write here refreshes them directly via
-                # mark_timers_stale(), so there is no need to poll device/timer any
-                # more often than settings.
+                # buttons, and a write from here never waits for this poll to be seen -
+                # the schedule services mark the cache stale and refresh, the sleep
+                # entities publish the document the device returned with their write.
+                # Only a failed write, or a change made in the Klyqa app, leaves
+                # anything for this poll to pick up, so there is no need to read
+                # device/timer any more often than settings.
                 if self._timers is None or self._poll_count % SETTINGS_POLL_INTERVAL == 0:
                     self._timers = await self.foody_device.get_timers()
                 timers = self._timers

@@ -26,6 +26,9 @@ class KlyqaSwitchEntityDescription(SwitchEntityDescription):
 
     is_on_fn: Callable[[KlyqaDeviceData], bool]
     set_fn: Callable[[KlyqaDeviceCoordinator, bool], Coroutine[Any, Any, Any]]
+    # Set on the switches whose `set_fn` writes the Foody's timer document, so a failed
+    # write drops the cached copy - see KlyqaPetEntity._async_send.
+    writes_timers: bool = False
 
 
 def _welly_setting(key: str) -> KlyqaSwitchEntityDescription:
@@ -82,6 +85,7 @@ FOODY_SWITCHES: tuple[KlyqaSwitchEntityDescription, ...] = (
         set_fn=lambda coordinator, on: coordinator.foody_device.set_sleep_mode(
             replace(coordinator.data.foody_timers.sleep_mode, enabled=on)
         ),
+        writes_timers=True,
     ),
 )
 
@@ -144,8 +148,14 @@ class KlyqaSwitch(KlyqaPetEntity, SwitchEntity):
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn the setting on."""
-        await self._async_send(self.entity_description.set_fn(self.coordinator, True))
+        await self._async_send(
+            self.entity_description.set_fn(self.coordinator, True),
+            writes_timers=self.entity_description.writes_timers,
+        )
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the setting off."""
-        await self._async_send(self.entity_description.set_fn(self.coordinator, False))
+        await self._async_send(
+            self.entity_description.set_fn(self.coordinator, False),
+            writes_timers=self.entity_description.writes_timers,
+        )
