@@ -25,6 +25,7 @@
       "last_scheduled_portions": { "default": "mdi:counter" },
       "next_feed_time": { "default": "mdi:timer-sand" },
       "mcu_firmware_version": { "default": "mdi:chip" },
+      "feeding_schedules": { "default": "mdi:calendar-clock" },
       "firmware_version": { "default": "mdi:chip" },
       "sdk_version": { "default": "mdi:package-variant" },
       "last_boot": { "default": "mdi:clock-start" },

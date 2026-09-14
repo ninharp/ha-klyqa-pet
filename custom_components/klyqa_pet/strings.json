@@ -210,6 +210,7 @@
       "last_scheduled_portions": { "name": "Last scheduled portions" },
       "next_feed_time": { "name": "Next scheduled feeding" },
       "mcu_firmware_version": { "name": "MCU firmware version" },
+      "feeding_schedules": { "name": "Feeding schedules" },
       "air_quality": {
         "name": "Air quality",
         "state": {

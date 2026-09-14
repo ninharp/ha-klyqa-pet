@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
+from typing import Any
 
 from homeassistant.components.sensor import (
     SensorDeviceClass,
@@ -55,6 +56,7 @@ class KlyqaSensorEntityDescription(SensorEntityDescription):
     """Sensor description with a value extractor."""
 
     value_fn: Callable[[KlyqaDeviceData], StateType | datetime]
+    attributes_fn: Callable[[KlyqaDeviceData], dict[str, Any]] | None = None
 
 
 def _timestamp(seconds: int) -> datetime | None:
@@ -102,6 +104,37 @@ def _wifi_rssi_description(
         entity_registry_enabled_default=False,
         value_fn=value_fn,
     )
+
+
+# Bit 0 = Sunday .. bit 6 = Saturday, matching FeedingSchedule.weekdays.
+_WEEKDAY_KEYS = ("sun", "mon", "tue", "wed", "thu", "fri", "sat")
+
+
+def _schedule_attributes(data: KlyqaDeviceData) -> dict[str, Any]:
+    """Render the feeding-schedule list for the `schedules` attribute.
+
+    Times and weekdays are rendered as readable strings rather than an HHMM
+    integer or bitmask, so a template author never has to decode them. Slot
+    ids are positions rather than stable identities (the app may reuse a
+    freed id for an unrelated schedule), so this attribute is the only place
+    schedules are exposed at all - no entity is pinned to a particular id.
+    """
+    schedules = []
+    for schedule in data.foody_timers.schedules:
+        attrs = {
+            "schedule_id": schedule.schedule_id,
+            "enabled": schedule.enabled,
+            "skip_once": schedule.skip_once,
+            "time": schedule.execution_time.strftime("%H:%M"),
+            "weekdays": [_WEEKDAY_KEYS[day] for day in sorted(schedule.weekdays)],
+            "portions": schedule.portions,
+            "fresh_food_mode": schedule.fresh_food_mode,
+            "auto_play_voice": schedule.auto_play_voice,
+        }
+        if schedule.total_duration_sec:
+            attrs["total_duration_sec"] = schedule.total_duration_sec
+        schedules.append(attrs)
+    return {"schedules": schedules}
 
 
 COMMON_SENSORS: tuple[KlyqaSensorEntityDescription, ...] = (
@@ -288,6 +321,14 @@ FOODY_SENSORS: tuple[KlyqaSensorEntityDescription, ...] = (
         entity_registry_enabled_default=False,
         value_fn=lambda data: data.foody.mcu_sw_version,
     ),
+    KlyqaSensorEntityDescription(
+        key="feeding_schedules",
+        translation_key="feeding_schedules",
+        value_fn=lambda data: sum(
+            1 for schedule in data.foody_timers.schedules if schedule.enabled
+        ),
+        attributes_fn=_schedule_attributes,
+    ),
 )
 
 PURIFIER_SENSORS: tuple[KlyqaSensorEntityDescription, ...] = (
@@ -397,3 +438,10 @@ class KlyqaSensor(KlyqaPetEntity, SensorEntity):
     def native_value(self) -> StateType | datetime:
         """Return the value extracted from the coordinator data."""
         return self.entity_description.value_fn(self.coordinator.data)
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any] | None:
+        """Return the extra attributes extracted from the coordinator data, if any."""
+        if self.entity_description.attributes_fn is None:
+            return None
+        return self.entity_description.attributes_fn(self.coordinator.data)

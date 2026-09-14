@@ -145,6 +145,7 @@
       "last_scheduled_portions": { "name": "Portionen letzte geplante Fütterung" },
       "next_feed_time": { "name": "Nächste geplante Fütterung" },
       "mcu_firmware_version": { "name": "MCU-Firmware-Version" },
+      "feeding_schedules": { "name": "Fütterungspläne" },
       "air_quality": {
         "name": "Luftqualität",
         "state": { "excellent": "Ausgezeichnet", "good": "Gut", "slightly_polluted": "Leicht belastet", "heavily_polluted": "Stark belastet" }

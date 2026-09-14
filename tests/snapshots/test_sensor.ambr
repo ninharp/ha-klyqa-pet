@@ -238,6 +238,76 @@
     'state': 'normal',
   })
 # ---
+# name: test_sensors[sensor.feeder_feeding_schedules-entry]
+  EntityRegistryEntrySnapshot({
+    'aliases': list([
+      None,
+    ]),
+    'area_id': None,
+    'capabilities': None,
+    'config_entry_id': <ANY>,
+    'config_subentry_id': <ANY>,
+    'device_class': None,
+    'device_id': <ANY>,
+    'disabled_by': None,
+    'domain': 'sensor',
+    'entity_category': None,
+    'entity_id': 'sensor.feeder_feeding_schedules',
+    'has_entity_name': True,
+    'hidden_by': None,
+    'icon': None,
+    'id': <ANY>,
+    'labels': set({
+    }),
+    'name': None,
+    'object_id_base': 'Feeding schedules',
+    'options': dict({
+    }),
+    'original_device_class': None,
+    'original_icon': None,
+    'original_name': 'Feeding schedules',
+    'platform': 'klyqa_pet',
+    'previous_unique_id': None,
+    'suggested_object_id': None,
+    'supported_features': 0,
+    'translation_key': 'feeding_schedules',
+    'unique_id': 'A0F26219DC34_feeding_schedules',
+    'unit_of_measurement': None,
+  })
+# ---
+# name: test_sensors[sensor.feeder_feeding_schedules-state]
+  StateSnapshot({
+    'attributes': ReadOnlyDict({
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Feeder Feeding schedules',
+      'schedules': list([
+        dict({
+          'auto_play_voice': True,
+          'enabled': True,
+          'fresh_food_mode': False,
+          'portions': 2,
+          'schedule_id': 0,
+          'skip_once': False,
+          'time': '06:30',
+          'weekdays': list([
+            'sun',
+            'mon',
+            'tue',
+            'wed',
+            'thu',
+            'fri',
+            'sat',
+          ]),
+        }),
+      ]),
+    }),
+    'context': <ANY>,
+    'entity_id': 'sensor.feeder_feeding_schedules',
+    'last_changed': <ANY>,
+    'last_reported': <ANY>,
+    'last_updated': <ANY>,
+    'state': '1',
+  })
+# ---
 # name: test_sensors[sensor.feeder_feeding_state-entry]
   EntityRegistryEntrySnapshot({
     'aliases': list([

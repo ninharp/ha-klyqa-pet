@@ -53,3 +53,27 @@ async def test_strype_length_and_mode_sensors(
         await setup_integration(hass, mock_config_entry)
     assert hass.states.get("sensor.living_room_strip_strip_length").state == "3"
     assert hass.states.get("sensor.living_room_strip_light_mode").state == "rgb"
+
+
+async def test_schedule_sensor_counts_enabled_and_lists_all(
+    hass: HomeAssistant,
+    mock_config_entry: MockConfigEntry,
+    mock_cloud: MagicMock,
+    mock_devices: dict,
+) -> None:
+    with patch("custom_components.klyqa_pet.PLATFORMS", [Platform.SENSOR]):
+        await setup_integration(hass, mock_config_entry)
+    state = hass.states.get("sensor.feeder_feeding_schedules")
+    assert state.state == "1"
+    assert state.attributes["schedules"] == [
+        {
+            "schedule_id": 0,
+            "enabled": True,
+            "skip_once": False,
+            "time": "06:30",
+            "weekdays": ["sun", "mon", "tue", "wed", "thu", "fri", "sat"],
+            "portions": 2,
+            "fresh_food_mode": False,
+            "auto_play_voice": True,
+        }
+    ]
