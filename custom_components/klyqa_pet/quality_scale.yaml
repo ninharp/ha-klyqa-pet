@@ -21,8 +21,10 @@ rules:
   config-flow-test-coverage: done
   dependency-transparency: done
   docs-actions:
-    status: todo
-    comment: The feeding-schedule actions still need their README section.
+    status: done
+    comment: >
+      README.md, section "Feeding schedules": describes all three actions with
+      their slot-id semantics and a YAML example each.
   docs-high-level-description: done
   docs-installation-instructions: done
   docs-removal-instructions: done
