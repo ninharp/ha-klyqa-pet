@@ -12,3 +12,5 @@ docker/config/*
 docs/superpowers/
 .ha-native/
 custom_components/hacs/
+.superpowers/
+.vscode/
