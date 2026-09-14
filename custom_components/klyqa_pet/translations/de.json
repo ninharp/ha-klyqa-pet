@@ -62,9 +62,20 @@
   "options": {
     "step": {
       "init": {
+        "menu_options": {
+          "add_device": "Gerät manuell hinzufügen",
+          "polling": "Abfrageintervall"
+        }
+      },
+      "add_device": {
         "title": "Gerät manuell hinzufügen",
         "description": "Ein Klyqa-Gerät per IP-Adresse und Zugriffstoken hinzufügen, z. B. ein Entwicklungsgerät, das nicht mit dem Cloud-Konto gekoppelt ist.",
         "data": { "host": "IP-Adresse oder Hostname", "port": "Port", "access_token": "Geräte-Zugriffstoken" }
+      },
+      "polling": {
+        "title": "Abfrageintervall",
+        "description": "Lege fest, wie oft (in Sekunden) jedes Gerät nach seinem aktuellen Zustand abgefragt wird. Einstellungen werden seltener aktualisiert, nur bei jeder 4. Abfrage.",
+        "data": { "scan_interval": "Abfrageintervall" }
       }
     },
     "error": {

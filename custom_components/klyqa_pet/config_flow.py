@@ -13,7 +13,13 @@ from homeassistant.config_entries import (
     ConfigFlowResult,
     OptionsFlowWithReload,
 )
-from homeassistant.const import CONF_EMAIL, CONF_HOST, CONF_PASSWORD, CONF_PORT
+from homeassistant.const import (
+    CONF_EMAIL,
+    CONF_HOST,
+    CONF_PASSWORD,
+    CONF_PORT,
+    CONF_SCAN_INTERVAL,
+)
 from homeassistant.core import callback
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.selector import (
@@ -52,9 +58,12 @@ from .const import (
     CONF_MANUAL_DEVICES,
     CONF_PRODUCT_ID,
     CONF_PRODUCT_NAME,
+    DEFAULT_SCAN_INTERVAL,
     DOMAIN,
     ENVIRONMENT_LOCAL,
     LOCAL_ENTRY_UNIQUE_ID,
+    MAX_SCAN_INTERVAL,
+    MIN_SCAN_INTERVAL,
 )
 from .const import MINOR_VERSION as ENTRY_MINOR_VERSION
 from .const import VERSION as ENTRY_VERSION
@@ -97,6 +106,20 @@ STEP_MANUAL_SCHEMA = vol.Schema(
             NumberSelectorConfig(min=1, max=65535, mode=NumberSelectorMode.BOX)
         ),
         vol.Required(CONF_ACCESS_TOKEN): PASSWORD_SELECTOR,
+    }
+)
+STEP_POLLING_SCHEMA = vol.Schema(
+    {
+        vol.Required(
+            CONF_SCAN_INTERVAL, default=int(DEFAULT_SCAN_INTERVAL.total_seconds())
+        ): NumberSelector(
+            NumberSelectorConfig(
+                min=MIN_SCAN_INTERVAL,
+                max=MAX_SCAN_INTERVAL,
+                mode=NumberSelectorMode.BOX,
+                unit_of_measurement="s",
+            )
+        ),
     }
 )
 
@@ -401,9 +424,15 @@ class KlyqaPetConfigFlow(ConfigFlow, domain=DOMAIN):
 
 
 class KlyqaPetOptionsFlow(OptionsFlowWithReload):
-    """Options flow: add a device manually by host and access token."""
+    """Options flow: add a device manually, or change the polling interval."""
 
     async def async_step_init(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        """Let the user choose what to configure."""
+        return self.async_show_menu(step_id="init", menu_options=["add_device", "polling"])
+
+    async def async_step_add_device(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
         """Validate the device and store it in the options."""
         errors: dict[str, str] = {}
         if user_input is not None:
@@ -444,7 +473,29 @@ class KlyqaPetOptionsFlow(OptionsFlowWithReload):
                         data={**self.config_entry.options, CONF_MANUAL_DEVICES: manual}
                     )
         return self.async_show_form(
-            step_id="init",
+            step_id="add_device",
             data_schema=self.add_suggested_values_to_schema(STEP_MANUAL_SCHEMA, user_input),
             errors=errors,
+        )
+
+    async def async_step_polling(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Set how often the devices are polled."""
+        if user_input is not None:
+            return self.async_create_entry(
+                data={
+                    **self.config_entry.options,
+                    # NumberSelector coerces to float and voluptuous does not enforce
+                    # its `step`, so a fractional value like 30.5 would otherwise be
+                    # stored as-is; match the int() convention already used above for
+                    # CONF_PORT.
+                    CONF_SCAN_INTERVAL: int(user_input[CONF_SCAN_INTERVAL]),
+                }
+            )
+        return self.async_show_form(
+            step_id="polling",
+            data_schema=self.add_suggested_values_to_schema(
+                STEP_POLLING_SCHEMA, self.config_entry.options
+            ),
         )

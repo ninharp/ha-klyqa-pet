@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
-from datetime import datetime
+from datetime import datetime, timedelta
 import logging
 from typing import TYPE_CHECKING, Any
 
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import CONF_SCAN_INTERVAL
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers import device_registry as dr
@@ -38,8 +39,10 @@ from .const import (
     CONF_DEVICE_NAME,
     CONF_PRODUCT_ID,
     CONF_PRODUCT_NAME,
+    DEFAULT_SCAN_INTERVAL,
     DOMAIN,
-    SCAN_INTERVAL,
+    MAX_SCAN_INTERVAL,
+    MIN_SCAN_INTERVAL,
     SETTINGS_POLL_INTERVAL,
     SYSTEM_INFO_INTERVAL,
     TOKEN_RECOVERY_BACKOFF,
@@ -124,12 +127,27 @@ class KlyqaDeviceCoordinator(DataUpdateCoordinator[KlyqaDeviceData]):
         is_manual: bool,
     ) -> None:
         """Initialise the coordinator for one device."""
+        # The options-flow selector can only ever store an int within
+        # [MIN_SCAN_INTERVAL, MAX_SCAN_INTERVAL], but the option can also be reached by
+        # editing .storage directly or via a programmatic async_update_entry, which
+        # bypasses that validation entirely. Clamp/fall back here so a bad value (0, a
+        # negative number, a non-numeric string, or an out-of-range value) can never
+        # produce a zero/negative update_interval or a setup-time TypeError.
+        raw_scan_interval: Any = entry.options.get(CONF_SCAN_INTERVAL)
+        try:
+            scan_interval_seconds = int(raw_scan_interval)
+        except (TypeError, ValueError):
+            scan_interval_seconds = int(DEFAULT_SCAN_INTERVAL.total_seconds())
+        scan_interval_seconds = min(
+            max(scan_interval_seconds, MIN_SCAN_INTERVAL), MAX_SCAN_INTERVAL
+        )
+        update_interval = timedelta(seconds=scan_interval_seconds)
         super().__init__(
             hass,
             _LOGGER,
             config_entry=entry,
             name=f"{DOMAIN} {local_device_id}",
-            update_interval=SCAN_INTERVAL,
+            update_interval=update_interval,
         )
         self.hub = hub
         self.local_device_id = local_device_id

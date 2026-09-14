@@ -1,9 +1,10 @@
 # Klyqa Pet for Home Assistant
 
 Klyqa Pet is a Home Assistant custom integration for Klyqa's pet devices: the
-**Welly** water fountain, the **Foody** feeder and the **Airpurifier**. All day-to-day
-control — reading sensors, changing settings, dispensing food, switching the fan on —
-talks directly to the device's local QConnex REST API over your LAN. The Klyqa cloud
+**Welly** water fountain, the **Foody** feeder, the **Airpurifier** and the **Strype**
+LED strip. All day-to-day control — reading sensors, changing settings, dispensing
+food, switching the fan on — talks directly to the device's local QConnex REST API
+over your LAN. The Klyqa cloud
 is only used once, during setup, to look up the access token each device needs; after
 that the integration never depends on the cloud being reachable.
 
@@ -52,12 +53,11 @@ lighting products (E27, G95) are not supported.
 
 ### A note on the `pyklyqa-pet` dependency
 
-The integration's `manifest.json` requires the `pyklyqa-pet` library from PyPI so
-that HACS and manual installs can pull it in automatically. Until that library is
-published, a normal HACS or manual install will fail during setup with "Requirements
-for klyqa_pet not found". Until then, run Home Assistant for development with
-`--skip-pip-packages pyklyqa-pet` and the repository root on `PYTHONPATH`, so the
-in-repo copy of the library is used instead — see
+The integration's `manifest.json` pins `pyklyqa-pet` to a specific version on PyPI, so
+a HACS or manual install resolves and installs it automatically — nothing special to
+do. This only matters when developing against the in-repo copy of the library instead
+of the published package: run Home Assistant with `--skip-pip-packages pyklyqa-pet`
+and the repository root on `PYTHONPATH`, so the in-repo copy is used instead — see
 [`docker/README.md`](docker/README.md) for a working example.
 
 ## Configuration
@@ -93,6 +93,9 @@ and access token instead:
   adds it to that same local entry instead of creating a duplicate.
 - **Adding one more manual device to an existing account entry**: open that entry's
   **Configure** dialog and choose **Add a device manually**.
+
+The same **Configure** dialog also offers **Polling interval**, for changing how often
+devices are polled — see [Data updates](#data-updates).
 
 Both forms ask for the same fields:
 
@@ -178,10 +181,13 @@ Assistant, or black if none has been seen yet.
 
 Each device is polled independently through its own `DataUpdateCoordinator`:
 
-- Device state is refreshed every **15 seconds**.
-- Settings (Welly/Foody) are refreshed every **4th poll (60 seconds)**, since they
-  change far less often than state; a settings change made through Home Assistant is
-  reflected immediately, without waiting for the next scheduled settings poll.
+- Device state is refreshed every **30 seconds** by default. This polling interval is
+  configurable per entry from **10 to 600 seconds** in the integration's options, under
+  "Polling interval".
+- Settings (Welly/Foody) are refreshed every **4th poll**, since they change far less
+  often than state; that's every 2 minutes at the default interval, scaling with it. A
+  settings change made through Home Assistant is reflected immediately, without waiting
+  for the next scheduled settings poll.
 - System information (firmware/SDK version, last boot, etc.) is refreshed every
   **5 minutes**, since it changes far less often.
 - Devices are also discovered passively via mDNS (`_qcxrest._tcp`). If a known

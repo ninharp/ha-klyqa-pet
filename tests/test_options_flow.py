@@ -1,14 +1,21 @@
 """Tests for the manual-device options flow."""
 
+from datetime import timedelta
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
+from homeassistant.const import CONF_SCAN_INTERVAL
 from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from homeassistant.data_entry_flow import FlowResultType, InvalidData
 import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from custom_components.klyqa_pet.const import CONF_MANUAL_DEVICES
+from custom_components.klyqa_pet.const import (
+    CONF_MANUAL_DEVICES,
+    DEFAULT_SCAN_INTERVAL,
+    MAX_SCAN_INTERVAL,
+    MIN_SCAN_INTERVAL,
+)
 from pyklyqa_pet import KlyqaAuthError, KlyqaConnectionError, KlyqaDeviceError
 
 from .conftest import WELLY_ID, make_system_info, setup_integration
@@ -25,6 +32,20 @@ def mock_manual_device() -> Any:
         yield cls.return_value
 
 
+async def test_options_flow_shows_menu(
+    hass: HomeAssistant,
+    mock_config_entry: MockConfigEntry,
+    mock_cloud: MagicMock,
+    mock_devices: dict,
+) -> None:
+    """The options flow starts with a menu to pick what to configure."""
+    await setup_integration(hass, mock_config_entry)
+    result = await hass.config_entries.options.async_init(mock_config_entry.entry_id)
+    assert result["type"] is FlowResultType.MENU
+    assert result["step_id"] == "init"
+    assert result["menu_options"] == ["add_device", "polling"]
+
+
 async def test_add_manual_device(
     hass: HomeAssistant,
     mock_config_entry: MockConfigEntry,
@@ -34,8 +55,11 @@ async def test_add_manual_device(
 ) -> None:
     await setup_integration(hass, mock_config_entry)
     result = await hass.config_entries.options.async_init(mock_config_entry.entry_id)
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], {"next_step_id": "add_device"}
+    )
     assert result["type"] is FlowResultType.FORM
-    assert result["step_id"] == "init"
+    assert result["step_id"] == "add_device"
 
     result = await hass.config_entries.options.async_configure(result["flow_id"], MANUAL_INPUT)
     await hass.async_block_till_done()
@@ -71,6 +95,9 @@ async def test_add_manual_device_releases_it_from_owning_account_entry(
         return_value=make_system_info("@klyqa.welly-dev", WELLY_ID, "Klyqa Welly")
     )
     result = await hass.config_entries.options.async_init(mock_local_config_entry.entry_id)
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], {"next_step_id": "add_device"}
+    )
     with patch.object(hass.config_entries, "async_schedule_reload") as mock_reload:
         result = await hass.config_entries.options.async_configure(result["flow_id"], MANUAL_INPUT)
         await hass.async_block_till_done()
@@ -105,6 +132,113 @@ async def test_add_manual_device_errors(
         product_id, "AABBCCDDEE01", "x"
     )
     result = await hass.config_entries.options.async_init(mock_config_entry.entry_id)
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], {"next_step_id": "add_device"}
+    )
     result = await hass.config_entries.options.async_configure(result["flow_id"], MANUAL_INPUT)
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {"base": error}
+
+
+async def test_polling_step_stores_value(
+    hass: HomeAssistant,
+    mock_config_entry: MockConfigEntry,
+    mock_cloud: MagicMock,
+    mock_devices: dict,
+) -> None:
+    """Submitting the polling step stores the scan interval in the entry options."""
+    await setup_integration(hass, mock_config_entry)
+    result = await hass.config_entries.options.async_init(mock_config_entry.entry_id)
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], {"next_step_id": "polling"}
+    )
+    assert result["type"] is FlowResultType.FORM
+    assert result["step_id"] == "polling"
+
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], {CONF_SCAN_INTERVAL: 120}
+    )
+    await hass.async_block_till_done()
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert mock_config_entry.options[CONF_SCAN_INTERVAL] == 120
+    # OptionsFlowWithReload reloads the entry on its own; the new interval must reach
+    # the coordinator without any extra plumbing on our side.
+    coordinator = mock_config_entry.runtime_data.coordinators[WELLY_ID]
+    assert coordinator.update_interval == timedelta(seconds=120)
+
+
+async def test_polling_step_prefills_current_value(
+    hass: HomeAssistant,
+    mock_config_entry: MockConfigEntry,
+    mock_cloud: MagicMock,
+    mock_devices: dict,
+) -> None:
+    """The polling form is pre-filled with the currently configured value."""
+    mock_config_entry.add_to_hass(hass)
+    hass.config_entries.async_update_entry(
+        mock_config_entry, options={**mock_config_entry.options, CONF_SCAN_INTERVAL: 90}
+    )
+    await hass.config_entries.async_setup(mock_config_entry.entry_id)
+    await hass.async_block_till_done()
+    result = await hass.config_entries.options.async_init(mock_config_entry.entry_id)
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], {"next_step_id": "polling"}
+    )
+    assert result["type"] is FlowResultType.FORM
+    schema = result["data_schema"].schema
+    (scan_interval_key,) = (key for key in schema if key == CONF_SCAN_INTERVAL)
+    assert scan_interval_key.description == {"suggested_value": 90}
+
+
+@pytest.mark.parametrize("value", [MIN_SCAN_INTERVAL - 1, MAX_SCAN_INTERVAL + 1])
+async def test_polling_step_enforces_bounds(
+    hass: HomeAssistant,
+    mock_config_entry: MockConfigEntry,
+    mock_cloud: MagicMock,
+    mock_devices: dict,
+    value: int,
+) -> None:
+    """Submitting a value outside 10-600 seconds through the flow is rejected."""
+    await setup_integration(hass, mock_config_entry)
+    result = await hass.config_entries.options.async_init(mock_config_entry.entry_id)
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], {"next_step_id": "polling"}
+    )
+    with pytest.raises(InvalidData):
+        await hass.config_entries.options.async_configure(
+            result["flow_id"], {CONF_SCAN_INTERVAL: value}
+        )
+    # The bad value must never have been stored.
+    assert CONF_SCAN_INTERVAL not in mock_config_entry.options
+
+
+async def test_polling_step_stores_int_even_for_fractional_input(
+    hass: HomeAssistant,
+    mock_config_entry: MockConfigEntry,
+    mock_cloud: MagicMock,
+    mock_devices: dict,
+) -> None:
+    """The stored option is always an int, even if the selector yields a float.
+
+    NumberSelector coerces submitted values to float, and voluptuous does not enforce
+    the selector's `step`, so a fractional value like 30.5 validates; it must still be
+    stored as a whole number of seconds.
+    """
+    await setup_integration(hass, mock_config_entry)
+    result = await hass.config_entries.options.async_init(mock_config_entry.entry_id)
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], {"next_step_id": "polling"}
+    )
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], {CONF_SCAN_INTERVAL: 30.5}
+    )
+    await hass.async_block_till_done()
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    stored = mock_config_entry.options[CONF_SCAN_INTERVAL]
+    assert isinstance(stored, int)
+    assert stored == 30
+
+
+async def test_default_scan_interval_seconds() -> None:
+    """The documented default of 30 s is what DEFAULT_SCAN_INTERVAL encodes."""
+    assert DEFAULT_SCAN_INTERVAL.total_seconds() == 30
