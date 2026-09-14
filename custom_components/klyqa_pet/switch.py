@@ -65,6 +65,33 @@ WELLY_SWITCHES: tuple[KlyqaSwitchEntityDescription, ...] = (
     _welly_setting("alert_dirty_tank_full"),
     _welly_setting("super_power_saving_mode"),
     _welly_setting("telemetry"),
+    KlyqaSwitchEntityDescription(
+        key="quiet_time",
+        translation_key="quiet_time",
+        entity_category=EntityCategory.CONFIG,
+        is_on_fn=lambda data: data.welly_timers.quiet_time.enabled,
+        # Only the `enabled` flag comes from this switch; start, end, the water flag
+        # and the weekday mask are set elsewhere (the app, the `time` entities, or the
+        # water switch) and must survive a toggle untouched, so the write is built from
+        # the coordinator's own cached quiet-time window via `replace`, not from
+        # scratch.
+        set_fn=lambda coordinator, on: coordinator.welly_device.set_quiet_time(
+            replace(coordinator.data.welly_timers.quiet_time, enabled=on)
+        ),
+        writes_timers=True,
+    ),
+    KlyqaSwitchEntityDescription(
+        key="quiet_time_water",
+        translation_key="quiet_time_water",
+        entity_category=EntityCategory.CONFIG,
+        is_on_fn=lambda data: data.welly_timers.quiet_time.water_enabled,
+        # Only `water_enabled` comes from this switch; the rest of the quiet-time
+        # window must survive untouched - see the `quiet_time` switch above.
+        set_fn=lambda coordinator, on: coordinator.welly_device.set_quiet_time(
+            replace(coordinator.data.welly_timers.quiet_time, water_enabled=on)
+        ),
+        writes_timers=True,
+    ),
 )
 
 FOODY_SWITCHES: tuple[KlyqaSwitchEntityDescription, ...] = (

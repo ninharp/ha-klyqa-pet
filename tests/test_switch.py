@@ -131,6 +131,70 @@ async def test_sleep_mode_switch_writes_the_whole_object(
 
 
 @pytest.mark.usefixtures("switches")
+async def test_quiet_time_switch_preserves_other_fields(
+    hass: HomeAssistant, mock_welly: MagicMock
+) -> None:
+    """Toggling `quiet_time` must leave start, end and the water flag untouched."""
+    await hass.services.async_call(
+        SWITCH_DOMAIN,
+        SERVICE_TURN_ON,
+        {ATTR_ENTITY_ID: "switch.kitchen_fountain_quiet_time"},
+        blocking=True,
+    )
+    sent = mock_welly.set_quiet_time.await_args.args[0]
+    assert sent.enabled is True
+    assert sent.start == time(22, 0)
+    assert sent.end == time(7, 0)
+    assert sent.water_enabled is False
+    assert sent.weekdays == frozenset(range(7))
+
+    await hass.services.async_call(
+        SWITCH_DOMAIN,
+        SERVICE_TURN_OFF,
+        {ATTR_ENTITY_ID: "switch.kitchen_fountain_quiet_time"},
+        blocking=True,
+    )
+    sent_off = mock_welly.set_quiet_time.await_args.args[0]
+    assert sent_off.enabled is False
+    assert sent_off.start == time(22, 0)
+    assert sent_off.end == time(7, 0)
+    assert sent_off.water_enabled is False
+    assert sent_off.weekdays == frozenset(range(7))
+
+
+@pytest.mark.usefixtures("switches")
+async def test_quiet_time_water_switch_preserves_other_fields(
+    hass: HomeAssistant, mock_welly: MagicMock
+) -> None:
+    """Toggling `quiet_time_water` must leave enabled, start, end and weekdays untouched."""
+    await hass.services.async_call(
+        SWITCH_DOMAIN,
+        SERVICE_TURN_ON,
+        {ATTR_ENTITY_ID: "switch.kitchen_fountain_quiet_time_water"},
+        blocking=True,
+    )
+    sent = mock_welly.set_quiet_time.await_args.args[0]
+    assert sent.water_enabled is True
+    assert sent.enabled is False
+    assert sent.start == time(22, 0)
+    assert sent.end == time(7, 0)
+    assert sent.weekdays == frozenset(range(7))
+
+    await hass.services.async_call(
+        SWITCH_DOMAIN,
+        SERVICE_TURN_OFF,
+        {ATTR_ENTITY_ID: "switch.kitchen_fountain_quiet_time_water"},
+        blocking=True,
+    )
+    sent_off = mock_welly.set_quiet_time.await_args.args[0]
+    assert sent_off.water_enabled is False
+    assert sent_off.enabled is False
+    assert sent_off.start == time(22, 0)
+    assert sent_off.end == time(7, 0)
+    assert sent_off.weekdays == frozenset(range(7))
+
+
+@pytest.mark.usefixtures("switches")
 async def test_switch_command_error(hass: HomeAssistant, mock_welly: MagicMock) -> None:
     mock_welly.set_heating.side_effect = KlyqaDeviceError(["Invalid heating value"])
     with pytest.raises(HomeAssistantError, match="rejected the command"):

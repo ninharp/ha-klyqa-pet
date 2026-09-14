@@ -371,6 +371,8 @@
       "alert_dirty_tank_full": { "name": "Dirty tank full alert" },
       "super_power_saving_mode": { "name": "Super power saving" },
       "telemetry": { "name": "Telemetry" },
+      "quiet_time": { "name": "Quiet time" },
+      "quiet_time_water": { "name": "Quiet time water" },
       "app_led": { "name": "Indicator LED" },
       "app_pet_lock": { "name": "Pet lock" },
       "beep_switch": { "name": "Beep" },
@@ -391,6 +393,8 @@
       "feed_audio_volume": { "name": "Feed audio volume" }
     },
     "time": {
+      "quiet_time_start": { "name": "Quiet time start" },
+      "quiet_time_end": { "name": "Quiet time end" },
       "sleep_start": { "name": "Sleep start" },
       "sleep_end": { "name": "Sleep end" }
     },

@@ -76,6 +76,44 @@ async def test_setting_the_sleep_end_preserves_the_start(
     assert sent.weekdays == frozenset(range(7))
 
 
+@pytest.mark.usefixtures("times")
+async def test_setting_the_quiet_time_start_preserves_the_rest(
+    hass: HomeAssistant, mock_welly: MagicMock
+) -> None:
+    """Setting quiet_time_start must not disturb end, water or the weekday mask."""
+    await hass.services.async_call(
+        TIME_DOMAIN,
+        "set_value",
+        {ATTR_ENTITY_ID: "time.kitchen_fountain_quiet_time_start", "time": "21:30:00"},
+        blocking=True,
+    )
+    sent = mock_welly.set_quiet_time.await_args.args[0]
+    assert sent.start == time(21, 30)
+    assert sent.end == time(7, 0)
+    assert sent.enabled is False
+    assert sent.water_enabled is False
+    assert sent.weekdays == frozenset(range(7))
+
+
+@pytest.mark.usefixtures("times")
+async def test_setting_the_quiet_time_end_preserves_the_rest(
+    hass: HomeAssistant, mock_welly: MagicMock
+) -> None:
+    """Setting quiet_time_end must not disturb start, water or the weekday mask."""
+    await hass.services.async_call(
+        TIME_DOMAIN,
+        "set_value",
+        {ATTR_ENTITY_ID: "time.kitchen_fountain_quiet_time_end", "time": "06:15:00"},
+        blocking=True,
+    )
+    sent = mock_welly.set_quiet_time.await_args.args[0]
+    assert sent.end == time(6, 15)
+    assert sent.start == time(22, 0)
+    assert sent.enabled is False
+    assert sent.water_enabled is False
+    assert sent.weekdays == frozenset(range(7))
+
+
 @pytest.fixture
 async def sleep_entities(
     hass: HomeAssistant,

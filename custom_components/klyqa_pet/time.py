@@ -54,8 +54,34 @@ FOODY_TIMES: tuple[KlyqaTimeEntityDescription, ...] = (
     ),
 )
 
+WELLY_TIMES: tuple[KlyqaTimeEntityDescription, ...] = (
+    KlyqaTimeEntityDescription(
+        key="quiet_time_start",
+        translation_key="quiet_time_start",
+        entity_category=EntityCategory.CONFIG,
+        value_fn=lambda c: c.data.welly_timers.quiet_time.start,
+        # Only `start` comes from this entity; `end`, the water flag, the weekday mask
+        # and the enabled flag are set elsewhere (the app, the quiet-time switches, or
+        # the other `time` entity) and must survive untouched, so the write is built
+        # from the coordinator's own cached quiet-time window via `replace`, not from
+        # scratch.
+        set_fn=lambda coordinator, value: coordinator.welly_device.set_quiet_time(
+            replace(coordinator.data.welly_timers.quiet_time, start=value)
+        ),
+    ),
+    KlyqaTimeEntityDescription(
+        key="quiet_time_end",
+        translation_key="quiet_time_end",
+        entity_category=EntityCategory.CONFIG,
+        value_fn=lambda c: c.data.welly_timers.quiet_time.end,
+        set_fn=lambda coordinator, value: coordinator.welly_device.set_quiet_time(
+            replace(coordinator.data.welly_timers.quiet_time, end=value)
+        ),
+    ),
+)
+
 TIMES_BY_TYPE: dict[DeviceType, tuple[KlyqaTimeEntityDescription, ...]] = {
-    DeviceType.WELLY: (),
+    DeviceType.WELLY: WELLY_TIMES,
     DeviceType.FOODY: FOODY_TIMES,
     DeviceType.AIRPURIFIER: (),
     DeviceType.STRYPE: (),
@@ -90,8 +116,9 @@ class KlyqaTime(KlyqaPetEntity, TimeEntity):
 
     async def async_set_value(self, value: datetime.time) -> None:
         """Send the new value to the device."""
-        # Every time entity on a Klyqa device writes the Foody's sleep window, so a
-        # failed write always drops the cached timer document.
+        # Every time entity on a Klyqa device writes the Foody's sleep window or the
+        # Welly's quiet-time window, so a failed write always drops the cached timer
+        # document.
         await self._async_send(
             self.entity_description.set_fn(self.coordinator, value), writes_timers=True
         )

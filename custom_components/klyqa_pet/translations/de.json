@@ -301,6 +301,8 @@
       "alert_dirty_tank_full": { "name": "Warnung Abwassertank voll" },
       "super_power_saving_mode": { "name": "Super-Energiesparmodus" },
       "telemetry": { "name": "Telemetrie" },
+      "quiet_time": { "name": "Ruhezeit" },
+      "quiet_time_water": { "name": "Wasser während der Ruhezeit" },
       "app_led": { "name": "Anzeige-LED" },
       "app_pet_lock": { "name": "Tiersperre" },
       "beep_switch": { "name": "Signalton" },
@@ -321,6 +323,8 @@
       "feed_audio_volume": { "name": "Lautstärke Fütterungs-Audio" }
     },
     "time": {
+      "quiet_time_start": { "name": "Beginn der Ruhezeit" },
+      "quiet_time_end": { "name": "Ende der Ruhezeit" },
       "sleep_start": { "name": "Schlafbeginn" },
       "sleep_end": { "name": "Schlafende" }
     },
