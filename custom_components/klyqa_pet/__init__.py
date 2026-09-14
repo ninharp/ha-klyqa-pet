@@ -23,6 +23,7 @@ from .const import (
     PLATFORMS,
 )
 from .hub import KlyqaPetHub
+from .services import async_setup_services, async_unload_services
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -96,6 +97,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: KlyqaPetConfigEntry) -> 
     # is cheap (a no-op once cached) and guarantees they are ready before any device is
     # touched.
     await translation.async_load_integrations(hass, {DOMAIN})
+    # Registering here (rather than in async_setup) keeps the services tied to the
+    # lifetime of the integration's entries; async_setup_services is idempotent, so a
+    # second entry does not register them twice.
+    async_setup_services(hass)
     hub = KlyqaPetHub(hass, entry)
     await hub.async_setup()
     entry.runtime_data = hub
@@ -115,6 +120,14 @@ async def async_unload_entry(hass: HomeAssistant, entry: KlyqaPetConfigEntry) ->
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unload_ok:
         await entry.runtime_data.async_shutdown()
+        if not [
+            other
+            for other in hass.config_entries.async_loaded_entries(DOMAIN)
+            if other.entry_id != entry.entry_id
+        ]:
+            # The last entry is going: only now may the services disappear, otherwise
+            # unloading one of two accounts would strip them from the other as well.
+            async_unload_services(hass)
     return unload_ok
 
 

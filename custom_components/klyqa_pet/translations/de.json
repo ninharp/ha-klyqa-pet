@@ -86,12 +86,125 @@
     }
   },
   "selector": {
+    "weekdays": {
+      "options": {
+        "sun": "Sonntag",
+        "mon": "Montag",
+        "tue": "Dienstag",
+        "wed": "Mittwoch",
+        "thu": "Donnerstag",
+        "fri": "Freitag",
+        "sat": "Samstag"
+      }
+    },
     "environment": { "options": { "prod": "Produktion", "test": "Test" } },
     "cloud_app": {
       "options": { "Klyqapet": "Klyqa Pet", "Klyqa": "Klyqa (Beleuchtung)" }
     }
   },
+  "services": {
+    "add_feeding_schedule": {
+      "name": "Fütterungsplan hinzufügen",
+      "description": "Fügt einem Foody-Futterautomaten einen Fütterungsplan hinzu. Der Automat fasst bis zu 20 Pläne; der neue belegt den niedrigsten freien Platz.",
+      "fields": {
+        "device_id": {
+          "name": "Gerät",
+          "description": "Der Foody-Futterautomat, dem der Plan hinzugefügt wird."
+        },
+        "time": {
+          "name": "Uhrzeit",
+          "description": "Uhrzeit, zu der die Fütterung startet. Der Automat speichert nur Stunden und Minuten."
+        },
+        "portions": {
+          "name": "Portionen",
+          "description": "Anzahl der Portionen, die ausgegeben werden, 1 bis 40."
+        },
+        "weekdays": {
+          "name": "Wochentage",
+          "description": "Tage, an denen der Plan läuft. Leer gelassen, läuft er täglich."
+        },
+        "enabled": {
+          "name": "Aktiv",
+          "description": "Ob der Plan sofort aktiv ist."
+        },
+        "skip_once": {
+          "name": "Einmal aussetzen",
+          "description": "Die nächste fällige Fütterung dieses Plans überspringen und danach normal weiterlaufen."
+        },
+        "fresh_food_mode": {
+          "name": "Frischfutter-Modus",
+          "description": "In mehreren kleinen Gaben ausgeben, damit das Futter frisch bleibt."
+        },
+        "auto_play_voice": {
+          "name": "Sprachaufnahme abspielen",
+          "description": "Die aufgenommene Ansage vor der Ausgabe abspielen."
+        }
+      }
+    },
+    "set_feeding_schedule": {
+      "name": "Fütterungsplan ändern",
+      "description": "Ändert einen vorhandenen Fütterungsplan eines Foody-Futterautomaten. Weggelassene Felder behalten ihren aktuellen Wert.",
+      "fields": {
+        "device_id": {
+          "name": "Gerät",
+          "description": "Der Foody-Futterautomat, auf dem der Plan liegt."
+        },
+        "schedule_id": {
+          "name": "Plan-ID",
+          "description": "ID des zu ändernden Plans, wie im Attribut „schedules“ des Sensors „Fütterungspläne“ aufgeführt."
+        },
+        "time": {
+          "name": "Uhrzeit",
+          "description": "Neue Uhrzeit der Fütterung. Der Automat speichert nur Stunden und Minuten."
+        },
+        "portions": {
+          "name": "Portionen",
+          "description": "Neue Anzahl der Portionen, die ausgegeben werden, 1 bis 40."
+        },
+        "weekdays": {
+          "name": "Wochentage",
+          "description": "Neue Tage, an denen der Plan läuft."
+        },
+        "enabled": {
+          "name": "Aktiv",
+          "description": "Ob der Plan aktiv ist."
+        },
+        "skip_once": {
+          "name": "Einmal aussetzen",
+          "description": "Die nächste fällige Fütterung dieses Plans überspringen und danach normal weiterlaufen."
+        },
+        "fresh_food_mode": {
+          "name": "Frischfutter-Modus",
+          "description": "In mehreren kleinen Gaben ausgeben, damit das Futter frisch bleibt."
+        },
+        "auto_play_voice": {
+          "name": "Sprachaufnahme abspielen",
+          "description": "Die aufgenommene Ansage vor der Ausgabe abspielen."
+        }
+      }
+    },
+    "delete_feeding_schedule": {
+      "name": "Fütterungsplan löschen",
+      "description": "Löscht einen Fütterungsplan von einem Foody-Futterautomaten.",
+      "fields": {
+        "device_id": {
+          "name": "Gerät",
+          "description": "Der Foody-Futterautomat, auf dem der Plan liegt."
+        },
+        "schedule_id": {
+          "name": "Plan-ID",
+          "description": "ID des zu löschenden Plans, wie im Attribut „schedules“ des Sensors „Fütterungspläne“ aufgeführt."
+        }
+      }
+    }
+  },
   "exceptions": {
+    "device_not_found": { "message": "Es gibt kein Gerät mit der ID {device_id}" },
+    "device_not_klyqa": { "message": "{device} ist kein Klyqa-Pet-Gerät" },
+    "device_not_available": { "message": "{device} ist nicht verfügbar; der Klyqa-Pet-Eintrag ist nicht geladen oder das Gerät wurde noch nicht erreicht" },
+    "not_a_foody": { "message": "{device} ist kein Foody-Futterautomat; Fütterungspläne gibt es nur beim Foody" },
+    "unknown_schedule": { "message": "{device} hat keinen Fütterungsplan mit der ID {schedule_id}" },
+    "no_free_schedule_slot": { "message": "{device} hat bereits die maximale Anzahl von {maximum} Fütterungsplänen; lösche zuerst einen" },
     "update_failed": { "message": "Aktualisierung von {device} fehlgeschlagen: {error}" },
     "rate_limited": { "message": "{device} begrenzt die Anfragen; ein anderer Client (z. B. die Klyqa-App) fragt das Gerät gleichzeitig ab" },
     "token_refresh_failed": { "message": "{device} hat den Zugriffstoken abgelehnt und die Klyqa-Cloud war zum Erneuern nicht erreichbar" },

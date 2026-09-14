@@ -1,8 +1,12 @@
 rules:
   # Bronze
   action-setup:
-    status: exempt
-    comment: The integration does not register custom actions.
+    status: todo
+    comment: >
+      The three feeding-schedule actions are registered in async_setup_entry
+      (and removed when the last entry unloads) rather than in async_setup,
+      because they resolve a target device to a live coordinator and have
+      nothing to validate against while no entry is loaded.
   appropriate-polling: done
   brands:
     status: done
@@ -16,8 +20,8 @@ rules:
   config-flow-test-coverage: done
   dependency-transparency: done
   docs-actions:
-    status: exempt
-    comment: No custom actions.
+    status: todo
+    comment: The feeding-schedule actions still need their README section.
   docs-high-level-description: done
   docs-installation-instructions: done
   docs-removal-instructions: done

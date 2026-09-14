@@ -41,6 +41,7 @@ from .const import (
     FOODY_SCHEDULED_REPORT,
     PURIFIER_AQI_GRADES,
     STRYPE_LIGHT_MODES,
+    WEEKDAY_KEYS,
     WELLY_POWER_STATUS,
     WELLY_POWER_SUPPLY,
     WELLY_PUMP_STATUS,
@@ -106,10 +107,6 @@ def _wifi_rssi_description(
     )
 
 
-# Bit 0 = Sunday .. bit 6 = Saturday, matching FeedingSchedule.weekdays.
-_WEEKDAY_KEYS = ("sun", "mon", "tue", "wed", "thu", "fri", "sat")
-
-
 def _schedule_attributes(data: KlyqaDeviceData) -> dict[str, Any]:
     """Render the feeding-schedule list for the `schedules` attribute.
 
@@ -126,7 +123,7 @@ def _schedule_attributes(data: KlyqaDeviceData) -> dict[str, Any]:
             "enabled": schedule.enabled,
             "skip_once": schedule.skip_once,
             "time": schedule.execution_time.strftime("%H:%M"),
-            "weekdays": [_WEEKDAY_KEYS[day] for day in sorted(schedule.weekdays)],
+            "weekdays": [WEEKDAY_KEYS[day] for day in sorted(schedule.weekdays)],
             "portions": schedule.portions,
             "fresh_food_mode": schedule.fresh_food_mode,
             "auto_play_voice": schedule.auto_play_voice,

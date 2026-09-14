@@ -1,0 +1,118 @@
+add_feeding_schedule:
+  fields:
+    device_id:
+      required: true
+      selector:
+        device:
+          integration: klyqa_pet
+    time:
+      required: true
+      example: "07:00:00"
+      selector:
+        time:
+    portions:
+      required: true
+      default: 1
+      selector:
+        number:
+          min: 1
+          max: 40
+          mode: box
+    weekdays:
+      example: '["mon", "wed", "fri"]'
+      selector:
+        select:
+          multiple: true
+          mode: list
+          translation_key: weekdays
+          options:
+            - sun
+            - mon
+            - tue
+            - wed
+            - thu
+            - fri
+            - sat
+    enabled:
+      default: true
+      selector:
+        boolean:
+    skip_once:
+      default: false
+      selector:
+        boolean:
+    fresh_food_mode:
+      default: false
+      selector:
+        boolean:
+    auto_play_voice:
+      default: false
+      selector:
+        boolean:
+
+set_feeding_schedule:
+  fields:
+    device_id:
+      required: true
+      selector:
+        device:
+          integration: klyqa_pet
+    schedule_id:
+      required: true
+      selector:
+        number:
+          min: 0
+          max: 19
+          mode: box
+    time:
+      example: "07:00:00"
+      selector:
+        time:
+    portions:
+      selector:
+        number:
+          min: 1
+          max: 40
+          mode: box
+    weekdays:
+      example: '["mon", "wed", "fri"]'
+      selector:
+        select:
+          multiple: true
+          mode: list
+          translation_key: weekdays
+          options:
+            - sun
+            - mon
+            - tue
+            - wed
+            - thu
+            - fri
+            - sat
+    enabled:
+      selector:
+        boolean:
+    skip_once:
+      selector:
+        boolean:
+    fresh_food_mode:
+      selector:
+        boolean:
+    auto_play_voice:
+      selector:
+        boolean:
+
+delete_feeding_schedule:
+  fields:
+    device_id:
+      required: true
+      selector:
+        device:
+          integration: klyqa_pet
+    schedule_id:
+      required: true
+      selector:
+        number:
+          min: 0
+          max: 19
+          mode: box

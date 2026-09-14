@@ -102,6 +102,17 @@
     }
   },
   "selector": {
+    "weekdays": {
+      "options": {
+        "sun": "Sunday",
+        "mon": "Monday",
+        "tue": "Tuesday",
+        "wed": "Wednesday",
+        "thu": "Thursday",
+        "fri": "Friday",
+        "sat": "Saturday"
+      }
+    },
     "environment": {
       "options": {
         "prod": "Production",
@@ -115,7 +126,109 @@
       }
     }
   },
+  "services": {
+    "add_feeding_schedule": {
+      "name": "Add feeding schedule",
+      "description": "Adds a feeding schedule to a Foody pet feeder. The feeder holds up to 20 schedules; the new one takes the lowest free slot.",
+      "fields": {
+        "device_id": {
+          "name": "Device",
+          "description": "The Foody pet feeder to add the schedule to."
+        },
+        "time": {
+          "name": "Time",
+          "description": "Time of day the feeding starts. The feeder stores hours and minutes only."
+        },
+        "portions": {
+          "name": "Portions",
+          "description": "Number of portions to dispense, 1 to 40."
+        },
+        "weekdays": {
+          "name": "Weekdays",
+          "description": "Days the schedule runs on. Left empty, it runs every day."
+        },
+        "enabled": {
+          "name": "Enabled",
+          "description": "Whether the schedule is active straight away."
+        },
+        "skip_once": {
+          "name": "Skip once",
+          "description": "Skip the next due feeding of this schedule, then carry on as usual."
+        },
+        "fresh_food_mode": {
+          "name": "Fresh food mode",
+          "description": "Dispense in several small helpings so the food stays fresh."
+        },
+        "auto_play_voice": {
+          "name": "Play voice recording",
+          "description": "Play the recorded call before the food is dispensed."
+        }
+      }
+    },
+    "set_feeding_schedule": {
+      "name": "Change feeding schedule",
+      "description": "Changes an existing feeding schedule of a Foody pet feeder. Fields you leave out keep their current value.",
+      "fields": {
+        "device_id": {
+          "name": "Device",
+          "description": "The Foody pet feeder that holds the schedule."
+        },
+        "schedule_id": {
+          "name": "Schedule ID",
+          "description": "ID of the schedule to change, as listed in the schedules attribute of the feeding schedules sensor."
+        },
+        "time": {
+          "name": "Time",
+          "description": "New time of day for the feeding. The feeder stores hours and minutes only."
+        },
+        "portions": {
+          "name": "Portions",
+          "description": "New number of portions to dispense, 1 to 40."
+        },
+        "weekdays": {
+          "name": "Weekdays",
+          "description": "New set of days the schedule runs on."
+        },
+        "enabled": {
+          "name": "Enabled",
+          "description": "Whether the schedule is active."
+        },
+        "skip_once": {
+          "name": "Skip once",
+          "description": "Skip the next due feeding of this schedule, then carry on as usual."
+        },
+        "fresh_food_mode": {
+          "name": "Fresh food mode",
+          "description": "Dispense in several small helpings so the food stays fresh."
+        },
+        "auto_play_voice": {
+          "name": "Play voice recording",
+          "description": "Play the recorded call before the food is dispensed."
+        }
+      }
+    },
+    "delete_feeding_schedule": {
+      "name": "Delete feeding schedule",
+      "description": "Deletes a feeding schedule from a Foody pet feeder.",
+      "fields": {
+        "device_id": {
+          "name": "Device",
+          "description": "The Foody pet feeder that holds the schedule."
+        },
+        "schedule_id": {
+          "name": "Schedule ID",
+          "description": "ID of the schedule to delete, as listed in the schedules attribute of the feeding schedules sensor."
+        }
+      }
+    }
+  },
   "exceptions": {
+    "device_not_found": { "message": "No device with the id {device_id} exists" },
+    "device_not_klyqa": { "message": "{device} is not a Klyqa Pet device" },
+    "device_not_available": { "message": "{device} is not available; its Klyqa Pet entry is not loaded, or the device has not been reached yet" },
+    "not_a_foody": { "message": "{device} is not a Foody pet feeder; feeding schedules exist only on the Foody" },
+    "unknown_schedule": { "message": "{device} has no feeding schedule with the id {schedule_id}" },
+    "no_free_schedule_slot": { "message": "{device} already holds the maximum of {maximum} feeding schedules; delete one first" },
     "update_failed": { "message": "Updating {device} failed: {error}" },
     "rate_limited": { "message": "{device} is rate limiting requests; another client (for example the Klyqa app) is polling it at the same time" },
     "token_refresh_failed": { "message": "{device} rejected its access token and the Klyqa cloud could not be reached to refresh it" },

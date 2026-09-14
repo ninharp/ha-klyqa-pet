@@ -99,5 +99,10 @@
       "led": { "default": "mdi:led-strip-variant" },
       "strip": { "default": "mdi:led-strip-variant", "state": { "off": "mdi:led-strip" } }
     }
+  },
+  "services": {
+    "add_feeding_schedule": "mdi:calendar-plus",
+    "set_feeding_schedule": "mdi:calendar-edit",
+    "delete_feeding_schedule": "mdi:calendar-remove"
   }
 }
