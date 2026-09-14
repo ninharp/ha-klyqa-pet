@@ -26,6 +26,13 @@ from .exceptions import (
 from .foody import FoodyDevice, FoodySettings, FoodyState
 from .foody_timers import FeedingSchedule, FoodyTimers, SleepMode
 from .strype import StrypeDevice, StrypeState
+from .timecodes import (
+    decode_hhmm,
+    decode_hhmm_lenient,
+    decode_weekdays,
+    encode_hhmm,
+    encode_weekdays,
+)
 from .welly import WellyDevice, WellyMode, WellySettings, WellyState
 
 __version__ = "0.3.0"
@@ -82,6 +89,11 @@ __all__ = [
     "WellySettings",
     "WellyState",
     "create_device",
+    "decode_hhmm",
+    "decode_hhmm_lenient",
+    "decode_weekdays",
     "device_type_from_product_id",
+    "encode_hhmm",
+    "encode_weekdays",
     "parse_zeroconf_properties",
 ]
