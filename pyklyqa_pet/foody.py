@@ -6,9 +6,10 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from .device import KlyqaDevice, _as_bool, _as_int
+from .exceptions import KlyqaDeviceError
+from .foody_timers import MAX_PORTIONS, FeedingSchedule, FoodyTimers, SleepMode
 
 MIN_PORTIONS = 1
-MAX_PORTIONS = 40
 
 
 def _opt_int(value: Any) -> int | None:
@@ -144,3 +145,39 @@ class FoodyDevice(KlyqaDevice):
     async def query_realtime_weight(self) -> None:
         """Ask the MCU for the current bowl weight; the result shows up in the state later."""
         await self.request("POST", "device/control", {"action": "query_realtime_weight"})
+
+    async def _timer_request(
+        self, method: str, payload: dict[str, Any] | None = None
+    ) -> FoodyTimers:
+        """Send a timer request and parse the response.
+
+        The firmware answers HTTP 200 even for a rejected write, with `type: "timer"`
+        and the reason in a non-empty `error` array - `KlyqaDevice.request` only raises
+        on `type: "error"`, so the array is checked here.
+        """
+        data = await self.request(method, "device/timer", payload)
+        errors = data.get("error") or []
+        if errors:
+            raise KlyqaDeviceError([str(error) for error in errors])
+        return FoodyTimers.from_dict(data)
+
+    async def get_timers(self) -> FoodyTimers:
+        """Return the feeding schedules and sleep mode configuration."""
+        return await self._timer_request("GET")
+
+    async def set_schedule(self, schedule: FeedingSchedule, *, create: bool) -> FoodyTimers:
+        """Create or modify a feeding schedule and return the resulting timers."""
+        action = "add" if create else "mod"
+        return await self._timer_request("POST", {"action": action, "data": schedule.to_dict()})
+
+    async def delete_schedule(self, schedule_id: int) -> FoodyTimers:
+        """Delete a feeding schedule by id and return the resulting timers."""
+        return await self._timer_request(
+            "POST", {"action": "del", "data": {"schedule_id": schedule_id}}
+        )
+
+    async def set_sleep_mode(self, sleep_mode: SleepMode) -> FoodyTimers:
+        """Set the sleep mode (do-not-disturb window) and return the resulting timers."""
+        return await self._timer_request(
+            "POST", {"action": "sleep_mode", "data": sleep_mode.to_dict()}
+        )
