@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Coroutine
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any
 
 from homeassistant.components.switch import SwitchEntity, SwitchEntityDescription
@@ -70,6 +70,19 @@ FOODY_SWITCHES: tuple[KlyqaSwitchEntityDescription, ...] = (
     _foody_setting("beep_switch"),
     _foody_setting("feed_audio_enable"),
     _foody_setting("telemetry"),
+    KlyqaSwitchEntityDescription(
+        key="sleep_mode",
+        translation_key="sleep_mode",
+        entity_category=EntityCategory.CONFIG,
+        is_on_fn=lambda data: data.foody_timers.sleep_mode.enabled,
+        # Only the `enabled` flag comes from this switch; weekdays and the start/end
+        # times are set elsewhere (the app, or the `time` entities added in a later
+        # task) and must survive a toggle untouched, so the write is built from the
+        # coordinator's own cached sleep mode via `replace`, not from scratch.
+        set_fn=lambda coordinator, on: coordinator.foody_device.set_sleep_mode(
+            replace(coordinator.data.foody_timers.sleep_mode, enabled=on)
+        ),
+    ),
 )
 
 PURIFIER_SWITCHES: tuple[KlyqaSwitchEntityDescription, ...] = (

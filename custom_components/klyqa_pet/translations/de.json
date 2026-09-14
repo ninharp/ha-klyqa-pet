@@ -183,6 +183,7 @@
       "app_pet_lock": { "name": "Tiersperre" },
       "beep_switch": { "name": "Signalton" },
       "feed_audio_enable": { "name": "Fütterungs-Audio" },
+      "sleep_mode": { "name": "Schlafmodus" },
       "ionizer": { "name": "Ionisator" },
       "child_lock": { "name": "Kindersicherung" },
       "key_tone": { "name": "Tastenton" }

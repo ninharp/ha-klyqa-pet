@@ -61,6 +61,7 @@
       "app_pet_lock": { "default": "mdi:paw" },
       "beep_switch": { "default": "mdi:volume-high" },
       "feed_audio_enable": { "default": "mdi:account-voice" },
+      "sleep_mode": { "default": "mdi:sleep", "state": { "off": "mdi:sleep-off" } },
       "ionizer": { "default": "mdi:atom" },
       "child_lock": { "default": "mdi:lock" },
       "key_tone": { "default": "mdi:volume-high" }

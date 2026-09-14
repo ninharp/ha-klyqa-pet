@@ -253,6 +253,7 @@
       "app_pet_lock": { "name": "Pet lock" },
       "beep_switch": { "name": "Beep" },
       "feed_audio_enable": { "name": "Feeding audio" },
+      "sleep_mode": { "name": "Sleep mode" },
       "ionizer": { "name": "Ionizer" },
       "child_lock": { "name": "Child lock" },
       "key_tone": { "name": "Key tone" }
