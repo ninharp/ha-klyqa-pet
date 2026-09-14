@@ -486,7 +486,11 @@ class KlyqaPetOptionsFlow(OptionsFlowWithReload):
             return self.async_create_entry(
                 data={
                     **self.config_entry.options,
-                    CONF_SCAN_INTERVAL: user_input[CONF_SCAN_INTERVAL],
+                    # NumberSelector coerces to float and voluptuous does not enforce
+                    # its `step`, so a fractional value like 30.5 would otherwise be
+                    # stored as-is; match the int() convention already used above for
+                    # CONF_PORT.
+                    CONF_SCAN_INTERVAL: int(user_input[CONF_SCAN_INTERVAL]),
                 }
             )
         return self.async_show_form(

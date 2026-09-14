@@ -41,6 +41,8 @@ from .const import (
     CONF_PRODUCT_NAME,
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
+    MAX_SCAN_INTERVAL,
+    MIN_SCAN_INTERVAL,
     SETTINGS_POLL_INTERVAL,
     SYSTEM_INFO_INTERVAL,
     TOKEN_RECOVERY_BACKOFF,
@@ -125,12 +127,21 @@ class KlyqaDeviceCoordinator(DataUpdateCoordinator[KlyqaDeviceData]):
         is_manual: bool,
     ) -> None:
         """Initialise the coordinator for one device."""
-        scan_interval_seconds = entry.options.get(CONF_SCAN_INTERVAL)
-        update_interval = (
-            timedelta(seconds=scan_interval_seconds)
-            if scan_interval_seconds is not None
-            else DEFAULT_SCAN_INTERVAL
+        # The options-flow selector can only ever store an int within
+        # [MIN_SCAN_INTERVAL, MAX_SCAN_INTERVAL], but the option can also be reached by
+        # editing .storage directly or via a programmatic async_update_entry, which
+        # bypasses that validation entirely. Clamp/fall back here so a bad value (0, a
+        # negative number, a non-numeric string, or an out-of-range value) can never
+        # produce a zero/negative update_interval or a setup-time TypeError.
+        raw_scan_interval: Any = entry.options.get(CONF_SCAN_INTERVAL)
+        try:
+            scan_interval_seconds = int(raw_scan_interval)
+        except (TypeError, ValueError):
+            scan_interval_seconds = int(DEFAULT_SCAN_INTERVAL.total_seconds())
+        scan_interval_seconds = min(
+            max(scan_interval_seconds, MIN_SCAN_INTERVAL), MAX_SCAN_INTERVAL
         )
+        update_interval = timedelta(seconds=scan_interval_seconds)
         super().__init__(
             hass,
             _LOGGER,

@@ -6,10 +6,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 from homeassistant.const import CONF_SCAN_INTERVAL
 from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from homeassistant.data_entry_flow import FlowResultType, InvalidData
 import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry
-import voluptuous as vol
 
 from custom_components.klyqa_pet.const import (
     CONF_MANUAL_DEVICES,
@@ -199,14 +198,45 @@ async def test_polling_step_enforces_bounds(
     mock_devices: dict,
     value: int,
 ) -> None:
-    """The scan interval selector rejects values outside 10-600 seconds."""
+    """Submitting a value outside 10-600 seconds through the flow is rejected."""
     await setup_integration(hass, mock_config_entry)
     result = await hass.config_entries.options.async_init(mock_config_entry.entry_id)
     result = await hass.config_entries.options.async_configure(
         result["flow_id"], {"next_step_id": "polling"}
     )
-    with pytest.raises(vol.Invalid):
-        result["data_schema"]({CONF_SCAN_INTERVAL: value})
+    with pytest.raises(InvalidData):
+        await hass.config_entries.options.async_configure(
+            result["flow_id"], {CONF_SCAN_INTERVAL: value}
+        )
+    # The bad value must never have been stored.
+    assert CONF_SCAN_INTERVAL not in mock_config_entry.options
+
+
+async def test_polling_step_stores_int_even_for_fractional_input(
+    hass: HomeAssistant,
+    mock_config_entry: MockConfigEntry,
+    mock_cloud: MagicMock,
+    mock_devices: dict,
+) -> None:
+    """The stored option is always an int, even if the selector yields a float.
+
+    NumberSelector coerces submitted values to float, and voluptuous does not enforce
+    the selector's `step`, so a fractional value like 30.5 validates; it must still be
+    stored as a whole number of seconds.
+    """
+    await setup_integration(hass, mock_config_entry)
+    result = await hass.config_entries.options.async_init(mock_config_entry.entry_id)
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], {"next_step_id": "polling"}
+    )
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], {CONF_SCAN_INTERVAL: 30.5}
+    )
+    await hass.async_block_till_done()
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    stored = mock_config_entry.options[CONF_SCAN_INTERVAL]
+    assert isinstance(stored, int)
+    assert stored == 30
 
 
 async def test_default_scan_interval_seconds() -> None:

@@ -9,16 +9,56 @@ from homeassistant.components.switch import SERVICE_TURN_ON
 from homeassistant.const import ATTR_ENTITY_ID, CONF_SCAN_INTERVAL
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import EntityDescription
+import pytest
 from pytest_homeassistant_custom_component.common import (
     MockConfigEntry,
     async_fire_time_changed,
 )
 
-from custom_components.klyqa_pet.const import DEFAULT_SCAN_INTERVAL
+from custom_components.klyqa_pet.const import (
+    DEFAULT_SCAN_INTERVAL,
+    MAX_SCAN_INTERVAL,
+    MIN_SCAN_INTERVAL,
+)
 from custom_components.klyqa_pet.entity import KlyqaPetEntity
 from pyklyqa_pet import KlyqaConnectionError, KlyqaRateLimitError, StrypeState, WellySettings
 
 from .conftest import STRYPE_ID, WELLY_ID, load_json, setup_integration
+
+
+@pytest.mark.parametrize(
+    ("stored_value", "expected_seconds"),
+    [
+        (0, MIN_SCAN_INTERVAL),
+        (-5, MIN_SCAN_INTERVAL),
+        ("not-a-number", int(DEFAULT_SCAN_INTERVAL.total_seconds())),
+        (MAX_SCAN_INTERVAL + 100, MAX_SCAN_INTERVAL),
+    ],
+)
+async def test_coordinator_hardens_bad_stored_scan_interval(
+    hass: HomeAssistant,
+    mock_config_entry: MockConfigEntry,
+    mock_cloud: MagicMock,
+    mock_devices: dict,
+    stored_value: object,
+    expected_seconds: int,
+) -> None:
+    """A bad stored scan interval must never yield a bad update_interval.
+
+    Values out of the MIN_SCAN_INTERVAL/MAX_SCAN_INTERVAL bounds are clamped, and
+    non-numeric values fall back to DEFAULT_SCAN_INTERVAL. The options flow itself
+    cannot produce these values; this guards the read side against anything else that
+    can (e.g. editing .storage directly, or a programmatic async_update_entry).
+    """
+    mock_config_entry.add_to_hass(hass)
+    hass.config_entries.async_update_entry(
+        mock_config_entry, options={**mock_config_entry.options, CONF_SCAN_INTERVAL: stored_value}
+    )
+    await hass.config_entries.async_setup(mock_config_entry.entry_id)
+    await hass.async_block_till_done()
+
+    coordinator = mock_config_entry.runtime_data.coordinators[WELLY_ID]
+    assert coordinator.update_interval == timedelta(seconds=expected_seconds)
 
 
 async def test_update_failed_message_is_rendered(
