@@ -280,6 +280,7 @@
       },
       "descaling_status": { "name": "Descaling status" },
       "light_effect": { "name": "Light effect" },
+      "water_change_schedules": { "name": "Water-change schedules" },
       "bowl_remaining": { "name": "Bowl remaining" },
       "realtime_weight": { "name": "Real-time weight" },
       "feeding_state": {

@@ -13,6 +13,7 @@
       "power_supply": { "default": "mdi:power-plug" },
       "descaling_status": { "default": "mdi:water-remove" },
       "light_effect": { "default": "mdi:led-variant-on" },
+      "water_change_schedules": { "default": "mdi:water-sync" },
       "bowl_remaining": { "default": "mdi:bowl" },
       "realtime_weight": { "default": "mdi:scale" },
       "feeding_state": { "default": "mdi:food-drumstick" },

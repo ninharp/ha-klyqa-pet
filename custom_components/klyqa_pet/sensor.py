@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime, time, timedelta
 from typing import Any
 
 from homeassistant.components.sensor import (
@@ -119,12 +119,24 @@ def _wifi_rssi_description(
     )
 
 
+def _render_schedule_time_and_weekdays(
+    time_value: time, weekdays: frozenset[int]
+) -> dict[str, Any]:
+    """Render a schedule's time and weekdays the way every schedule sensor shows them.
+
+    Times and weekdays are rendered as readable strings rather than an HHMM
+    integer or bitmask, so a template author never has to decode them.
+    """
+    return {
+        "time": time_value.strftime("%H:%M"),
+        "weekdays": [WEEKDAY_KEYS[day] for day in sorted(weekdays)],
+    }
+
+
 def _schedule_attributes(data: KlyqaDeviceData) -> dict[str, Any]:
     """Render the feeding-schedule list for the `schedules` attribute.
 
-    Times and weekdays are rendered as readable strings rather than an HHMM
-    integer or bitmask, so a template author never has to decode them. Slot
-    ids are positions rather than stable identities (the app may reuse a
+    Slot ids are positions rather than stable identities (the app may reuse a
     freed id for an unrelated schedule), so this attribute is the only place
     schedules are exposed at all - no entity is pinned to a particular id.
     """
@@ -134,8 +146,7 @@ def _schedule_attributes(data: KlyqaDeviceData) -> dict[str, Any]:
             "schedule_id": schedule.schedule_id,
             "enabled": schedule.enabled,
             "skip_once": schedule.skip_once,
-            "time": schedule.execution_time.strftime("%H:%M"),
-            "weekdays": [WEEKDAY_KEYS[day] for day in sorted(schedule.weekdays)],
+            **_render_schedule_time_and_weekdays(schedule.execution_time, schedule.weekdays),
             "portions": schedule.portions,
             "fresh_food_mode": schedule.fresh_food_mode,
             "auto_play_voice": schedule.auto_play_voice,
@@ -143,6 +154,24 @@ def _schedule_attributes(data: KlyqaDeviceData) -> dict[str, Any]:
         if schedule.total_duration_sec:
             attrs["total_duration_sec"] = schedule.total_duration_sec
         schedules.append(attrs)
+    return {"schedules": schedules}
+
+
+def _water_change_attributes(data: KlyqaDeviceData) -> dict[str, Any]:
+    """Render the water-change entry list for the `schedules` attribute.
+
+    Entry ids are positions rather than stable identities (the app may reuse a
+    freed id for an unrelated entry), so this attribute is the only place
+    entries are exposed at all - no entity is pinned to a particular id.
+    """
+    schedules = [
+        {
+            "entry_id": entry.entry_id,
+            "enabled": entry.enabled,
+            **_render_schedule_time_and_weekdays(entry.start, entry.weekdays),
+        }
+        for entry in data.welly_timers.water_changes
+    ]
     return {"schedules": schedules}
 
 
@@ -260,6 +289,12 @@ WELLY_SENSORS: tuple[KlyqaSensorEntityDescription, ...] = (
         entity_category=EntityCategory.DIAGNOSTIC,
         entity_registry_enabled_default=False,
         value_fn=lambda data: data.welly.light_id,
+    ),
+    KlyqaSensorEntityDescription(
+        key="water_change_schedules",
+        translation_key="water_change_schedules",
+        value_fn=lambda data: sum(1 for entry in data.welly_timers.water_changes if entry.enabled),
+        attributes_fn=_water_change_attributes,
     ),
     KlyqaSensorEntityDescription(
         key="last_descaling",

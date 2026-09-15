@@ -244,6 +244,7 @@
       "power_supply": { "name": "Stromversorgung", "state": { "mains": "Netz", "battery": "Akku" } },
       "descaling_status": { "name": "Entkalkungsstatus" },
       "light_effect": { "name": "Lichteffekt" },
+      "water_change_schedules": { "name": "Wasserwechsel-Pläne" },
       "bowl_remaining": { "name": "Restmenge im Napf" },
       "realtime_weight": { "name": "Aktuelles Gewicht" },
       "feeding_state": {
