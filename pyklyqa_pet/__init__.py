@@ -36,7 +36,7 @@ from .timecodes import (
 from .welly import WellyDevice, WellyMode, WellySettings, WellyState
 from .welly_timers import DescalingReminder, QuietTime, WaterChangeEntry, WellyTimers
 
-__version__ = "0.3.1"
+__version__ = "0.4.0"
 
 _DEVICE_CLASSES: dict[DeviceType, type[KlyqaDevice]] = {
     DeviceType.WELLY: WellyDevice,
