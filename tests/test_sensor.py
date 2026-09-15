@@ -94,10 +94,11 @@ async def test_schedule_sensor_counts_only_enabled_and_orders_weekdays(
 
     A single, fully-enabled, every-day schedule (the real device capture used by
     other tests) cannot tell a correct implementation from a broken one: counting
-    all schedules instead of only enabled ones still yields "1", and iterating a
-    raw frozenset instead of sorting it still yields all seven weekdays in the
-    same order. This fixture has one enabled schedule with a partial weekday mask
-    and one disabled schedule, so both mistakes would fail these assertions.
+    all schedules instead of only enabled ones still yields "1", and any bitmask
+    with every bit set looks the same regardless of which bit maps to which day.
+    This fixture's partial weekday masks pin the bit-to-day decoding (bit 1 is
+    Monday, bit 6 is Saturday, etc.), and its disabled schedule pins the
+    enabled-only count.
     """
     mock_foody.get_timers = AsyncMock(
         return_value=FoodyTimers.from_dict(load_json("foody_timers_multi.json"))
@@ -113,8 +114,8 @@ async def test_schedule_sensor_counts_only_enabled_and_orders_weekdays(
             "enabled": True,
             "skip_once": False,
             "time": "18:05",
-            # week_cycle 42 = bits 1,3,5 = Mon, Wed, Fri; a raw set iteration would
-            # not reliably reproduce this Sunday-first order.
+            # week_cycle 42 = bits 1,3,5 = Mon, Wed, Fri; a wrong bit-to-day mapping
+            # would produce a different set of names here.
             "weekdays": ["mon", "wed", "fri"],
             "portions": 3,
             "fresh_food_mode": False,
@@ -163,10 +164,10 @@ async def test_water_change_sensor_counts_only_enabled_and_orders_weekdays(
 
     A single, fully-enabled, every-day entry (the real device capture used by other
     tests) cannot tell a correct implementation from a broken one: counting all
-    entries instead of only enabled ones still yields "1", and iterating a raw
-    frozenset instead of sorting it still yields all seven weekdays in the same
-    order. This fixture has one enabled entry with a partial weekday mask and one
-    disabled entry, so both mistakes would fail these assertions.
+    entries instead of only enabled ones still yields "1", and any bitmask with
+    every bit set looks the same regardless of which bit maps to which day. This
+    fixture's partial weekday masks pin the bit-to-day decoding (bit 1 is Monday,
+    bit 6 is Saturday, etc.), and its disabled entry pins the enabled-only count.
     """
     mock_welly.get_timers = AsyncMock(
         return_value=WellyTimers.from_dict(load_json("welly_timers_multi.json"))
@@ -181,8 +182,8 @@ async def test_water_change_sensor_counts_only_enabled_and_orders_weekdays(
             "entry_id": 0,
             "enabled": True,
             "time": "18:05",
-            # repeat 42 = bits 1,3,5 = Mon, Wed, Fri; a raw set iteration would not
-            # reliably reproduce this Sunday-first order.
+            # repeat 42 = bits 1,3,5 = Mon, Wed, Fri; a wrong bit-to-day mapping
+            # would produce a different set of names here.
             "weekdays": ["mon", "wed", "fri"],
         },
         {

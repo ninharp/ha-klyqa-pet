@@ -1,4 +1,4 @@
-{"_comment": "Constructed scenario for the feeding-schedule sensor tests, not a device capture. Exercises enabled-only counting, a partial weekday mask (order-sensitive), boundary times, and a disabled schedule.",
+{"_comment": "Constructed scenario for the feeding-schedule sensor tests, not a device capture. Exercises enabled-only counting, a partial weekday mask that pins the bit-to-day decoding, boundary times, and a disabled schedule.",
  "type": "timer",
  "schedules": [
    {"schedule_id": 0, "enable": true, "skip_once": false, "execution_time": 1805, "week_cycle": 42, "portions": 3, "total_duration_sec": 0, "fresh_food_mode": false, "auto_play_voice": true},

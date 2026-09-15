@@ -129,6 +129,9 @@ def _render_schedule_time_and_weekdays(
     """
     return {
         "time": time_value.strftime("%H:%M"),
+        # sorted() states the intent of a guaranteed Sunday-first order; it is not
+        # here to work around the current CPython small-int set hashing, which
+        # already happens to iterate in ascending order.
         "weekdays": [WEEKDAY_KEYS[day] for day in sorted(weekdays)],
     }
 
