@@ -187,16 +187,23 @@ class KlyqaSwitch(KlyqaPetEntity, SwitchEntity):
         """Return the current state."""
         return self.entity_description.is_on_fn(self.coordinator.data)
 
+    async def _async_set(self, on: bool) -> None:
+        """Write the new value, through the timer path where the switch needs it."""
+        description = self.entity_description
+        if description.writes_timers:
+            # `set_fn` builds its write from the coordinator's cached timer document,
+            # so it is handed over as a factory to be called inside the write lock -
+            # see KlyqaPetEntity._async_send.
+            await self._async_send(
+                lambda: description.set_fn(self.coordinator, on), writes_timers=True
+            )
+            return
+        await self._async_send(description.set_fn(self.coordinator, on))
+
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn the setting on."""
-        await self._async_send(
-            self.entity_description.set_fn(self.coordinator, True),
-            writes_timers=self.entity_description.writes_timers,
-        )
+        await self._async_set(True)
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the setting off."""
-        await self._async_send(
-            self.entity_description.set_fn(self.coordinator, False),
-            writes_timers=self.entity_description.writes_timers,
-        )
+        await self._async_set(False)

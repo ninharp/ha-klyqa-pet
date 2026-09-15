@@ -118,7 +118,9 @@ class KlyqaTime(KlyqaPetEntity, TimeEntity):
         """Send the new value to the device."""
         # Every time entity on a Klyqa device writes the Foody's sleep window or the
         # Welly's quiet-time window, so a failed write always drops the cached timer
-        # document.
+        # document - and the write is built from that document, so it is handed over as
+        # a factory to be called inside the write lock (KlyqaPetEntity._async_send).
         await self._async_send(
-            self.entity_description.set_fn(self.coordinator, value), writes_timers=True
+            lambda: self.entity_description.set_fn(self.coordinator, value),
+            writes_timers=True,
         )

@@ -1,7 +1,11 @@
 """Tests for the coordinator: translated UpdateFailed messages and settings polling."""
 
-from datetime import timedelta
-from unittest.mock import MagicMock
+import asyncio
+from collections.abc import Coroutine
+from dataclasses import replace
+from datetime import time, timedelta
+from typing import Any
+from unittest.mock import MagicMock, patch
 
 from freezegun.api import FrozenDateTimeFactory
 from homeassistant.components.switch import DOMAIN as SWITCH_DOMAIN
@@ -20,9 +24,10 @@ from custom_components.klyqa_pet.const import (
     MAX_SCAN_INTERVAL,
     MIN_SCAN_INTERVAL,
 )
+from custom_components.klyqa_pet.coordinator import KlyqaDeviceCoordinator
 from custom_components.klyqa_pet.entity import KlyqaPetEntity
 from pyklyqa_pet import KlyqaConnectionError, KlyqaRateLimitError, StrypeState, WellySettings
-from pyklyqa_pet.welly_timers import WellyTimers
+from pyklyqa_pet.welly_timers import QuietTime, WellyTimers
 
 from .conftest import FOODY_ID, PURIFIER_ID, STRYPE_ID, WELLY_ID, load_json, setup_integration
 
@@ -385,6 +390,9 @@ async def test_a_welly_timer_write_publishes_without_refetching(
     writes. entity.py's `_async_send` must publish that result directly
     instead of asking the coordinator to refresh - a refresh is debounced and
     would silently swallow a later write in a burst.
+
+    A timer write is handed in as a factory rather than a started coroutine, so
+    the read it builds from happens inside the coordinator's write lock.
     """
     await setup_integration(hass, mock_config_entry)
     coordinator = mock_config_entry.runtime_data.coordinators[WELLY_ID]
@@ -397,9 +405,96 @@ async def test_a_welly_timer_write_publishes_without_refetching(
     async def _command() -> WellyTimers:
         return result
 
-    await entity._async_send(_command(), writes_timers=True)
+    await entity._async_send(_command, writes_timers=True)
     await hass.async_block_till_done()
 
     assert mock_welly.get_timers.call_count == get_timers_calls
     assert coordinator.data.timers is result
     assert coordinator.data.welly_timers is result
+
+
+async def test_two_timer_entity_writes_serialise(
+    hass: HomeAssistant,
+    mock_config_entry: MockConfigEntry,
+    mock_cloud: MagicMock,
+    mock_devices: dict,
+    mock_welly: MagicMock,
+) -> None:
+    """A second timer write must build on the first one's answer, not on the snapshot.
+
+    Every timer entity builds its write from the coordinator's cached document with
+    `replace`, changing one field. `PARALLEL_UPDATES = 1` serialises that only within
+    one platform, so a script touching the quiet-time switch and the quiet-time start
+    in the same tick runs both read-modify-writes concurrently. Taking the coordinator's
+    write lock around build, write and publish is what stops the second write from
+    reverting the first one's field.
+    """
+    await setup_integration(hass, mock_config_entry)
+    coordinator = mock_config_entry.runtime_data.coordinators[WELLY_ID]
+    entity = KlyqaPetEntity(coordinator, EntityDescription(key="test"))
+    document = load_json("welly_timers.json")
+    assert coordinator.data.welly_timers.quiet_time.start == time(22, 0)
+    assert coordinator.data.welly_timers.quiet_time.enabled is False
+
+    first_started = asyncio.Event()
+    release_first = asyncio.Event()
+
+    async def _answer(quiet_time: QuietTime) -> WellyTimers:
+        """Stand in for the device: answer with the document that write would produce."""
+        return WellyTimers.from_dict({**document, "ndt_timer": quiet_time.to_dict()})
+
+    async def _slow_answer(quiet_time: QuietTime) -> WellyTimers:
+        first_started.set()
+        await release_first.wait()
+        return await _answer(quiet_time)
+
+    def _set_start() -> Coroutine[Any, Any, WellyTimers]:
+        return _slow_answer(replace(coordinator.data.welly_timers.quiet_time, start=time(21, 30)))
+
+    def _turn_on() -> Coroutine[Any, Any, WellyTimers]:
+        return _answer(replace(coordinator.data.welly_timers.quiet_time, enabled=True))
+
+    first = asyncio.create_task(entity._async_send(_set_start, writes_timers=True))
+    await first_started.wait()
+    second = asyncio.create_task(entity._async_send(_turn_on, writes_timers=True))
+    await asyncio.sleep(0)
+    # The first write still holds the lock, so the second has not read anything yet.
+    assert not second.done()
+    release_first.set()
+    await first
+    await second
+    await hass.async_block_till_done()
+
+    quiet_time = coordinator.data.welly_timers.quiet_time
+    assert quiet_time.enabled is True
+    # Built from the pre-first snapshot, the second write would have sent 22:00 back.
+    assert quiet_time.start == time(21, 30)
+
+
+async def test_a_non_timer_entity_write_takes_no_lock(
+    hass: HomeAssistant,
+    mock_config_entry: MockConfigEntry,
+    mock_cloud: MagicMock,
+    mock_devices: dict,
+    mock_welly: MagicMock,
+) -> None:
+    """Only timer writes go through the write lock; the rest are unchanged.
+
+    A settings write is still handed in as a started coroutine and still marks the
+    settings cache stale and asks for a refresh. Running it while the lock is held -
+    as a service would hold it - proves it does not wait for the lock.
+    """
+    await setup_integration(hass, mock_config_entry)
+    coordinator = mock_config_entry.runtime_data.coordinators[WELLY_ID]
+    entity = KlyqaPetEntity(coordinator, EntityDescription(key="test"))
+    settings = coordinator.data.welly_settings
+
+    async def _command() -> WellySettings:
+        return settings
+
+    with patch.object(KlyqaDeviceCoordinator, "mark_settings_stale") as mark_stale:
+        async with coordinator.write_lock:
+            await entity._async_send(_command())
+    await hass.async_block_till_done()
+
+    assert mark_stale.call_count == 1

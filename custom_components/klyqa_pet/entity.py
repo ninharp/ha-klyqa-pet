@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Coroutine, Iterable
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from homeassistant.core import callback
 from homeassistant.exceptions import HomeAssistantError
@@ -72,12 +72,26 @@ class KlyqaPetEntity(CoordinatorEntity[KlyqaDeviceCoordinator]):
         )
 
     async def _async_send(
-        self, command: Coroutine[Any, Any, Any], *, writes_timers: bool = False
+        self,
+        command: Coroutine[Any, Any, Any] | Callable[[], Coroutine[Any, Any, Any]],
+        *,
+        writes_timers: bool = False,
     ) -> None:
         """Run a device command, translate library errors and publish or refresh.
 
         `writes_timers` marks the commands that write the Foody's or the Welly's timer
-        document. A rejected one still needs handling, because a failed write may
+        document, and those are handed in as a factory rather than as a started
+        coroutine: each of them is a read-modify-write that builds its payload from the
+        coordinator's cached document via `replace`, so the read has to happen inside
+        the coordinator's write lock, not before it. `PARALLEL_UPDATES = 1` serialises
+        writes within one platform but not across platforms, so without the lock a
+        script that sets the quiet-time switch and the quiet-time start in the same tick
+        would have both build from the same snapshot, and the second write would revert
+        the first's field. Publishing the answer happens under the same lock: the next
+        writer has to see it before it reads. Everything else is passed as a started
+        coroutine and takes no lock, leaving it free for the services.
+
+        A rejected write still needs handling, because a failed write may
         already have moved the device while the published document still shows the old
         window. On the Foody the firmware mutates its own copy before the step that can
         fail - the sleep branch stores enable, the weekday mask and both times and only
@@ -89,6 +103,17 @@ class KlyqaPetEntity(CoordinatorEntity[KlyqaDeviceCoordinator]):
         to the next scheduled poll; as in the services, the failure path deliberately
         does not force a refresh at a device that has just refused a request.
         """
+        if writes_timers:
+            build = cast("Callable[[], Coroutine[Any, Any, Any]]", command)
+            async with self.coordinator.write_lock:
+                await self._async_dispatch(build(), writes_timers=True)
+            return
+        await self._async_dispatch(cast("Coroutine[Any, Any, Any]", command), writes_timers=False)
+
+    async def _async_dispatch(
+        self, command: Coroutine[Any, Any, Any], *, writes_timers: bool
+    ) -> None:
+        """Await one command and deal with what it raised or returned."""
         try:
             result = await command
         except (KlyqaAuthError, KlyqaDeviceError, KlyqaConnectionError) as err:

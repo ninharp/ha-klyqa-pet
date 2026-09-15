@@ -201,11 +201,17 @@ class KlyqaNumber(KlyqaPetEntity, NumberEntity):
 
     async def async_set_native_value(self, value: float) -> None:
         """Send the new value to the device (or keep it locally for helper numbers)."""
-        if self.entity_description.local_only:
-            await self.entity_description.set_fn(self.coordinator, int(value))
+        description = self.entity_description
+        if description.local_only:
+            await description.set_fn(self.coordinator, int(value))
             self.async_write_ha_state()
             return
-        await self._async_send(
-            self.entity_description.set_fn(self.coordinator, int(value)),
-            writes_timers=self.entity_description.writes_timers,
-        )
+        if description.writes_timers:
+            # `set_fn` builds its write from the coordinator's cached timer document,
+            # so it is handed over as a factory to be called inside the write lock -
+            # see KlyqaPetEntity._async_send.
+            await self._async_send(
+                lambda: description.set_fn(self.coordinator, int(value)), writes_timers=True
+            )
+            return
+        await self._async_send(description.set_fn(self.coordinator, int(value)))
