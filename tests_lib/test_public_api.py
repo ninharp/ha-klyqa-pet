@@ -33,6 +33,10 @@ def test_public_names() -> None:
         "FoodyTimers",
         "FeedingSchedule",
         "SleepMode",
+        "WellyTimers",
+        "QuietTime",
+        "DescalingReminder",
+        "WaterChangeEntry",
         "parse_zeroconf_properties",
     ):
         assert hasattr(pyklyqa_pet, name)

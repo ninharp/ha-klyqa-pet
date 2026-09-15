@@ -34,6 +34,7 @@ from .timecodes import (
     encode_weekdays,
 )
 from .welly import WellyDevice, WellyMode, WellySettings, WellyState
+from .welly_timers import DescalingReminder, QuietTime, WaterChangeEntry, WellyTimers
 
 __version__ = "0.3.1"
 
@@ -65,6 +66,7 @@ __all__ = [
     "AirPurifierState",
     "CloudApp",
     "CloudDevice",
+    "DescalingReminder",
     "DeviceType",
     "DiscoveredDevice",
     "Environment",
@@ -80,14 +82,17 @@ __all__ = [
     "KlyqaDeviceError",
     "KlyqaError",
     "KlyqaRateLimitError",
+    "QuietTime",
     "SleepMode",
     "StrypeDevice",
     "StrypeState",
     "SystemInfo",
+    "WaterChangeEntry",
     "WellyDevice",
     "WellyMode",
     "WellySettings",
     "WellyState",
+    "WellyTimers",
     "create_device",
     "decode_hhmm",
     "decode_hhmm_lenient",

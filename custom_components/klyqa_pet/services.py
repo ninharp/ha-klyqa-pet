@@ -26,9 +26,10 @@ from pyklyqa_pet import (
     KlyqaAuthError,
     KlyqaConnectionError,
     KlyqaDeviceError,
+    WaterChangeEntry,
 )
 from pyklyqa_pet.foody_timers import MAX_DURATION_SEC, MAX_FEEDING_SCHEDULES, MAX_PORTIONS
-from pyklyqa_pet.welly_timers import MAX_WATER_CHANGE_ENTRIES, WaterChangeEntry
+from pyklyqa_pet.welly_timers import MAX_WATER_CHANGE_ENTRIES
 
 from .const import DOMAIN, WEEKDAY_KEYS
 from .coordinator import KlyqaDeviceCoordinator

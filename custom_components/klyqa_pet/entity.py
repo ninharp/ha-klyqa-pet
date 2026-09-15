@@ -20,8 +20,8 @@ from pyklyqa_pet import (
     KlyqaError,
     StrypeState,
     WellySettings,
+    WellyTimers,
 )
-from pyklyqa_pet.welly_timers import WellyTimers
 
 from .const import DOMAIN, MANUFACTURER
 from .coordinator import KlyqaDeviceCoordinator

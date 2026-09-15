@@ -35,8 +35,8 @@ from pyklyqa_pet import (
     WellyDevice,
     WellySettings,
     WellyState,
+    WellyTimers,
 )
-from pyklyqa_pet.welly_timers import WellyTimers
 
 from .const import (
     CONF_DEVICE_NAME,
