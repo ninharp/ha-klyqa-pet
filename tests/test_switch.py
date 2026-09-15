@@ -1,7 +1,7 @@
 """Tests for the switch platform."""
 
 from datetime import time
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from homeassistant.components.switch import DOMAIN as SWITCH_DOMAIN
 from homeassistant.components.switch import SERVICE_TURN_OFF, SERVICE_TURN_ON
@@ -14,8 +14,9 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry, snapsh
 from syrupy.assertion import SnapshotAssertion
 
 from pyklyqa_pet import KlyqaDeviceError
+from pyklyqa_pet.welly_timers import WellyTimers
 
-from .conftest import setup_integration
+from .conftest import load_json, setup_integration
 
 
 @pytest.fixture
@@ -130,11 +131,30 @@ async def test_sleep_mode_switch_writes_the_whole_object(
     assert sent_off.weekdays == frozenset(range(7))
 
 
-@pytest.mark.usefixtures("switches")
 async def test_quiet_time_switch_preserves_other_fields(
-    hass: HomeAssistant, mock_welly: MagicMock
+    hass: HomeAssistant,
+    mock_config_entry: MockConfigEntry,
+    mock_cloud: MagicMock,
+    mock_devices: dict,
+    mock_welly: MagicMock,
 ) -> None:
-    """Toggling `quiet_time` must leave start, end and the water flag untouched."""
+    """Toggling `quiet_time` must leave start, end, water and the weekday mask untouched.
+
+    A full week mask (the shared fixture's `repeat: 127`) cannot distinguish a
+    preserved mask from a `replace()`-free reconstruction that defaults to "every
+    day" - that default-to-every-day case is exactly the destructive one this
+    preservation requirement exists to prevent. Use a partial mask instead, the way
+    the Foody's sleep tests do (see `test_time.py`).
+    """
+    document = load_json("welly_timers.json")
+    mock_welly.get_timers = AsyncMock(
+        return_value=WellyTimers.from_dict(
+            {**document, "ndt_timer": {**document["ndt_timer"], "repeat": 62}}
+        )
+    )
+    with patch("custom_components.klyqa_pet.PLATFORMS", [Platform.SWITCH]):
+        await setup_integration(hass, mock_config_entry)
+
     await hass.services.async_call(
         SWITCH_DOMAIN,
         SERVICE_TURN_ON,
@@ -146,7 +166,7 @@ async def test_quiet_time_switch_preserves_other_fields(
     assert sent.start == time(22, 0)
     assert sent.end == time(7, 0)
     assert sent.water_enabled is False
-    assert sent.weekdays == frozenset(range(7))
+    assert sent.weekdays == frozenset({1, 2, 3, 4, 5})
 
     await hass.services.async_call(
         SWITCH_DOMAIN,
@@ -159,7 +179,7 @@ async def test_quiet_time_switch_preserves_other_fields(
     assert sent_off.start == time(22, 0)
     assert sent_off.end == time(7, 0)
     assert sent_off.water_enabled is False
-    assert sent_off.weekdays == frozenset(range(7))
+    assert sent_off.weekdays == frozenset({1, 2, 3, 4, 5})
 
 
 @pytest.mark.usefixtures("switches")
@@ -170,7 +190,7 @@ async def test_quiet_time_water_switch_preserves_other_fields(
     await hass.services.async_call(
         SWITCH_DOMAIN,
         SERVICE_TURN_ON,
-        {ATTR_ENTITY_ID: "switch.kitchen_fountain_quiet_time_water"},
+        {ATTR_ENTITY_ID: "switch.kitchen_fountain_water_during_quiet_time"},
         blocking=True,
     )
     sent = mock_welly.set_quiet_time.await_args.args[0]
@@ -183,7 +203,7 @@ async def test_quiet_time_water_switch_preserves_other_fields(
     await hass.services.async_call(
         SWITCH_DOMAIN,
         SERVICE_TURN_OFF,
-        {ATTR_ENTITY_ID: "switch.kitchen_fountain_quiet_time_water"},
+        {ATTR_ENTITY_ID: "switch.kitchen_fountain_water_during_quiet_time"},
         blocking=True,
     )
     sent_off = mock_welly.set_quiet_time.await_args.args[0]

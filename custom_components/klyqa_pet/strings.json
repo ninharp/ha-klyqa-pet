@@ -374,7 +374,7 @@
       "super_power_saving_mode": { "name": "Super power saving" },
       "telemetry": { "name": "Telemetry" },
       "quiet_time": { "name": "Quiet time" },
-      "quiet_time_water": { "name": "Quiet time water" },
+      "quiet_time_water": { "name": "Water during quiet time" },
       "descaling_reminder": { "name": "Descaling reminder" },
       "app_led": { "name": "Indicator LED" },
       "app_pet_lock": { "name": "Pet lock" },

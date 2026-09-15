@@ -26,8 +26,8 @@ class KlyqaSwitchEntityDescription(SwitchEntityDescription):
 
     is_on_fn: Callable[[KlyqaDeviceData], bool]
     set_fn: Callable[[KlyqaDeviceCoordinator, bool], Coroutine[Any, Any, Any]]
-    # Set on the switches whose `set_fn` writes the Foody's timer document, so a failed
-    # write drops the cached copy - see KlyqaPetEntity._async_send.
+    # Set on the switches whose `set_fn` writes the Welly's or the Foody's timer
+    # document, so a failed write drops the cached copy - see KlyqaPetEntity._async_send.
     writes_timers: bool = False
 
 

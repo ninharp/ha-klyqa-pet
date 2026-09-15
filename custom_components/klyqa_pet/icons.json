@@ -29,6 +29,8 @@
       "firmware_version": { "default": "mdi:chip" },
       "sdk_version": { "default": "mdi:package-variant" },
       "last_boot": { "default": "mdi:clock-start" },
+      "last_descaling": { "default": "mdi:water-remove" },
+      "next_descaling": { "default": "mdi:timer-sand" },
       "wifi_rssi": { "default": "mdi:wifi" },
       "air_quality": { "default": "mdi:air-filter" },
       "filter_remaining": { "default": "mdi:air-filter" },
@@ -77,10 +79,13 @@
       "circulation_pump_speed": { "default": "mdi:pump" },
       "threshold_clean_tank_low": { "default": "mdi:water-minus" },
       "threshold_dirty_tank_full": { "default": "mdi:water-plus" },
+      "descaling_interval": { "default": "mdi:calendar-sync" },
       "portions": { "default": "mdi:counter" },
       "feed_audio_volume": { "default": "mdi:volume-medium" }
     },
     "time": {
+      "quiet_time_start": { "default": "mdi:sleep" },
+      "quiet_time_end": { "default": "mdi:sleep-off" },
       "sleep_start": { "default": "mdi:sleep" },
       "sleep_end": { "default": "mdi:sleep-off" }
     },
