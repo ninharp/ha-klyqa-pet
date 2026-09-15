@@ -139,9 +139,13 @@ def _render_schedule_time_and_weekdays(
 def _schedule_attributes(data: KlyqaDeviceData) -> dict[str, Any]:
     """Render the feeding-schedule list for the `schedules` attribute.
 
-    Slot ids are positions rather than stable identities (the app may reuse a
-    freed id for an unrelated schedule), so this attribute is the only place
-    schedules are exposed at all - no entity is pinned to a particular id.
+    A slot id is the id the schedule was created with - the lowest free one
+    `add_feeding_schedule` claimed - not its position in the list the device
+    reports, which only carries the slots in use, and no stable identity either,
+    since a freed id may be reused for an unrelated schedule. So this attribute
+    is the only place schedules are exposed at all - no entity is pinned to a
+    particular id - and it is where the user reads the id that the three
+    feeding-schedule actions take.
     """
     schedules = []
     for schedule in data.foody_timers.schedules:

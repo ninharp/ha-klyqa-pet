@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Coroutine, Iterable
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, Literal, cast, overload
 
 from homeassistant.core import callback
 from homeassistant.exceptions import HomeAssistantError
@@ -71,6 +71,22 @@ class KlyqaPetEntity(CoordinatorEntity[KlyqaDeviceCoordinator]):
             translation_placeholders=placeholders,
         )
 
+    @overload
+    async def _async_send(
+        self,
+        command: Coroutine[Any, Any, Any],
+        *,
+        writes_timers: Literal[False] = False,
+    ) -> None: ...
+
+    @overload
+    async def _async_send(
+        self,
+        command: Callable[[], Coroutine[Any, Any, Any]],
+        *,
+        writes_timers: Literal[True],
+    ) -> None: ...
+
     async def _async_send(
         self,
         command: Coroutine[Any, Any, Any] | Callable[[], Coroutine[Any, Any, Any]],
@@ -78,6 +94,11 @@ class KlyqaPetEntity(CoordinatorEntity[KlyqaDeviceCoordinator]):
         writes_timers: bool = False,
     ) -> None:
         """Run a device command, translate library errors and publish or refresh.
+
+        The two overloads above tie the two shapes together: a timer write is a factory
+        and must say `writes_timers=True`, anything else is a started coroutine and must
+        not, so a mismatched call site is a type error rather than something that only
+        breaks when the command runs.
 
         `writes_timers` marks the commands that write the Foody's or the Welly's timer
         document, and those are handed in as a factory rather than as a started
