@@ -131,3 +131,87 @@ delete_feeding_schedule:
           min: 0
           max: 19
           mode: box
+
+add_water_change:
+  fields:
+    device_id:
+      required: true
+      selector:
+        device:
+          integration: klyqa_pet
+    time:
+      required: true
+      example: "07:00:00"
+      selector:
+        time:
+    weekdays:
+      example: '["mon", "wed", "fri"]'
+      selector:
+        select:
+          multiple: true
+          mode: list
+          translation_key: weekdays
+          options:
+            - sun
+            - mon
+            - tue
+            - wed
+            - thu
+            - fri
+            - sat
+    enabled:
+      default: true
+      selector:
+        boolean:
+
+set_water_change:
+  fields:
+    device_id:
+      required: true
+      selector:
+        device:
+          integration: klyqa_pet
+    entry_id:
+      required: true
+      selector:
+        number:
+          min: 0
+          max: 5
+          mode: box
+    time:
+      example: "07:00:00"
+      selector:
+        time:
+    weekdays:
+      example: '["mon", "wed", "fri"]'
+      selector:
+        select:
+          multiple: true
+          mode: list
+          translation_key: weekdays
+          options:
+            - sun
+            - mon
+            - tue
+            - wed
+            - thu
+            - fri
+            - sat
+    enabled:
+      selector:
+        boolean:
+
+delete_water_change:
+  fields:
+    device_id:
+      required: true
+      selector:
+        device:
+          integration: klyqa_pet
+    entry_id:
+      required: true
+      selector:
+        number:
+          min: 0
+          max: 5
+          mode: box

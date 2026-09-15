@@ -112,6 +112,9 @@
   "services": {
     "add_feeding_schedule": "mdi:calendar-plus",
     "set_feeding_schedule": "mdi:calendar-edit",
-    "delete_feeding_schedule": "mdi:calendar-remove"
+    "delete_feeding_schedule": "mdi:calendar-remove",
+    "add_water_change": "mdi:water-plus",
+    "set_water_change": "mdi:water-sync",
+    "delete_water_change": "mdi:water-remove"
   }
 }

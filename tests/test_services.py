@@ -1,4 +1,4 @@
-"""Tests for the Foody feeding-schedule services."""
+"""Tests for the Foody feeding-schedule and Welly water-change services."""
 
 import asyncio
 from datetime import time
@@ -21,11 +21,17 @@ from custom_components.klyqa_pet.const import DOMAIN, WEEKDAY_KEYS
 from custom_components.klyqa_pet.coordinator import KlyqaDeviceCoordinator
 from custom_components.klyqa_pet.services import (
     ADD_SCHEMA,
+    ADD_WATER_CHANGE_SCHEMA,
     DELETE_SCHEMA,
+    DELETE_WATER_CHANGE_SCHEMA,
     SERVICE_ADD_FEEDING_SCHEDULE,
+    SERVICE_ADD_WATER_CHANGE,
     SERVICE_DELETE_FEEDING_SCHEDULE,
+    SERVICE_DELETE_WATER_CHANGE,
     SERVICE_SET_FEEDING_SCHEDULE,
+    SERVICE_SET_WATER_CHANGE,
     SET_SCHEMA,
+    SET_WATER_CHANGE_SCHEMA,
 )
 from pyklyqa_pet import KlyqaAuthError, KlyqaConnectionError, KlyqaDeviceError
 from pyklyqa_pet.foody_timers import (
@@ -34,6 +40,7 @@ from pyklyqa_pet.foody_timers import (
     MAX_PORTIONS,
     FoodyTimers,
 )
+from pyklyqa_pet.welly_timers import MAX_WATER_CHANGE_ENTRIES, WellyTimers
 
 from .conftest import FOODY_ID, WELLY_ID, load_json, setup_integration
 
@@ -604,6 +611,9 @@ def test_services_yaml_matches_the_schemas_and_the_strings(
         SERVICE_ADD_FEEDING_SCHEDULE: ADD_SCHEMA,
         SERVICE_SET_FEEDING_SCHEDULE: SET_SCHEMA,
         SERVICE_DELETE_FEEDING_SCHEDULE: DELETE_SCHEMA,
+        SERVICE_ADD_WATER_CHANGE: ADD_WATER_CHANGE_SCHEMA,
+        SERVICE_SET_WATER_CHANGE: SET_WATER_CHANGE_SCHEMA,
+        SERVICE_DELETE_WATER_CHANGE: DELETE_WATER_CHANGE_SCHEMA,
     }
     assert set(described) == set(registered) == set(strings) == set(icons)
     assert set(hass.services.async_services_for_domain(DOMAIN)) == set(registered)
@@ -621,12 +631,390 @@ def test_services_yaml_matches_the_schemas_and_the_strings(
     for name in (SERVICE_ADD_FEEDING_SCHEDULE, SERVICE_SET_FEEDING_SCHEDULE):
         duration = described[name]["fields"]["duration"]["selector"]["number"]
         assert (duration["min"], duration["max"]) == (0, MAX_DURATION_SEC), name
+    for name in (SERVICE_SET_WATER_CHANGE, SERVICE_DELETE_WATER_CHANGE):
+        entry_id = described[name]["fields"]["entry_id"]["selector"]["number"]
+        assert (entry_id["min"], entry_id["max"]) == (0, MAX_WATER_CHANGE_ENTRIES - 1), name
 
 
 def test_the_weekday_selector_offers_exactly_the_known_keys() -> None:
     described = yaml.safe_load((COMPONENT / "services.yaml").read_text())
-    options = described[SERVICE_ADD_FEEDING_SCHEDULE]["fields"]["weekdays"]["selector"]["select"]
-    assert tuple(options["options"]) == WEEKDAY_KEYS
+    for service in (SERVICE_ADD_FEEDING_SCHEDULE, SERVICE_ADD_WATER_CHANGE):
+        options = described[service]["fields"]["weekdays"]["selector"]["select"]
+        assert tuple(options["options"]) == WEEKDAY_KEYS, service
     for name in ("strings.json", "translations/en.json", "translations/de.json"):
         translations = json.loads((COMPONENT / name).read_text())
         assert tuple(translations["selector"]["weekdays"]["options"]) == WEEKDAY_KEYS, name
+
+
+def make_water_changes(count: int) -> WellyTimers:
+    """Build a Welly timer document with `count` water-change entries."""
+    document = load_json("welly_timers.json")
+    template = document["water_change"][0]
+    document["water_change"] = [
+        {**template, "id": index, "start": 630 + index} for index in range(count)
+    ]
+    return WellyTimers.from_dict(document)
+
+
+async def test_add_water_change_does_not_send_an_id(
+    hass: HomeAssistant, mock_welly: MagicMock, welly_device_id: str
+) -> None:
+    """The MCU assigns it; the service must not guess a slot.
+
+    The device holds entry 0, so a service that copied the Foody's lowest-free-slot
+    search would claim 1 and edit rather than create. The Welly's `add` carries no id
+    at all: the firmware forwards the entry to the MCU, which assigns one.
+    """
+    await call(
+        hass,
+        SERVICE_ADD_WATER_CHANGE,
+        {"device_id": welly_device_id, "time": "07:00:00"},
+    )
+    mock_welly.set_water_change.assert_not_awaited()
+    entry = mock_welly.add_water_change.await_args.args[0]
+    assert "id" not in entry.to_dict(include_id=False)
+
+
+async def test_add_water_change_survives_an_entry_missing_from_the_follow_up_read(
+    hass: HomeAssistant, mock_welly: MagicMock, welly_device_id: str
+) -> None:
+    """The MCU reports the assigned id back asynchronously.
+
+    The read the library performs after the write may therefore still show the old
+    list; that is not a failure and the service must not wait for the entry to appear.
+    """
+    mock_welly.add_water_change.return_value = WellyTimers.from_dict(load_json("welly_timers.json"))
+    await call(
+        hass,
+        SERVICE_ADD_WATER_CHANGE,
+        {"device_id": welly_device_id, "time": "07:00:00"},
+    )
+    assert mock_welly.add_water_change.await_count == 1
+
+
+async def test_add_water_change_uses_the_defaults_for_omitted_fields(
+    hass: HomeAssistant, mock_welly: MagicMock, welly_device_id: str
+) -> None:
+    await call(
+        hass,
+        SERVICE_ADD_WATER_CHANGE,
+        {"device_id": welly_device_id, "time": "07:05:00"},
+    )
+    entry = mock_welly.add_water_change.await_args.args[0]
+    assert entry.start == time(7, 5)
+    assert entry.weekdays == frozenset(range(7))
+    assert entry.enabled is True
+
+
+async def test_add_water_change_takes_every_field(
+    hass: HomeAssistant, mock_welly: MagicMock, welly_device_id: str
+) -> None:
+    await call(
+        hass,
+        SERVICE_ADD_WATER_CHANGE,
+        {
+            "device_id": welly_device_id,
+            "time": "18:45:00",
+            "weekdays": ["mon", "sat"],
+            "enabled": False,
+        },
+    )
+    entry = mock_welly.add_water_change.await_args.args[0]
+    assert entry.start == time(18, 45)
+    assert entry.weekdays == frozenset({1, 6})
+    assert entry.enabled is False
+
+
+async def test_add_water_change_rejects_a_full_device_before_asking_the_firmware(
+    hass: HomeAssistant, mock_welly: MagicMock, welly_device_id: str
+) -> None:
+    """All 6 entries taken is a validation error, not a firmware round trip."""
+    mock_welly.get_timers.return_value = make_water_changes(MAX_WATER_CHANGE_ENTRIES)
+    with pytest.raises(ServiceValidationError) as err:
+        await call(
+            hass,
+            SERVICE_ADD_WATER_CHANGE,
+            {"device_id": welly_device_id, "time": "07:00:00"},
+        )
+    assert err.value.translation_key == "no_free_water_change_slot"
+    mock_welly.add_water_change.assert_not_awaited()
+
+
+async def test_set_water_change_leaves_omitted_fields_unchanged(
+    hass: HomeAssistant, mock_welly: MagicMock, welly_device_id: str
+) -> None:
+    await call(
+        hass,
+        SERVICE_SET_WATER_CHANGE,
+        {"device_id": welly_device_id, "entry_id": 0, "enabled": False},
+    )
+    entry = mock_welly.set_water_change.await_args.args[0]
+    assert entry.entry_id == 0
+    assert entry.enabled is False
+    # Everything else is what welly_timers.json holds for entry 0.
+    assert entry.start == time(6, 30)
+    assert entry.weekdays == frozenset(range(7))
+
+
+async def test_set_water_change_can_change_every_field(
+    hass: HomeAssistant, mock_welly: MagicMock, welly_device_id: str
+) -> None:
+    await call(
+        hass,
+        SERVICE_SET_WATER_CHANGE,
+        {
+            "device_id": welly_device_id,
+            "entry_id": 0,
+            "time": "09:15:00",
+            "weekdays": ["sun"],
+            "enabled": False,
+        },
+    )
+    entry = mock_welly.set_water_change.await_args.args[0]
+    assert entry.start == time(9, 15)
+    assert entry.weekdays == frozenset({0})
+    assert entry.enabled is False
+
+
+async def test_set_water_change_rereads_before_writing(
+    hass: HomeAssistant, mock_welly: MagicMock, welly_device_id: str
+) -> None:
+    """The freshly read entry is the base of the change, never the cached one."""
+    document = load_json("welly_timers.json")
+    document["water_change"][0]["start"] = 2015
+    mock_welly.get_timers.return_value = WellyTimers.from_dict(document)
+    mock_welly.reset_mock()
+    await call(
+        hass,
+        SERVICE_SET_WATER_CHANGE,
+        {"device_id": welly_device_id, "entry_id": 0, "enabled": False},
+    )
+    assert [name for name, *_ in mock_welly.mock_calls][:2] == ["get_timers", "set_water_change"]
+    entry = mock_welly.set_water_change.await_args.args[0]
+    assert entry.start == time(20, 15)
+    assert entry.enabled is False
+
+
+async def test_set_water_change_rejects_an_unknown_entry_id(
+    hass: HomeAssistant, mock_welly: MagicMock, welly_device_id: str
+) -> None:
+    with pytest.raises(ServiceValidationError) as err:
+        await call(
+            hass,
+            SERVICE_SET_WATER_CHANGE,
+            {"device_id": welly_device_id, "entry_id": 4, "enabled": False},
+        )
+    assert err.value.translation_key == "unknown_water_change"
+    mock_welly.set_water_change.assert_not_awaited()
+
+
+async def test_delete_water_change_rereads_before_writing(
+    hass: HomeAssistant, mock_welly: MagicMock, welly_device_id: str
+) -> None:
+    """Ids address positions in the ESP's shadow, so they are re-read, never cached."""
+    document = load_json("welly_timers.json")
+    document["water_change"][0]["id"] = 3
+    mock_welly.get_timers.return_value = WellyTimers.from_dict(document)
+    mock_welly.reset_mock()
+
+    await call(
+        hass,
+        SERVICE_DELETE_WATER_CHANGE,
+        {"device_id": welly_device_id, "entry_id": 3},
+    )
+    assert [name for name, *_ in mock_welly.mock_calls][:2] == [
+        "get_timers",
+        "delete_water_change",
+    ]
+    assert mock_welly.delete_water_change.await_args.args == (3,)
+
+    with pytest.raises(ServiceValidationError) as err:
+        await call(
+            hass,
+            SERVICE_DELETE_WATER_CHANGE,
+            {"device_id": welly_device_id, "entry_id": 0},
+        )
+    assert err.value.translation_key == "unknown_water_change"
+
+
+async def test_delete_water_change_rejects_an_unknown_entry_id(
+    hass: HomeAssistant, mock_welly: MagicMock, welly_device_id: str
+) -> None:
+    with pytest.raises(ServiceValidationError) as err:
+        await call(
+            hass,
+            SERVICE_DELETE_WATER_CHANGE,
+            {"device_id": welly_device_id, "entry_id": 5},
+        )
+    assert err.value.translation_key == "unknown_water_change"
+    mock_welly.delete_water_change.assert_not_awaited()
+
+
+async def test_a_water_change_service_on_a_foody_is_rejected(
+    hass: HomeAssistant, mock_foody: MagicMock, foody_device_id: str
+) -> None:
+    with pytest.raises(ServiceValidationError) as err:
+        await call(
+            hass,
+            SERVICE_ADD_WATER_CHANGE,
+            {"device_id": foody_device_id, "time": "07:00:00"},
+        )
+    assert err.value.translation_key == "not_a_welly"
+
+
+async def test_an_unknown_device_is_rejected_by_the_water_change_services(
+    hass: HomeAssistant, integration: None
+) -> None:
+    with pytest.raises(ServiceValidationError) as err:
+        await call(
+            hass,
+            SERVICE_ADD_WATER_CHANGE,
+            {"device_id": "does-not-exist", "time": "07:00:00"},
+        )
+    assert err.value.translation_key == "device_not_found"
+
+
+async def test_a_foreign_device_is_rejected_by_the_water_change_services(
+    hass: HomeAssistant, integration: None
+) -> None:
+    other = MockConfigEntry(domain="other")
+    other.add_to_hass(hass)
+    device = dr.async_get(hass).async_get_or_create(
+        config_entry_id=other.entry_id, identifiers={("other", "fountain")}
+    )
+    with pytest.raises(ServiceValidationError) as err:
+        await call(
+            hass,
+            SERVICE_ADD_WATER_CHANGE,
+            {"device_id": device.id, "time": "07:00:00"},
+        )
+    assert err.value.translation_key == "device_not_klyqa"
+
+
+async def test_a_device_of_an_unloaded_entry_is_rejected_by_the_water_change_services(
+    hass: HomeAssistant, integration: None
+) -> None:
+    other = MockConfigEntry(domain=DOMAIN, unique_id="local-welly")
+    other.add_to_hass(hass)
+    device = dr.async_get(hass).async_get_or_create(
+        config_entry_id=other.entry_id, identifiers={(DOMAIN, "AABBCCDDEE11")}
+    )
+    with pytest.raises(ServiceValidationError) as err:
+        await call(
+            hass,
+            SERVICE_ADD_WATER_CHANGE,
+            {"device_id": device.id, "time": "07:00:00"},
+        )
+    assert err.value.translation_key == "device_not_available"
+
+
+async def test_a_water_change_write_marks_the_timers_stale_and_refreshes(
+    hass: HomeAssistant, mock_welly: MagicMock, welly_device_id: str
+) -> None:
+    with (
+        patch.object(KlyqaDeviceCoordinator, "mark_timers_stale") as mark_stale,
+        patch.object(
+            KlyqaDeviceCoordinator, "async_request_refresh", new_callable=AsyncMock
+        ) as refresh,
+    ):
+        await call(
+            hass,
+            SERVICE_DELETE_WATER_CHANGE,
+            {"device_id": welly_device_id, "entry_id": 0},
+        )
+    assert mark_stale.call_count == 1
+    assert refresh.await_count == 1
+
+
+async def test_a_failed_water_change_write_marks_the_cache_stale(
+    hass: HomeAssistant, mock_welly: MagicMock, welly_device_id: str
+) -> None:
+    """The firmware clears its own entry before it tells the MCU, so a rejected delete
+    may still have removed it. The cached document can no longer be trusted."""
+    mock_welly.delete_water_change.side_effect = KlyqaDeviceError(["nope"])
+    with (
+        patch.object(KlyqaDeviceCoordinator, "mark_timers_stale") as mark_stale,
+        patch.object(
+            KlyqaDeviceCoordinator, "async_request_refresh", new_callable=AsyncMock
+        ) as refresh,
+        pytest.raises(HomeAssistantError),
+    ):
+        await call(
+            hass,
+            SERVICE_DELETE_WATER_CHANGE,
+            {"device_id": welly_device_id, "entry_id": 0},
+        )
+    assert mark_stale.call_count == 1
+    refresh.assert_not_awaited()
+
+
+@pytest.mark.parametrize(
+    "error", [KlyqaAuthError("bad token"), KlyqaConnectionError("unreachable")]
+)
+async def test_every_library_error_of_a_water_change_service_is_translated(
+    hass: HomeAssistant, mock_welly: MagicMock, welly_device_id: str, error: Exception
+) -> None:
+    mock_welly.get_timers.side_effect = error
+    with pytest.raises(HomeAssistantError, match="Kitchen fountain"):
+        await call(
+            hass,
+            SERVICE_DELETE_WATER_CHANGE,
+            {"device_id": welly_device_id, "entry_id": 0},
+        )
+
+
+@pytest.mark.parametrize(
+    ("service", "data"),
+    [
+        (SERVICE_ADD_WATER_CHANGE, {"time": "07:00:00", "weekdays": []}),
+        (SERVICE_ADD_WATER_CHANGE, {"time": "07:00:00", "weekdays": ["someday"]}),
+        (SERVICE_SET_WATER_CHANGE, {"entry_id": -1}),
+        (SERVICE_SET_WATER_CHANGE, {"entry_id": MAX_WATER_CHANGE_ENTRIES}),
+        (SERVICE_DELETE_WATER_CHANGE, {"entry_id": MAX_WATER_CHANGE_ENTRIES}),
+    ],
+)
+async def test_the_water_change_schema_rejects_impossible_values(
+    hass: HomeAssistant, welly_device_id: str, service: str, data: dict[str, Any]
+) -> None:
+    with pytest.raises((vol.Invalid, ServiceValidationError)):
+        await call(hass, service, {"device_id": welly_device_id, **data})
+
+
+async def test_two_parallel_water_change_adds_are_serialised(
+    hass: HomeAssistant, mock_welly: MagicMock, welly_device_id: str
+) -> None:
+    """The write lock spans read and write here too.
+
+    Five of the six entries are taken, so exactly one of the two adds can succeed. The
+    device mock yields at every await: without the coordinator's write lock held across
+    read and write, both calls would read the same five-entry list, both would pass the
+    cap check and both would create a sixth and seventh entry.
+    """
+    document = load_json("welly_timers.json")
+    entries = [
+        {**document["water_change"][0], "id": index, "start": 630 + index} for index in range(5)
+    ]
+
+    async def _get_timers() -> WellyTimers:
+        await asyncio.sleep(0)
+        return WellyTimers.from_dict({**document, "water_change": list(entries)})
+
+    async def _add_water_change(entry: Any) -> WellyTimers:
+        await asyncio.sleep(0)
+        entries.append({**entry.to_dict(include_id=False), "id": len(entries)})
+        return WellyTimers.from_dict({**document, "water_change": list(entries)})
+
+    mock_welly.get_timers.side_effect = _get_timers
+    mock_welly.add_water_change.side_effect = _add_water_change
+
+    results = await asyncio.gather(
+        call(hass, SERVICE_ADD_WATER_CHANGE, {"device_id": welly_device_id, "time": "07:00:00"}),
+        call(hass, SERVICE_ADD_WATER_CHANGE, {"device_id": welly_device_id, "time": "18:00:00"}),
+        return_exceptions=True,
+    )
+    failures = [result for result in results if isinstance(result, BaseException)]
+    assert len(failures) == 1
+    assert isinstance(failures[0], ServiceValidationError)
+    assert failures[0].translation_key == "no_free_water_change_slot"
+    assert mock_welly.add_water_change.await_count == 1
+    assert len(entries) == MAX_WATER_CHANGE_ENTRIES

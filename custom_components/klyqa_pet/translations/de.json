@@ -204,6 +204,68 @@
           "description": "ID des zu löschenden Plans, wie im Attribut „schedules“ des Sensors „Fütterungspläne“ aufgeführt."
         }
       }
+    },
+    "add_water_change": {
+      "name": "Wasserwechsel-Plan hinzufügen",
+      "description": "Fügt einem Welly-Trinkbrunnen einen Wasserwechsel-Plan hinzu. Der Brunnen fasst bis zu 6 Pläne und vergibt die ID des neuen selbst; er kann daher einen Moment brauchen, bis er im Sensor „Wasserwechsel-Pläne“ auftaucht.",
+      "fields": {
+        "device_id": {
+          "name": "Gerät",
+          "description": "Der Welly-Trinkbrunnen, dem der Plan hinzugefügt wird."
+        },
+        "time": {
+          "name": "Uhrzeit",
+          "description": "Uhrzeit, zu der der Wasserwechsel fällig ist. Der Brunnen speichert nur Stunden und Minuten."
+        },
+        "weekdays": {
+          "name": "Wochentage",
+          "description": "Tage, an denen der Plan läuft. Leer gelassen, läuft er täglich."
+        },
+        "enabled": {
+          "name": "Aktiv",
+          "description": "Ob der Plan sofort aktiv ist."
+        }
+      }
+    },
+    "set_water_change": {
+      "name": "Wasserwechsel-Plan ändern",
+      "description": "Ändert einen bestehenden Wasserwechsel-Plan eines Welly-Trinkbrunnens. Felder, die du weglässt, behalten ihren Wert.",
+      "fields": {
+        "device_id": {
+          "name": "Gerät",
+          "description": "Der Welly-Trinkbrunnen, auf dem der Plan liegt."
+        },
+        "entry_id": {
+          "name": "Eintrags-ID",
+          "description": "ID des zu ändernden Plans, wie im Attribut „schedules“ des Sensors „Wasserwechsel-Pläne“ aufgeführt."
+        },
+        "time": {
+          "name": "Uhrzeit",
+          "description": "Neue Uhrzeit für den Wasserwechsel. Der Brunnen speichert nur Stunden und Minuten."
+        },
+        "weekdays": {
+          "name": "Wochentage",
+          "description": "Neue Tage, an denen der Plan läuft."
+        },
+        "enabled": {
+          "name": "Aktiv",
+          "description": "Ob der Plan aktiv ist."
+        }
+      }
+    },
+    "delete_water_change": {
+      "name": "Wasserwechsel-Plan löschen",
+      "description": "Löscht einen Wasserwechsel-Plan von einem Welly-Trinkbrunnen.",
+      "fields": {
+        "device_id": {
+          "name": "Gerät",
+          "description": "Der Welly-Trinkbrunnen, auf dem der Plan liegt."
+        },
+        "entry_id": {
+          "name": "Eintrags-ID",
+          "description": "ID des zu löschenden Plans, wie im Attribut „schedules“ des Sensors „Wasserwechsel-Pläne“ aufgeführt."
+        }
+      }
     }
   },
   "exceptions": {
@@ -213,6 +275,9 @@
     "not_a_foody": { "message": "{device} ist kein Foody-Futterautomat; Fütterungspläne gibt es nur beim Foody" },
     "unknown_schedule": { "message": "{device} hat keinen Fütterungsplan mit der ID {schedule_id}" },
     "no_free_schedule_slot": { "message": "{device} hat bereits die maximale Anzahl von {maximum} Fütterungsplänen; lösche zuerst einen" },
+    "not_a_welly": { "message": "{device} ist kein Welly-Trinkbrunnen; Wasserwechsel-Pläne gibt es nur beim Welly" },
+    "unknown_water_change": { "message": "{device} hat keinen Wasserwechsel-Plan mit der ID {entry_id}" },
+    "no_free_water_change_slot": { "message": "{device} hat bereits die maximale Anzahl von {maximum} Wasserwechsel-Plänen; lösche zuerst einen" },
     "update_failed": { "message": "Aktualisierung von {device} fehlgeschlagen: {error}" },
     "rate_limited": { "message": "{device} begrenzt die Anfragen; ein anderer Client (z. B. die Klyqa-App) fragt das Gerät gleichzeitig ab" },
     "token_refresh_failed": { "message": "{device} hat den Zugriffstoken abgelehnt und die Klyqa-Cloud war zum Erneuern nicht erreichbar" },
