@@ -15,6 +15,7 @@ from syrupy.assertion import SnapshotAssertion
 
 from custom_components.klyqa_pet.coordinator import KlyqaDeviceCoordinator
 from pyklyqa_pet import FoodyTimers, KlyqaDeviceError, SleepMode
+from pyklyqa_pet.welly_timers import WellyTimers
 
 from .conftest import load_json, setup_integration
 
@@ -73,6 +74,63 @@ async def test_setting_the_sleep_end_preserves_the_start(
     assert sent.end == time(7, 15)
     assert sent.start == time(22, 0)
     assert sent.enabled is False
+    assert sent.weekdays == frozenset(range(7))
+
+
+async def test_setting_the_quiet_time_start_preserves_the_rest(
+    hass: HomeAssistant,
+    mock_config_entry: MockConfigEntry,
+    mock_cloud: MagicMock,
+    mock_devices: dict,
+    mock_welly: MagicMock,
+) -> None:
+    """Setting quiet_time_start must not disturb end, water or the weekday mask.
+
+    A full week mask (the shared fixture's `repeat: 127`) cannot distinguish a
+    preserved mask from a `replace()`-free reconstruction that defaults to "every
+    day" - that default-to-every-day case is exactly the destructive one this
+    preservation requirement exists to prevent. Use a partial mask instead, the way
+    the Foody's `foody_timers_multi.json` fixture does.
+    """
+    document = load_json("welly_timers.json")
+    mock_welly.get_timers = AsyncMock(
+        return_value=WellyTimers.from_dict(
+            {**document, "ndt_timer": {**document["ndt_timer"], "repeat": 62}}
+        )
+    )
+    with patch("custom_components.klyqa_pet.PLATFORMS", [Platform.TIME]):
+        await setup_integration(hass, mock_config_entry)
+
+    await hass.services.async_call(
+        TIME_DOMAIN,
+        "set_value",
+        {ATTR_ENTITY_ID: "time.kitchen_fountain_quiet_time_start", "time": "21:30:00"},
+        blocking=True,
+    )
+    sent = mock_welly.set_quiet_time.await_args.args[0]
+    assert sent.start == time(21, 30)
+    assert sent.end == time(7, 0)
+    assert sent.enabled is False
+    assert sent.water_enabled is False
+    assert sent.weekdays == frozenset({1, 2, 3, 4, 5})
+
+
+@pytest.mark.usefixtures("times")
+async def test_setting_the_quiet_time_end_preserves_the_rest(
+    hass: HomeAssistant, mock_welly: MagicMock
+) -> None:
+    """Setting quiet_time_end must not disturb start, water or the weekday mask."""
+    await hass.services.async_call(
+        TIME_DOMAIN,
+        "set_value",
+        {ATTR_ENTITY_ID: "time.kitchen_fountain_quiet_time_end", "time": "06:15:00"},
+        blocking=True,
+    )
+    sent = mock_welly.set_quiet_time.await_args.args[0]
+    assert sent.end == time(6, 15)
+    assert sent.start == time(22, 0)
+    assert sent.enabled is False
+    assert sent.water_enabled is False
     assert sent.weekdays == frozenset(range(7))
 
 

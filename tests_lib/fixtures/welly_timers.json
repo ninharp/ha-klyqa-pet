@@ -1,0 +1,4 @@
+{"type": "timer",
+ "dm_timer": {"enabled": true, "interval": 15, "last_descale_time": 0, "first_pairing_time": 1788615614},
+ "ndt_timer": {"enabled": false, "start": 2200, "end": 700, "water_enabled": false, "repeat": 127},
+ "water_change": [{"id": 0, "enabled": true, "start": 630, "repeat": 127}]}

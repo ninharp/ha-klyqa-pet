@@ -1,0 +1,5 @@
+{"_comment": "Constructed scenario for the water-change schedule sensor tests, not a device capture. Exercises the zero-entries path.",
+ "type": "timer",
+ "dm_timer": {"enabled": true, "interval": 15, "last_descale_time": 0, "first_pairing_time": 1788615614},
+ "ndt_timer": {"enabled": false, "start": 2200, "end": 700, "water_enabled": false, "repeat": 127},
+ "water_change": []}

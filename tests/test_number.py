@@ -1,6 +1,7 @@
 """Tests for the number platform."""
 
-from unittest.mock import MagicMock, patch
+from datetime import UTC, datetime
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from homeassistant.components.number import ATTR_VALUE, SERVICE_SET_VALUE
 from homeassistant.components.number import DOMAIN as NUMBER_DOMAIN
@@ -11,7 +12,9 @@ import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry, snapshot_platform
 from syrupy.assertion import SnapshotAssertion
 
-from .conftest import FOODY_ID, setup_integration
+from pyklyqa_pet.welly_timers import WellyTimers
+
+from .conftest import FOODY_ID, load_json, setup_integration
 
 
 @pytest.fixture
@@ -67,6 +70,44 @@ async def test_number_commands(
         blocking=True,
     )
     mock_foody.update_settings.assert_awaited_with(feed_audio_volume=70)
+
+
+async def test_descaling_interval_number_preserves_the_rest(
+    hass: HomeAssistant,
+    mock_config_entry: MockConfigEntry,
+    mock_cloud: MagicMock,
+    mock_devices: dict,
+    mock_welly: MagicMock,
+) -> None:
+    """Setting the interval must leave `enabled` and `last_descale` untouched.
+
+    The real fixture's `last_descale_time` is 0 (never descaled), which parses to
+    `None` regardless of whether it was preserved or a from-scratch object was built -
+    that case cannot tell the two apart. Use a fixture with a real timestamp instead,
+    so a broken reconstruction that drops `last_descale` would be caught.
+    """
+    document = load_json("welly_timers.json")
+    mock_welly.get_timers = AsyncMock(
+        return_value=WellyTimers.from_dict(
+            {
+                **document,
+                "dm_timer": {**document["dm_timer"], "last_descale_time": 1788615614},
+            }
+        )
+    )
+    with patch("custom_components.klyqa_pet.PLATFORMS", [Platform.NUMBER]):
+        await setup_integration(hass, mock_config_entry)
+
+    await hass.services.async_call(
+        NUMBER_DOMAIN,
+        SERVICE_SET_VALUE,
+        {ATTR_ENTITY_ID: "number.kitchen_fountain_descaling_interval", ATTR_VALUE: 20},
+        blocking=True,
+    )
+    sent = mock_welly.set_descaling_reminder.await_args.args[0]
+    assert sent.interval_days == 20
+    assert sent.enabled is True
+    assert sent.last_descale == datetime.fromtimestamp(1788615614, tz=UTC)
 
 
 @pytest.mark.usefixtures("numbers")

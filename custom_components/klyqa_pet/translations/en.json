@@ -228,6 +228,68 @@
           "description": "ID of the schedule to delete, as listed in the schedules attribute of the feeding schedules sensor."
         }
       }
+    },
+    "add_water_change": {
+      "name": "Add water-change schedule",
+      "description": "Adds a water-change schedule to a Welly water fountain. The fountain holds up to 6 schedules and assigns the ID of the new one itself, so it may take a moment to show up in the water-change schedules sensor.",
+      "fields": {
+        "device_id": {
+          "name": "Device",
+          "description": "The Welly water fountain to add the schedule to."
+        },
+        "time": {
+          "name": "Time",
+          "description": "Time of day the water change is due. The fountain stores hours and minutes only."
+        },
+        "weekdays": {
+          "name": "Weekdays",
+          "description": "Days the schedule runs on. Left empty, it runs every day."
+        },
+        "enabled": {
+          "name": "Enabled",
+          "description": "Whether the schedule is active straight away."
+        }
+      }
+    },
+    "set_water_change": {
+      "name": "Change water-change schedule",
+      "description": "Changes an existing water-change schedule of a Welly water fountain. Fields you leave out keep their current value.",
+      "fields": {
+        "device_id": {
+          "name": "Device",
+          "description": "The Welly water fountain that holds the schedule."
+        },
+        "entry_id": {
+          "name": "Entry ID",
+          "description": "ID of the schedule to change, as listed in the schedules attribute of the water-change schedules sensor."
+        },
+        "time": {
+          "name": "Time",
+          "description": "New time of day for the water change. The fountain stores hours and minutes only."
+        },
+        "weekdays": {
+          "name": "Weekdays",
+          "description": "New set of days the schedule runs on."
+        },
+        "enabled": {
+          "name": "Enabled",
+          "description": "Whether the schedule is active."
+        }
+      }
+    },
+    "delete_water_change": {
+      "name": "Delete water-change schedule",
+      "description": "Deletes a water-change schedule from a Welly water fountain.",
+      "fields": {
+        "device_id": {
+          "name": "Device",
+          "description": "The Welly water fountain that holds the schedule."
+        },
+        "entry_id": {
+          "name": "Entry ID",
+          "description": "ID of the schedule to delete, as listed in the schedules attribute of the water-change schedules sensor."
+        }
+      }
     }
   },
   "exceptions": {
@@ -237,6 +299,9 @@
     "not_a_foody": { "message": "{device} is not a Foody pet feeder; feeding schedules exist only on the Foody" },
     "unknown_schedule": { "message": "{device} has no feeding schedule with the id {schedule_id}" },
     "no_free_schedule_slot": { "message": "{device} already holds the maximum of {maximum} feeding schedules; delete one first" },
+    "not_a_welly": { "message": "{device} is not a Welly water fountain; water-change schedules exist only on the Welly" },
+    "unknown_water_change": { "message": "{device} has no water-change schedule with the id {entry_id}" },
+    "no_free_water_change_slot": { "message": "{device} already holds the maximum of {maximum} water-change schedules; delete one first" },
     "update_failed": { "message": "Updating {device} failed: {error}" },
     "rate_limited": { "message": "{device} is rate limiting requests; another client (for example the Klyqa app) is polling it at the same time" },
     "token_refresh_failed": { "message": "{device} rejected its access token and the Klyqa cloud could not be reached to refresh it" },
@@ -258,6 +323,8 @@
       "total_consumption": { "name": "Total consumption" },
       "last_drinking": { "name": "Last drinking" },
       "filter_life": { "name": "Filter life" },
+      "last_descaling": { "name": "Last descaling" },
+      "next_descaling": { "name": "Next descaling" },
       "pump_status": {
         "name": "Pump status",
         "state": {
@@ -278,6 +345,7 @@
       },
       "descaling_status": { "name": "Descaling status" },
       "light_effect": { "name": "Light effect" },
+      "water_change_schedules": { "name": "Water-change schedules" },
       "bowl_remaining": { "name": "Bowl remaining" },
       "realtime_weight": { "name": "Real-time weight" },
       "feeding_state": {
@@ -371,6 +439,9 @@
       "alert_dirty_tank_full": { "name": "Dirty tank full alert" },
       "super_power_saving_mode": { "name": "Super power saving" },
       "telemetry": { "name": "Telemetry" },
+      "quiet_time": { "name": "Quiet time" },
+      "quiet_time_water": { "name": "Water during quiet time" },
+      "descaling_reminder": { "name": "Descaling reminder" },
       "app_led": { "name": "Indicator LED" },
       "app_pet_lock": { "name": "Pet lock" },
       "beep_switch": { "name": "Beep" },
@@ -387,10 +458,13 @@
       "circulation_pump_speed": { "name": "Circulation pump speed" },
       "threshold_clean_tank_low": { "name": "Clean tank low threshold" },
       "threshold_dirty_tank_full": { "name": "Dirty tank full threshold" },
+      "descaling_interval": { "name": "Descaling interval" },
       "portions": { "name": "Portions" },
       "feed_audio_volume": { "name": "Feed audio volume" }
     },
     "time": {
+      "quiet_time_start": { "name": "Quiet time start" },
+      "quiet_time_end": { "name": "Quiet time end" },
       "sleep_start": { "name": "Sleep start" },
       "sleep_end": { "name": "Sleep end" }
     },

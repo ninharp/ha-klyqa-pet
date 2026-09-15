@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, time, timedelta
 from typing import Any
 
 from homeassistant.components.sensor import (
@@ -68,6 +68,18 @@ def _battery(level: int | None) -> int | None:
     return None if level is None or level < 0 else level
 
 
+def _next_descaling(data: KlyqaDeviceData) -> datetime | None:
+    """Return when the next descaling is due, or None if it cannot be known.
+
+    The device has never recorded a descaling until the app or a `start_descaling`
+    button press sets `last_descale`, so there is nothing to add the interval to yet.
+    """
+    last_descale = data.welly_timers.descaling.last_descale
+    if last_descale is None:
+        return None
+    return last_descale + timedelta(days=data.welly_timers.descaling.interval_days)
+
+
 def _enum(mapping: dict[int, str], value: int) -> str | None:
     return mapping.get(value)
 
@@ -107,14 +119,33 @@ def _wifi_rssi_description(
     )
 
 
+def _render_schedule_time_and_weekdays(
+    time_value: time, weekdays: frozenset[int]
+) -> dict[str, Any]:
+    """Render a schedule's time and weekdays the way every schedule sensor shows them.
+
+    Times and weekdays are rendered as readable strings rather than an HHMM
+    integer or bitmask, so a template author never has to decode them.
+    """
+    return {
+        "time": time_value.strftime("%H:%M"),
+        # sorted() states the intent of a guaranteed Sunday-first order; it is not
+        # here to work around the current CPython small-int set hashing, which
+        # already happens to iterate in ascending order.
+        "weekdays": [WEEKDAY_KEYS[day] for day in sorted(weekdays)],
+    }
+
+
 def _schedule_attributes(data: KlyqaDeviceData) -> dict[str, Any]:
     """Render the feeding-schedule list for the `schedules` attribute.
 
-    Times and weekdays are rendered as readable strings rather than an HHMM
-    integer or bitmask, so a template author never has to decode them. Slot
-    ids are positions rather than stable identities (the app may reuse a
-    freed id for an unrelated schedule), so this attribute is the only place
-    schedules are exposed at all - no entity is pinned to a particular id.
+    A slot id is the id the schedule was created with - the lowest free one
+    `add_feeding_schedule` claimed - not its position in the list the device
+    reports, which only carries the slots in use, and no stable identity either,
+    since a freed id may be reused for an unrelated schedule. So this attribute
+    is the only place schedules are exposed at all - no entity is pinned to a
+    particular id - and it is where the user reads the id that the three
+    feeding-schedule actions take.
     """
     schedules = []
     for schedule in data.foody_timers.schedules:
@@ -122,8 +153,7 @@ def _schedule_attributes(data: KlyqaDeviceData) -> dict[str, Any]:
             "schedule_id": schedule.schedule_id,
             "enabled": schedule.enabled,
             "skip_once": schedule.skip_once,
-            "time": schedule.execution_time.strftime("%H:%M"),
-            "weekdays": [WEEKDAY_KEYS[day] for day in sorted(schedule.weekdays)],
+            **_render_schedule_time_and_weekdays(schedule.execution_time, schedule.weekdays),
             "portions": schedule.portions,
             "fresh_food_mode": schedule.fresh_food_mode,
             "auto_play_voice": schedule.auto_play_voice,
@@ -131,6 +161,27 @@ def _schedule_attributes(data: KlyqaDeviceData) -> dict[str, Any]:
         if schedule.total_duration_sec:
             attrs["total_duration_sec"] = schedule.total_duration_sec
         schedules.append(attrs)
+    return {"schedules": schedules}
+
+
+def _water_change_attributes(data: KlyqaDeviceData) -> dict[str, Any]:
+    """Render the water-change entry list for the `schedules` attribute.
+
+    An entry's id is the MCU's own numbering, not its position in the list the
+    device reports - deleting an entry leaves a gap - and it is no stable
+    identity either, since a freed id may be handed to an unrelated entry next.
+    So this attribute is the only place entries are exposed at all - no entity
+    is pinned to a particular id - and it is where the user reads the id that
+    `set_water_change` and `delete_water_change` take.
+    """
+    schedules = [
+        {
+            "entry_id": entry.entry_id,
+            "enabled": entry.enabled,
+            **_render_schedule_time_and_weekdays(entry.start, entry.weekdays),
+        }
+        for entry in data.welly_timers.water_changes
+    ]
     return {"schedules": schedules}
 
 
@@ -248,6 +299,24 @@ WELLY_SENSORS: tuple[KlyqaSensorEntityDescription, ...] = (
         entity_category=EntityCategory.DIAGNOSTIC,
         entity_registry_enabled_default=False,
         value_fn=lambda data: data.welly.light_id,
+    ),
+    KlyqaSensorEntityDescription(
+        key="water_change_schedules",
+        translation_key="water_change_schedules",
+        value_fn=lambda data: sum(1 for entry in data.welly_timers.water_changes if entry.enabled),
+        attributes_fn=_water_change_attributes,
+    ),
+    KlyqaSensorEntityDescription(
+        key="last_descaling",
+        translation_key="last_descaling",
+        device_class=SensorDeviceClass.TIMESTAMP,
+        value_fn=lambda data: data.welly_timers.descaling.last_descale,
+    ),
+    KlyqaSensorEntityDescription(
+        key="next_descaling",
+        translation_key="next_descaling",
+        device_class=SensorDeviceClass.TIMESTAMP,
+        value_fn=_next_descaling,
     ),
 )
 

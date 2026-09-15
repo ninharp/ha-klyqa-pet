@@ -1,16 +1,17 @@
-"""Services of the Klyqa Pet integration: the Foody feeding schedules.
+"""Services of the Klyqa Pet integration: the schedule lists of the Foody and Welly.
 
-The Foody holds up to MAX_FEEDING_SCHEDULES schedules, addressed by a slot id. There
-is no entity shape that fits them (a variable-length list of records, created and
-deleted by the user), so they are exposed as three actions instead, alongside the
-read-only `feeding_schedules` sensor that renders the current list.
+The Foody holds up to MAX_FEEDING_SCHEDULES feeding schedules, the Welly up to
+MAX_WATER_CHANGE_ENTRIES water-change entries, each addressed by an id. There is no
+entity shape that fits either list (a variable-length list of records, created and
+deleted by the user), so both are exposed as three actions apiece, alongside the
+read-only sensors that render the current list.
 """
 
 from __future__ import annotations
 
 from collections.abc import Coroutine
 import dataclasses
-from typing import TYPE_CHECKING, Any, Final
+from typing import TYPE_CHECKING, Any, Final, Literal
 
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.core import HomeAssistant, ServiceCall, callback
@@ -25,8 +26,10 @@ from pyklyqa_pet import (
     KlyqaAuthError,
     KlyqaConnectionError,
     KlyqaDeviceError,
+    WaterChangeEntry,
 )
 from pyklyqa_pet.foody_timers import MAX_DURATION_SEC, MAX_FEEDING_SCHEDULES, MAX_PORTIONS
+from pyklyqa_pet.welly_timers import MAX_WATER_CHANGE_ENTRIES
 
 from .const import DOMAIN, WEEKDAY_KEYS
 from .coordinator import KlyqaDeviceCoordinator
@@ -37,9 +40,13 @@ if TYPE_CHECKING:
 SERVICE_ADD_FEEDING_SCHEDULE: Final = "add_feeding_schedule"
 SERVICE_SET_FEEDING_SCHEDULE: Final = "set_feeding_schedule"
 SERVICE_DELETE_FEEDING_SCHEDULE: Final = "delete_feeding_schedule"
+SERVICE_ADD_WATER_CHANGE: Final = "add_water_change"
+SERVICE_SET_WATER_CHANGE: Final = "set_water_change"
+SERVICE_DELETE_WATER_CHANGE: Final = "delete_water_change"
 
 ATTR_DEVICE_ID: Final = "device_id"
 ATTR_SCHEDULE_ID: Final = "schedule_id"
+ATTR_ENTRY_ID: Final = "entry_id"
 ATTR_TIME: Final = "time"
 ATTR_PORTIONS: Final = "portions"
 ATTR_DURATION: Final = "duration"
@@ -91,6 +98,38 @@ DELETE_SCHEMA: Final = vol.Schema(
     }
 )
 
+# The Welly's entries live in a fixed array of MAX_WATER_CHANGE_ENTRIES slots on the
+# MCU, which draws their ids from that same range, so an id outside it can never exist.
+# The id is the MCU's own numbering, not the entry's position in the list the device
+# reports: deleting an entry leaves a gap rather than renumbering the rest.
+_ENTRY_ID = vol.All(vol.Coerce(int), vol.Range(min=0, max=MAX_WATER_CHANGE_ENTRIES - 1))
+
+ADD_WATER_CHANGE_SCHEMA: Final = vol.Schema(
+    {
+        vol.Required(ATTR_DEVICE_ID): cv.string,
+        vol.Required(ATTR_TIME): cv.time,
+        vol.Optional(ATTR_WEEKDAYS): _WEEKDAYS,
+        vol.Optional(ATTR_ENABLED): cv.boolean,
+    }
+)
+
+SET_WATER_CHANGE_SCHEMA: Final = vol.Schema(
+    {
+        vol.Required(ATTR_DEVICE_ID): cv.string,
+        vol.Required(ATTR_ENTRY_ID): _ENTRY_ID,
+        vol.Optional(ATTR_TIME): cv.time,
+        vol.Optional(ATTR_WEEKDAYS): _WEEKDAYS,
+        vol.Optional(ATTR_ENABLED): cv.boolean,
+    }
+)
+
+DELETE_WATER_CHANGE_SCHEMA: Final = vol.Schema(
+    {
+        vol.Required(ATTR_DEVICE_ID): cv.string,
+        vol.Required(ATTR_ENTRY_ID): _ENTRY_ID,
+    }
+)
+
 # Defaults of a newly created schedule: on, not skipped, every day, mode flag off,
 # silent, and no duration - which is what every captured schedule carries.
 DEFAULT_ENABLED: Final = True
@@ -105,8 +144,21 @@ def _decode_weekdays(keys: list[str]) -> frozenset[int]:
     return frozenset(WEEKDAY_KEYS.index(key) for key in keys)
 
 
-def _async_resolve_coordinator(hass: HomeAssistant, device_id: str) -> KlyqaDeviceCoordinator:
-    """Return the Foody coordinator behind a Home Assistant device id.
+# The message for a target of the wrong kind names what the action needs, so each
+# device type carries its own key. Only the two types that own schedule lists have one,
+# and the parameter is typed to them - a third would have to add its key here.
+_WrongTypeDevice = Literal[DeviceType.FOODY, DeviceType.WELLY]
+
+_WRONG_TYPE_KEYS: Final[dict[_WrongTypeDevice, str]] = {
+    DeviceType.FOODY: "not_a_foody",
+    DeviceType.WELLY: "not_a_welly",
+}
+
+
+def _async_resolve_coordinator(
+    hass: HomeAssistant, device_id: str, device_type: _WrongTypeDevice
+) -> KlyqaDeviceCoordinator:
+    """Return the coordinator of that device type behind a Home Assistant device id.
 
     Services are targeted at a device-registry id, while the hub keys its coordinators
     by the device's `local_device_id`; the registry entry's `(DOMAIN, local_device_id)`
@@ -147,10 +199,10 @@ def _async_resolve_coordinator(hass: HomeAssistant, device_id: str) -> KlyqaDevi
             translation_key="device_not_available",
             translation_placeholders={"device": name},
         )
-    if coordinator.device_type is not DeviceType.FOODY:
+    if coordinator.device_type is not device_type:
         raise ServiceValidationError(
             translation_domain=DOMAIN,
-            translation_key="not_a_foody",
+            translation_key=_WRONG_TYPE_KEYS[device_type],
             translation_placeholders={"device": coordinator.device_name},
         )
     return coordinator
@@ -215,11 +267,14 @@ async def _async_write(
 ) -> Any:
     """Await a timer write, dropping the cached document even when the write fails.
 
-    The firmware mutates its own shadow *before* the step that can fail: a delete clears
-    the slot and only then tells the MCU, and a set stores the entry and only then sends
-    it on (device_timers.c). A rejected write can therefore still have changed the
-    device, and keeping the pre-write document would leave the `feeding_schedules`
-    sensor listing a schedule that is already gone. Marking the cache stale lets the
+    A rejected write can still have changed the device. On the Foody the firmware
+    mutates its own shadow *before* the step that can fail: a delete clears the slot and
+    only then tells the MCU, and a set stores the entry and only then sends it on
+    (device_timers.c). On the Welly nothing local changes at all - the entry goes
+    straight to the fountain's MCU, which may have accepted it even when the ESP answers
+    with an error. Either way, keeping the pre-write document would leave the
+    `feeding_schedules` or `water_change_schedules` sensor listing an entry that is
+    already gone. Marking the cache stale lets the
     next scheduled poll re-read it; the failure path deliberately does not force a
     refresh, which would only put another request to a device that has just refused one.
     """
@@ -238,7 +293,7 @@ async def _async_finish(coordinator: KlyqaDeviceCoordinator) -> None:
 
 async def _async_add_feeding_schedule(call: ServiceCall) -> None:
     """Create a feeding schedule in the lowest free slot."""
-    coordinator = _async_resolve_coordinator(call.hass, call.data[ATTR_DEVICE_ID])
+    coordinator = _async_resolve_coordinator(call.hass, call.data[ATTR_DEVICE_ID], DeviceType.FOODY)
     # The free slot is derived from the list that was just read, so nothing else may
     # write to this device between the read and the write that claims the slot.
     async with coordinator.write_lock:
@@ -281,7 +336,7 @@ async def _async_add_feeding_schedule(call: ServiceCall) -> None:
 
 async def _async_set_feeding_schedule(call: ServiceCall) -> None:
     """Change an existing feeding schedule, leaving omitted fields as they are."""
-    coordinator = _async_resolve_coordinator(call.hass, call.data[ATTR_DEVICE_ID])
+    coordinator = _async_resolve_coordinator(call.hass, call.data[ATTR_DEVICE_ID], DeviceType.FOODY)
     schedule_id: int = call.data[ATTR_SCHEDULE_ID]
     # The write is the schedule that was just read with a few fields replaced, so a
     # change landing in between would be silently dropped by this one.
@@ -314,7 +369,7 @@ async def _async_set_feeding_schedule(call: ServiceCall) -> None:
 
 async def _async_delete_feeding_schedule(call: ServiceCall) -> None:
     """Delete a feeding schedule by its slot id."""
-    coordinator = _async_resolve_coordinator(call.hass, call.data[ATTR_DEVICE_ID])
+    coordinator = _async_resolve_coordinator(call.hass, call.data[ATTR_DEVICE_ID], DeviceType.FOODY)
     schedule_id: int = call.data[ATTR_SCHEDULE_ID]
     # The id is only known to mean what the user meant for as long as the list that was
     # just read still stands, so the delete belongs inside the same lock.
@@ -325,16 +380,123 @@ async def _async_delete_feeding_schedule(call: ServiceCall) -> None:
         await _async_finish(coordinator)
 
 
+async def _async_read_water_changes(
+    coordinator: KlyqaDeviceCoordinator,
+) -> tuple[WaterChangeEntry, ...]:
+    """Read the water-change entries straight from the device, never from the cache.
+
+    Same reasoning as the feeding schedules: the list lives in the ESP's shadow of the
+    fountain's MCU, an entry id is the MCU's own numbering rather than a stable identity
+    (a freed id may be handed to an unrelated entry next), and a cached id may by now
+    address a different entry than the user means.
+    """
+    timers = await _async_device_call(coordinator, coordinator.welly_device.get_timers())
+    entries: tuple[WaterChangeEntry, ...] = timers.water_changes
+    return entries
+
+
+def _find_entry(
+    entries: tuple[WaterChangeEntry, ...], entry_id: int, device: str
+) -> WaterChangeEntry:
+    """Return the entry with that id, or explain that the device has no such entry."""
+    for entry in entries:
+        if entry.entry_id == entry_id:
+            return entry
+    raise ServiceValidationError(
+        translation_domain=DOMAIN,
+        translation_key="unknown_water_change",
+        translation_placeholders={"device": device, "entry_id": str(entry_id)},
+    )
+
+
+async def _async_add_water_change(call: ServiceCall) -> None:
+    """Create a water-change schedule; the MCU assigns its id.
+
+    Unlike the Foody's `add`, this picks no slot: the firmware forwards the entry to
+    the MCU without an id and the MCU numbers it, reporting the id back asynchronously.
+    The new entry may therefore not yet appear in the read that follows the write, and
+    the service cannot tell the caller which id was created - the `water_change_schedules`
+    sensor lists them once the device has caught up.
+    """
+    coordinator = _async_resolve_coordinator(call.hass, call.data[ATTR_DEVICE_ID], DeviceType.WELLY)
+    # The cap is checked against the list that was just read, so nothing else may write
+    # to this device between that read and the write that fills the last free entry.
+    async with coordinator.write_lock:
+        entries = await _async_read_water_changes(coordinator)
+        if len(entries) >= MAX_WATER_CHANGE_ENTRIES:
+            # A full device is answered here with a clear message instead of the
+            # firmware's terse rejection.
+            raise ServiceValidationError(
+                translation_domain=DOMAIN,
+                translation_key="no_free_water_change_slot",
+                translation_placeholders={
+                    "device": coordinator.device_name,
+                    "maximum": str(MAX_WATER_CHANGE_ENTRIES),
+                },
+            )
+        weekdays = call.data.get(ATTR_WEEKDAYS)
+        entry = WaterChangeEntry(
+            # Ignored: `add` serialises the entry without its id (to_dict(include_id=False)).
+            entry_id=0,
+            enabled=call.data.get(ATTR_ENABLED, DEFAULT_ENABLED),
+            start=call.data[ATTR_TIME],
+            weekdays=_decode_weekdays(weekdays) if weekdays else frozenset(range(7)),
+        )
+        await _async_write(coordinator, coordinator.welly_device.add_water_change(entry))
+        await _async_finish(coordinator)
+
+
+async def _async_set_water_change(call: ServiceCall) -> None:
+    """Change an existing water-change schedule, leaving omitted fields as they are."""
+    coordinator = _async_resolve_coordinator(call.hass, call.data[ATTR_DEVICE_ID], DeviceType.WELLY)
+    entry_id: int = call.data[ATTR_ENTRY_ID]
+    # The write is the entry that was just read with a few fields replaced, so a change
+    # landing in between would be silently dropped by this one.
+    async with coordinator.write_lock:
+        entries = await _async_read_water_changes(coordinator)
+        existing = _find_entry(entries, entry_id, coordinator.device_name)
+        changes: dict[str, Any] = {}
+        if (start := call.data.get(ATTR_TIME)) is not None:
+            changes["start"] = start
+        if (weekdays := call.data.get(ATTR_WEEKDAYS)) is not None:
+            changes["weekdays"] = _decode_weekdays(weekdays)
+        if ATTR_ENABLED in call.data:
+            changes["enabled"] = call.data[ATTR_ENABLED]
+        entry = dataclasses.replace(existing, **changes)
+        await _async_write(coordinator, coordinator.welly_device.set_water_change(entry))
+        await _async_finish(coordinator)
+
+
+async def _async_delete_water_change(call: ServiceCall) -> None:
+    """Delete a water-change schedule by its entry id.
+
+    One id per call: the firmware also accepts an array, but a partial failure across
+    one has no legible error story, so it is out of scope.
+    """
+    coordinator = _async_resolve_coordinator(call.hass, call.data[ATTR_DEVICE_ID], DeviceType.WELLY)
+    entry_id: int = call.data[ATTR_ENTRY_ID]
+    # The id only means what the user meant for as long as the list that was just read
+    # still stands, so the delete belongs inside the same lock.
+    async with coordinator.write_lock:
+        entries = await _async_read_water_changes(coordinator)
+        _find_entry(entries, entry_id, coordinator.device_name)
+        await _async_write(coordinator, coordinator.welly_device.delete_water_change(entry_id))
+        await _async_finish(coordinator)
+
+
 _SERVICES: Final = (
     (SERVICE_ADD_FEEDING_SCHEDULE, _async_add_feeding_schedule, ADD_SCHEMA),
     (SERVICE_SET_FEEDING_SCHEDULE, _async_set_feeding_schedule, SET_SCHEMA),
     (SERVICE_DELETE_FEEDING_SCHEDULE, _async_delete_feeding_schedule, DELETE_SCHEMA),
+    (SERVICE_ADD_WATER_CHANGE, _async_add_water_change, ADD_WATER_CHANGE_SCHEMA),
+    (SERVICE_SET_WATER_CHANGE, _async_set_water_change, SET_WATER_CHANGE_SCHEMA),
+    (SERVICE_DELETE_WATER_CHANGE, _async_delete_water_change, DELETE_WATER_CHANGE_SCHEMA),
 )
 
 
 @callback
 def async_setup_services(hass: HomeAssistant) -> None:
-    """Register the feeding-schedule services.
+    """Register the feeding-schedule and water-change services.
 
     Called from async_setup, so the actions exist as soon as the integration is loaded
     and stay for the lifetime of Home Assistant - independent of how many config entries

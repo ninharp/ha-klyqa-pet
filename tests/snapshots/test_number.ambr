@@ -300,6 +300,66 @@
     'state': '500',
   })
 # ---
+# name: test_numbers[number.kitchen_fountain_descaling_interval-entry]
+  EntityRegistryEntrySnapshot({
+    'aliases': list([
+      None,
+    ]),
+    'area_id': None,
+    'capabilities': dict({
+      <NumberEntityCapabilityAttribute.MAX: 'max'>: 30,
+      <NumberEntityCapabilityAttribute.MIN: 'min'>: 1,
+      <NumberEntityCapabilityAttribute.MODE: 'mode'>: <NumberMode.AUTO: 'auto'>,
+      <NumberEntityCapabilityAttribute.STEP: 'step'>: 1,
+    }),
+    'config_entry_id': <ANY>,
+    'config_subentry_id': <ANY>,
+    'device_class': None,
+    'device_id': <ANY>,
+    'disabled_by': None,
+    'domain': 'number',
+    'entity_category': <EntityCategory.CONFIG: 'config'>,
+    'entity_id': 'number.kitchen_fountain_descaling_interval',
+    'has_entity_name': True,
+    'hidden_by': None,
+    'icon': None,
+    'id': <ANY>,
+    'labels': set({
+    }),
+    'name': None,
+    'object_id_base': 'Descaling interval',
+    'options': dict({
+    }),
+    'original_device_class': None,
+    'original_icon': None,
+    'original_name': 'Descaling interval',
+    'platform': 'klyqa_pet',
+    'previous_unique_id': None,
+    'suggested_object_id': None,
+    'supported_features': 0,
+    'translation_key': 'descaling_interval',
+    'unique_id': '188B0EAF2D7C_descaling_interval',
+    'unit_of_measurement': <UnitOfTime.DAYS: 'd'>,
+  })
+# ---
+# name: test_numbers[number.kitchen_fountain_descaling_interval-state]
+  StateSnapshot({
+    'attributes': ReadOnlyDict({
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Kitchen fountain Descaling interval',
+      <NumberEntityCapabilityAttribute.MAX: 'max'>: 30,
+      <NumberEntityCapabilityAttribute.MIN: 'min'>: 1,
+      <NumberEntityCapabilityAttribute.MODE: 'mode'>: <NumberMode.AUTO: 'auto'>,
+      <NumberEntityCapabilityAttribute.STEP: 'step'>: 1,
+      <EntityStateAttribute.UNIT_OF_MEASUREMENT: 'unit_of_measurement'>: <UnitOfTime.DAYS: 'd'>,
+    }),
+    'context': <ANY>,
+    'entity_id': 'number.kitchen_fountain_descaling_interval',
+    'last_changed': <ANY>,
+    'last_reported': <ANY>,
+    'last_updated': <ANY>,
+    'state': '15',
+  })
+# ---
 # name: test_numbers[number.kitchen_fountain_dirty_tank_full_threshold-entry]
   EntityRegistryEntrySnapshot({
     'aliases': list([

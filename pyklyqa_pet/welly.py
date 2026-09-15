@@ -7,6 +7,7 @@ from enum import IntEnum
 from typing import Any
 
 from .device import KlyqaDevice, _as_bool, _as_int
+from .welly_timers import DescalingReminder, QuietTime, WaterChangeEntry, WellyTimers
 
 
 class WellyMode(IntEnum):
@@ -180,3 +181,58 @@ class WellyDevice(KlyqaDevice):
     async def update_settings(self, **changes: bool | int) -> WellySettings:
         """Change one or more settings and return the resulting settings."""
         return WellySettings.from_dict(await self.request("POST", "device/settings", dict(changes)))
+
+    async def get_timers(self) -> WellyTimers:
+        """Return the quiet-time window, descaling reminder and water-change schedules."""
+        return WellyTimers.from_dict(await self.request("GET", "device/timer"))
+
+    async def _timer_write(self, payload: dict[str, Any]) -> WellyTimers:
+        """Send a timer write and return the state read back afterwards.
+
+        The firmware answers a write with `{"type": "success"}` and nothing else, so the
+        fresh document takes a second request. A rejected write answers `type: "error"`,
+        which `request` already raises on - so this never reaches the read.
+
+        The write is not applied on the ESP but forwarded to the fountain's MCU, so
+        nothing in the protocol promises that the read-back already shows it. In
+        practice it always does, because the MCU round-trip finishes well inside the
+        spacing this client keeps between requests - verified on a real device for all
+        three write types (a dm_timer interval change, an ndt_timer enable, and an
+        hw_timer add, which even reports the MCU-assigned id straight away). Treat that
+        as an observed dependency on the timing, not as a guarantee.
+        """
+        await self.request("POST", "device/timer", payload)
+        return await self.get_timers()
+
+    async def set_quiet_time(self, quiet_time: QuietTime) -> WellyTimers:
+        """Set the quiet-time (do-not-disturb) window and return the resulting timers."""
+        return await self._timer_write({"type": "ndt_timer", "data": quiet_time.to_dict()})
+
+    async def set_descaling_reminder(self, reminder: DescalingReminder) -> WellyTimers:
+        """Set the descaling reminder and return the resulting timers.
+
+        Named distinctly from `set_descaling` (which starts/stops descaling mode via
+        `device/state`) to avoid colliding with that existing, unrelated method.
+        """
+        return await self._timer_write({"type": "dm_timer", "data": reminder.to_dict()})
+
+    async def add_water_change(self, entry: WaterChangeEntry) -> WellyTimers:
+        """Create a water-change schedule and return the resulting timers.
+
+        The MCU assigns the id, so it must not be sent.
+        """
+        return await self._timer_write(
+            {"type": "hw_timer", "action": "add", "data": entry.to_dict(include_id=False)}
+        )
+
+    async def set_water_change(self, entry: WaterChangeEntry) -> WellyTimers:
+        """Modify an existing water-change schedule and return the resulting timers."""
+        return await self._timer_write(
+            {"type": "hw_timer", "action": "mod", "data": entry.to_dict(include_id=True)}
+        )
+
+    async def delete_water_change(self, entry_id: int) -> WellyTimers:
+        """Delete a water-change schedule by id and return the resulting timers."""
+        return await self._timer_write(
+            {"type": "hw_timer", "action": "del", "data": {"id": entry_id}}
+        )

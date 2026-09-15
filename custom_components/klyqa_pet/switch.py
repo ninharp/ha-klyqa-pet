@@ -26,8 +26,8 @@ class KlyqaSwitchEntityDescription(SwitchEntityDescription):
 
     is_on_fn: Callable[[KlyqaDeviceData], bool]
     set_fn: Callable[[KlyqaDeviceCoordinator, bool], Coroutine[Any, Any, Any]]
-    # Set on the switches whose `set_fn` writes the Foody's timer document, so a failed
-    # write drops the cached copy - see KlyqaPetEntity._async_send.
+    # Set on the switches whose `set_fn` writes the Welly's or the Foody's timer
+    # document, so a failed write drops the cached copy - see KlyqaPetEntity._async_send.
     writes_timers: bool = False
 
 
@@ -65,6 +65,47 @@ WELLY_SWITCHES: tuple[KlyqaSwitchEntityDescription, ...] = (
     _welly_setting("alert_dirty_tank_full"),
     _welly_setting("super_power_saving_mode"),
     _welly_setting("telemetry"),
+    KlyqaSwitchEntityDescription(
+        key="quiet_time",
+        translation_key="quiet_time",
+        entity_category=EntityCategory.CONFIG,
+        is_on_fn=lambda data: data.welly_timers.quiet_time.enabled,
+        # Only the `enabled` flag comes from this switch; start, end, the water flag
+        # and the weekday mask are set elsewhere (the app, the `time` entities, or the
+        # water switch) and must survive a toggle untouched, so the write is built from
+        # the coordinator's own cached quiet-time window via `replace`, not from
+        # scratch.
+        set_fn=lambda coordinator, on: coordinator.welly_device.set_quiet_time(
+            replace(coordinator.data.welly_timers.quiet_time, enabled=on)
+        ),
+        writes_timers=True,
+    ),
+    KlyqaSwitchEntityDescription(
+        key="quiet_time_water",
+        translation_key="quiet_time_water",
+        entity_category=EntityCategory.CONFIG,
+        is_on_fn=lambda data: data.welly_timers.quiet_time.water_enabled,
+        # Only `water_enabled` comes from this switch; the rest of the quiet-time
+        # window must survive untouched - see the `quiet_time` switch above.
+        set_fn=lambda coordinator, on: coordinator.welly_device.set_quiet_time(
+            replace(coordinator.data.welly_timers.quiet_time, water_enabled=on)
+        ),
+        writes_timers=True,
+    ),
+    KlyqaSwitchEntityDescription(
+        key="descaling_reminder",
+        translation_key="descaling_reminder",
+        entity_category=EntityCategory.CONFIG,
+        is_on_fn=lambda data: data.welly_timers.descaling.enabled,
+        # Only `enabled` comes from this switch; `interval_days` and `last_descale`
+        # are set elsewhere (the app, or the `descaling_interval` number) and must
+        # survive a toggle untouched, so the write is built from the coordinator's own
+        # cached descaling reminder via `replace`, not from scratch.
+        set_fn=lambda coordinator, on: coordinator.welly_device.set_descaling_reminder(
+            replace(coordinator.data.welly_timers.descaling, enabled=on)
+        ),
+        writes_timers=True,
+    ),
 )
 
 FOODY_SWITCHES: tuple[KlyqaSwitchEntityDescription, ...] = (
@@ -146,16 +187,23 @@ class KlyqaSwitch(KlyqaPetEntity, SwitchEntity):
         """Return the current state."""
         return self.entity_description.is_on_fn(self.coordinator.data)
 
+    async def _async_set(self, on: bool) -> None:
+        """Write the new value, through the timer path where the switch needs it."""
+        description = self.entity_description
+        if description.writes_timers:
+            # `set_fn` builds its write from the coordinator's cached timer document,
+            # so it is handed over as a factory to be called inside the write lock -
+            # see KlyqaPetEntity._async_send.
+            await self._async_send(
+                lambda: description.set_fn(self.coordinator, on), writes_timers=True
+            )
+            return
+        await self._async_send(description.set_fn(self.coordinator, on))
+
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn the setting on."""
-        await self._async_send(
-            self.entity_description.set_fn(self.coordinator, True),
-            writes_timers=self.entity_description.writes_timers,
-        )
+        await self._async_set(True)
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the setting off."""
-        await self._async_send(
-            self.entity_description.set_fn(self.coordinator, False),
-            writes_timers=self.entity_description.writes_timers,
-        )
+        await self._async_set(False)

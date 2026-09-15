@@ -99,3 +99,103 @@
     'state': '22:00:00',
   })
 # ---
+# name: test_times[time.kitchen_fountain_quiet_time_end-entry]
+  EntityRegistryEntrySnapshot({
+    'aliases': list([
+      None,
+    ]),
+    'area_id': None,
+    'capabilities': None,
+    'config_entry_id': <ANY>,
+    'config_subentry_id': <ANY>,
+    'device_class': None,
+    'device_id': <ANY>,
+    'disabled_by': None,
+    'domain': 'time',
+    'entity_category': <EntityCategory.CONFIG: 'config'>,
+    'entity_id': 'time.kitchen_fountain_quiet_time_end',
+    'has_entity_name': True,
+    'hidden_by': None,
+    'icon': None,
+    'id': <ANY>,
+    'labels': set({
+    }),
+    'name': None,
+    'object_id_base': 'Quiet time end',
+    'options': dict({
+    }),
+    'original_device_class': None,
+    'original_icon': None,
+    'original_name': 'Quiet time end',
+    'platform': 'klyqa_pet',
+    'previous_unique_id': None,
+    'suggested_object_id': None,
+    'supported_features': 0,
+    'translation_key': 'quiet_time_end',
+    'unique_id': '188B0EAF2D7C_quiet_time_end',
+    'unit_of_measurement': None,
+  })
+# ---
+# name: test_times[time.kitchen_fountain_quiet_time_end-state]
+  StateSnapshot({
+    'attributes': ReadOnlyDict({
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Kitchen fountain Quiet time end',
+    }),
+    'context': <ANY>,
+    'entity_id': 'time.kitchen_fountain_quiet_time_end',
+    'last_changed': <ANY>,
+    'last_reported': <ANY>,
+    'last_updated': <ANY>,
+    'state': '07:00:00',
+  })
+# ---
+# name: test_times[time.kitchen_fountain_quiet_time_start-entry]
+  EntityRegistryEntrySnapshot({
+    'aliases': list([
+      None,
+    ]),
+    'area_id': None,
+    'capabilities': None,
+    'config_entry_id': <ANY>,
+    'config_subentry_id': <ANY>,
+    'device_class': None,
+    'device_id': <ANY>,
+    'disabled_by': None,
+    'domain': 'time',
+    'entity_category': <EntityCategory.CONFIG: 'config'>,
+    'entity_id': 'time.kitchen_fountain_quiet_time_start',
+    'has_entity_name': True,
+    'hidden_by': None,
+    'icon': None,
+    'id': <ANY>,
+    'labels': set({
+    }),
+    'name': None,
+    'object_id_base': 'Quiet time start',
+    'options': dict({
+    }),
+    'original_device_class': None,
+    'original_icon': None,
+    'original_name': 'Quiet time start',
+    'platform': 'klyqa_pet',
+    'previous_unique_id': None,
+    'suggested_object_id': None,
+    'supported_features': 0,
+    'translation_key': 'quiet_time_start',
+    'unique_id': '188B0EAF2D7C_quiet_time_start',
+    'unit_of_measurement': None,
+  })
+# ---
+# name: test_times[time.kitchen_fountain_quiet_time_start-state]
+  StateSnapshot({
+    'attributes': ReadOnlyDict({
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Kitchen fountain Quiet time start',
+    }),
+    'context': <ANY>,
+    'entity_id': 'time.kitchen_fountain_quiet_time_start',
+    'last_changed': <ANY>,
+    'last_reported': <ANY>,
+    'last_updated': <ANY>,
+    'state': '22:00:00',
+  })
+# ---

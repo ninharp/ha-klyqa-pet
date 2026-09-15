@@ -26,7 +26,15 @@ from .exceptions import (
 from .foody import FoodyDevice, FoodySettings, FoodyState
 from .foody_timers import FeedingSchedule, FoodyTimers, SleepMode
 from .strype import StrypeDevice, StrypeState
+from .timecodes import (
+    decode_hhmm,
+    decode_hhmm_lenient,
+    decode_weekdays,
+    encode_hhmm,
+    encode_weekdays,
+)
 from .welly import WellyDevice, WellyMode, WellySettings, WellyState
+from .welly_timers import DescalingReminder, QuietTime, WaterChangeEntry, WellyTimers
 
 __version__ = "0.3.1"
 
@@ -58,6 +66,7 @@ __all__ = [
     "AirPurifierState",
     "CloudApp",
     "CloudDevice",
+    "DescalingReminder",
     "DeviceType",
     "DiscoveredDevice",
     "Environment",
@@ -73,15 +82,23 @@ __all__ = [
     "KlyqaDeviceError",
     "KlyqaError",
     "KlyqaRateLimitError",
+    "QuietTime",
     "SleepMode",
     "StrypeDevice",
     "StrypeState",
     "SystemInfo",
+    "WaterChangeEntry",
     "WellyDevice",
     "WellyMode",
     "WellySettings",
     "WellyState",
+    "WellyTimers",
     "create_device",
+    "decode_hhmm",
+    "decode_hhmm_lenient",
+    "decode_weekdays",
     "device_type_from_product_id",
+    "encode_hhmm",
+    "encode_weekdays",
     "parse_zeroconf_properties",
 ]

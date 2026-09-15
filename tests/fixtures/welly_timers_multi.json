@@ -1,0 +1,8 @@
+{"_comment": "Constructed scenario for the water-change schedule sensor tests, not a device capture. Exercises enabled-only counting, a partial weekday mask that pins the bit-to-day decoding, a disabled entry, and gapped entry ids (the MCU numbers the entries and deleting one leaves a gap), so an id can never be confused with its position in the list.",
+ "type": "timer",
+ "dm_timer": {"enabled": true, "interval": 15, "last_descale_time": 0, "first_pairing_time": 1788615614},
+ "ndt_timer": {"enabled": false, "start": 2200, "end": 700, "water_enabled": false, "repeat": 127},
+ "water_change": [
+   {"id": 0, "enabled": true, "start": 1805, "repeat": 42},
+   {"id": 4, "enabled": false, "start": 0, "repeat": 65}
+ ]}

@@ -399,6 +399,56 @@
     'state': 'on',
   })
 # ---
+# name: test_switches[switch.kitchen_fountain_descaling_reminder-entry]
+  EntityRegistryEntrySnapshot({
+    'aliases': list([
+      None,
+    ]),
+    'area_id': None,
+    'capabilities': None,
+    'config_entry_id': <ANY>,
+    'config_subentry_id': <ANY>,
+    'device_class': None,
+    'device_id': <ANY>,
+    'disabled_by': None,
+    'domain': 'switch',
+    'entity_category': <EntityCategory.CONFIG: 'config'>,
+    'entity_id': 'switch.kitchen_fountain_descaling_reminder',
+    'has_entity_name': True,
+    'hidden_by': None,
+    'icon': None,
+    'id': <ANY>,
+    'labels': set({
+    }),
+    'name': None,
+    'object_id_base': 'Descaling reminder',
+    'options': dict({
+    }),
+    'original_device_class': None,
+    'original_icon': None,
+    'original_name': 'Descaling reminder',
+    'platform': 'klyqa_pet',
+    'previous_unique_id': None,
+    'suggested_object_id': None,
+    'supported_features': 0,
+    'translation_key': 'descaling_reminder',
+    'unique_id': '188B0EAF2D7C_descaling_reminder',
+    'unit_of_measurement': None,
+  })
+# ---
+# name: test_switches[switch.kitchen_fountain_descaling_reminder-state]
+  StateSnapshot({
+    'attributes': ReadOnlyDict({
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Kitchen fountain Descaling reminder',
+    }),
+    'context': <ANY>,
+    'entity_id': 'switch.kitchen_fountain_descaling_reminder',
+    'last_changed': <ANY>,
+    'last_reported': <ANY>,
+    'last_updated': <ANY>,
+    'state': 'on',
+  })
+# ---
 # name: test_switches[switch.kitchen_fountain_dirty_tank_full_alert-entry]
   EntityRegistryEntrySnapshot({
     'aliases': list([
@@ -549,6 +599,56 @@
     'state': 'on',
   })
 # ---
+# name: test_switches[switch.kitchen_fountain_quiet_time-entry]
+  EntityRegistryEntrySnapshot({
+    'aliases': list([
+      None,
+    ]),
+    'area_id': None,
+    'capabilities': None,
+    'config_entry_id': <ANY>,
+    'config_subentry_id': <ANY>,
+    'device_class': None,
+    'device_id': <ANY>,
+    'disabled_by': None,
+    'domain': 'switch',
+    'entity_category': <EntityCategory.CONFIG: 'config'>,
+    'entity_id': 'switch.kitchen_fountain_quiet_time',
+    'has_entity_name': True,
+    'hidden_by': None,
+    'icon': None,
+    'id': <ANY>,
+    'labels': set({
+    }),
+    'name': None,
+    'object_id_base': 'Quiet time',
+    'options': dict({
+    }),
+    'original_device_class': None,
+    'original_icon': None,
+    'original_name': 'Quiet time',
+    'platform': 'klyqa_pet',
+    'previous_unique_id': None,
+    'suggested_object_id': None,
+    'supported_features': 0,
+    'translation_key': 'quiet_time',
+    'unique_id': '188B0EAF2D7C_quiet_time',
+    'unit_of_measurement': None,
+  })
+# ---
+# name: test_switches[switch.kitchen_fountain_quiet_time-state]
+  StateSnapshot({
+    'attributes': ReadOnlyDict({
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Kitchen fountain Quiet time',
+    }),
+    'context': <ANY>,
+    'entity_id': 'switch.kitchen_fountain_quiet_time',
+    'last_changed': <ANY>,
+    'last_reported': <ANY>,
+    'last_updated': <ANY>,
+    'state': 'off',
+  })
+# ---
 # name: test_switches[switch.kitchen_fountain_sensor_mode_light-entry]
   EntityRegistryEntrySnapshot({
     'aliases': list([
@@ -697,6 +797,56 @@
     'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': 'on',
+  })
+# ---
+# name: test_switches[switch.kitchen_fountain_water_during_quiet_time-entry]
+  EntityRegistryEntrySnapshot({
+    'aliases': list([
+      None,
+    ]),
+    'area_id': None,
+    'capabilities': None,
+    'config_entry_id': <ANY>,
+    'config_subentry_id': <ANY>,
+    'device_class': None,
+    'device_id': <ANY>,
+    'disabled_by': None,
+    'domain': 'switch',
+    'entity_category': <EntityCategory.CONFIG: 'config'>,
+    'entity_id': 'switch.kitchen_fountain_water_during_quiet_time',
+    'has_entity_name': True,
+    'hidden_by': None,
+    'icon': None,
+    'id': <ANY>,
+    'labels': set({
+    }),
+    'name': None,
+    'object_id_base': 'Water during quiet time',
+    'options': dict({
+    }),
+    'original_device_class': None,
+    'original_icon': None,
+    'original_name': 'Water during quiet time',
+    'platform': 'klyqa_pet',
+    'previous_unique_id': None,
+    'suggested_object_id': None,
+    'supported_features': 0,
+    'translation_key': 'quiet_time_water',
+    'unique_id': '188B0EAF2D7C_quiet_time_water',
+    'unit_of_measurement': None,
+  })
+# ---
+# name: test_switches[switch.kitchen_fountain_water_during_quiet_time-state]
+  StateSnapshot({
+    'attributes': ReadOnlyDict({
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Kitchen fountain Water during quiet time',
+    }),
+    'context': <ANY>,
+    'entity_id': 'switch.kitchen_fountain_water_during_quiet_time',
+    'last_changed': <ANY>,
+    'last_reported': <ANY>,
+    'last_updated': <ANY>,
+    'state': 'off',
   })
 # ---
 # name: test_switches[switch.klyqa_airpurifier_e85dfc_child_lock-entry]

@@ -1417,6 +1417,57 @@
     'state': '2025-09-04T12:46:40+00:00',
   })
 # ---
+# name: test_sensors[sensor.kitchen_fountain_last_descaling-entry]
+  EntityRegistryEntrySnapshot({
+    'aliases': list([
+      None,
+    ]),
+    'area_id': None,
+    'capabilities': None,
+    'config_entry_id': <ANY>,
+    'config_subentry_id': <ANY>,
+    'device_class': None,
+    'device_id': <ANY>,
+    'disabled_by': None,
+    'domain': 'sensor',
+    'entity_category': None,
+    'entity_id': 'sensor.kitchen_fountain_last_descaling',
+    'has_entity_name': True,
+    'hidden_by': None,
+    'icon': None,
+    'id': <ANY>,
+    'labels': set({
+    }),
+    'name': None,
+    'object_id_base': 'Last descaling',
+    'options': dict({
+    }),
+    'original_device_class': <SensorDeviceClass.TIMESTAMP: 'timestamp'>,
+    'original_icon': None,
+    'original_name': 'Last descaling',
+    'platform': 'klyqa_pet',
+    'previous_unique_id': None,
+    'suggested_object_id': None,
+    'supported_features': 0,
+    'translation_key': 'last_descaling',
+    'unique_id': '188B0EAF2D7C_last_descaling',
+    'unit_of_measurement': None,
+  })
+# ---
+# name: test_sensors[sensor.kitchen_fountain_last_descaling-state]
+  StateSnapshot({
+    'attributes': ReadOnlyDict({
+      <EntityStateAttribute.DEVICE_CLASS: 'device_class'>: 'timestamp',
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Kitchen fountain Last descaling',
+    }),
+    'context': <ANY>,
+    'entity_id': 'sensor.kitchen_fountain_last_descaling',
+    'last_changed': <ANY>,
+    'last_reported': <ANY>,
+    'last_updated': <ANY>,
+    'state': 'unknown',
+  })
+# ---
 # name: test_sensors[sensor.kitchen_fountain_last_drinking-entry]
   EntityRegistryEntrySnapshot({
     'aliases': list([
@@ -1516,6 +1567,57 @@
     'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': '2',
+  })
+# ---
+# name: test_sensors[sensor.kitchen_fountain_next_descaling-entry]
+  EntityRegistryEntrySnapshot({
+    'aliases': list([
+      None,
+    ]),
+    'area_id': None,
+    'capabilities': None,
+    'config_entry_id': <ANY>,
+    'config_subentry_id': <ANY>,
+    'device_class': None,
+    'device_id': <ANY>,
+    'disabled_by': None,
+    'domain': 'sensor',
+    'entity_category': None,
+    'entity_id': 'sensor.kitchen_fountain_next_descaling',
+    'has_entity_name': True,
+    'hidden_by': None,
+    'icon': None,
+    'id': <ANY>,
+    'labels': set({
+    }),
+    'name': None,
+    'object_id_base': 'Next descaling',
+    'options': dict({
+    }),
+    'original_device_class': <SensorDeviceClass.TIMESTAMP: 'timestamp'>,
+    'original_icon': None,
+    'original_name': 'Next descaling',
+    'platform': 'klyqa_pet',
+    'previous_unique_id': None,
+    'suggested_object_id': None,
+    'supported_features': 0,
+    'translation_key': 'next_descaling',
+    'unique_id': '188B0EAF2D7C_next_descaling',
+    'unit_of_measurement': None,
+  })
+# ---
+# name: test_sensors[sensor.kitchen_fountain_next_descaling-state]
+  StateSnapshot({
+    'attributes': ReadOnlyDict({
+      <EntityStateAttribute.DEVICE_CLASS: 'device_class'>: 'timestamp',
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Kitchen fountain Next descaling',
+    }),
+    'context': <ANY>,
+    'entity_id': 'sensor.kitchen_fountain_next_descaling',
+    'last_changed': <ANY>,
+    'last_reported': <ANY>,
+    'last_updated': <ANY>,
+    'state': 'unknown',
   })
 # ---
 # name: test_sensors[sensor.kitchen_fountain_power_status-entry]
@@ -1870,6 +1972,72 @@
     'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': '1234',
+  })
+# ---
+# name: test_sensors[sensor.kitchen_fountain_water_change_schedules-entry]
+  EntityRegistryEntrySnapshot({
+    'aliases': list([
+      None,
+    ]),
+    'area_id': None,
+    'capabilities': None,
+    'config_entry_id': <ANY>,
+    'config_subentry_id': <ANY>,
+    'device_class': None,
+    'device_id': <ANY>,
+    'disabled_by': None,
+    'domain': 'sensor',
+    'entity_category': None,
+    'entity_id': 'sensor.kitchen_fountain_water_change_schedules',
+    'has_entity_name': True,
+    'hidden_by': None,
+    'icon': None,
+    'id': <ANY>,
+    'labels': set({
+    }),
+    'name': None,
+    'object_id_base': 'Water-change schedules',
+    'options': dict({
+    }),
+    'original_device_class': None,
+    'original_icon': None,
+    'original_name': 'Water-change schedules',
+    'platform': 'klyqa_pet',
+    'previous_unique_id': None,
+    'suggested_object_id': None,
+    'supported_features': 0,
+    'translation_key': 'water_change_schedules',
+    'unique_id': '188B0EAF2D7C_water_change_schedules',
+    'unit_of_measurement': None,
+  })
+# ---
+# name: test_sensors[sensor.kitchen_fountain_water_change_schedules-state]
+  StateSnapshot({
+    'attributes': ReadOnlyDict({
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Kitchen fountain Water-change schedules',
+      'schedules': list([
+        dict({
+          'enabled': True,
+          'entry_id': 0,
+          'time': '06:30',
+          'weekdays': list([
+            'sun',
+            'mon',
+            'tue',
+            'wed',
+            'thu',
+            'fri',
+            'sat',
+          ]),
+        }),
+      ]),
+    }),
+    'context': <ANY>,
+    'entity_id': 'sensor.kitchen_fountain_water_change_schedules',
+    'last_changed': <ANY>,
+    'last_reported': <ANY>,
+    'last_updated': <ANY>,
+    'state': '1',
   })
 # ---
 # name: test_sensors[sensor.kitchen_fountain_water_temperature-entry]
