@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from collections.abc import Coroutine
 import dataclasses
-from typing import TYPE_CHECKING, Any, Final
+from typing import TYPE_CHECKING, Any, Final, Literal
 
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.core import HomeAssistant, ServiceCall, callback
@@ -142,15 +142,18 @@ def _decode_weekdays(keys: list[str]) -> frozenset[int]:
 
 
 # The message for a target of the wrong kind names what the action needs, so each
-# device type carries its own key.
-_WRONG_TYPE_KEYS: Final[dict[DeviceType, str]] = {
+# device type carries its own key. Only the two types that own schedule lists have one,
+# and the parameter is typed to them - a third would have to add its key here.
+_WrongTypeDevice = Literal[DeviceType.FOODY, DeviceType.WELLY]
+
+_WRONG_TYPE_KEYS: Final[dict[_WrongTypeDevice, str]] = {
     DeviceType.FOODY: "not_a_foody",
     DeviceType.WELLY: "not_a_welly",
 }
 
 
 def _async_resolve_coordinator(
-    hass: HomeAssistant, device_id: str, device_type: DeviceType
+    hass: HomeAssistant, device_id: str, device_type: _WrongTypeDevice
 ) -> KlyqaDeviceCoordinator:
     """Return the coordinator of that device type behind a Home Assistant device id.
 

@@ -656,23 +656,42 @@ def make_water_changes(count: int) -> WellyTimers:
     return WellyTimers.from_dict(document)
 
 
-async def test_add_water_change_does_not_send_an_id(
+def gapped_water_changes(ids: tuple[int, ...]) -> WellyTimers:
+    """Build a document whose entry ids have gaps, as deleting entries leaves them.
+
+    The id is the MCU's own numbering, not the position in the list the device reports,
+    and nothing renumbers the remaining entries when one is deleted.
+    """
+    document = load_json("welly_timers.json")
+    template = document["water_change"][0]
+    document["water_change"] = [
+        {**template, "id": entry_id, "start": 600 + entry_id} for entry_id in ids
+    ]
+    return WellyTimers.from_dict(document)
+
+
+async def test_add_water_change_does_not_pick_a_slot(
     hass: HomeAssistant, mock_welly: MagicMock, welly_device_id: str
 ) -> None:
-    """The MCU assigns it; the service must not guess a slot.
+    """The MCU assigns the id; the service must not guess a slot.
 
     The device holds entry 0, so a service that copied the Foody's lowest-free-slot
-    search would claim 1 and edit rather than create. The Welly's `add` carries no id
-    at all: the firmware forwards the entry to the MCU, which assigns one.
+    search would claim 1 and reach the device through `set`, or would re-read the list
+    to find a free one. Creating goes through `add` alone, on the strength of the one
+    read the cap check already did. That `add` puts no id on the wire is pinned a layer
+    down, in tests_lib/test_welly.py::test_add_water_change_sends_no_id.
     """
+    mock_welly.reset_mock()
     await call(
         hass,
         SERVICE_ADD_WATER_CHANGE,
         {"device_id": welly_device_id, "time": "07:00:00"},
     )
+    assert mock_welly.add_water_change.await_count == 1
     mock_welly.set_water_change.assert_not_awaited()
-    entry = mock_welly.add_water_change.await_args.args[0]
-    assert "id" not in entry.to_dict(include_id=False)
+    # One read reaches the write - the cap check's. A slot search would want another,
+    # and the read after the write is the refresh that follows every write.
+    assert [name for name, *_ in mock_welly.mock_calls][:2] == ["get_timers", "add_water_change"]
 
 
 async def test_add_water_change_survives_an_entry_missing_from_the_follow_up_read(
@@ -740,9 +759,68 @@ async def test_add_water_change_rejects_a_full_device_before_asking_the_firmware
     mock_welly.add_water_change.assert_not_awaited()
 
 
+async def test_add_water_change_accepts_a_device_with_gaps_in_its_ids(
+    hass: HomeAssistant, mock_welly: MagicMock, welly_device_id: str
+) -> None:
+    """Three entries numbered 0, 3 and 5 leave three free: the cap counts, not numbers.
+
+    That is the state after deleting entries in the middle, and the highest id in use
+    says nothing about how full the device is.
+    """
+    mock_welly.get_timers.return_value = gapped_water_changes((0, 3, 5))
+    await call(
+        hass,
+        SERVICE_ADD_WATER_CHANGE,
+        {"device_id": welly_device_id, "time": "07:00:00"},
+    )
+    assert mock_welly.add_water_change.await_count == 1
+
+
+async def test_the_water_change_services_address_the_id_not_the_position(
+    hass: HomeAssistant, mock_welly: MagicMock, welly_device_id: str
+) -> None:
+    """With ids 0, 3 and 5, entry 5 is the third in the list the device reports."""
+    mock_welly.get_timers.return_value = gapped_water_changes((0, 3, 5))
+
+    await call(
+        hass,
+        SERVICE_SET_WATER_CHANGE,
+        {"device_id": welly_device_id, "entry_id": 5, "enabled": False},
+    )
+    entry = mock_welly.set_water_change.await_args.args[0]
+    assert entry.entry_id == 5
+    # 600 + 5 in the document, so reading entry 5 as the list's index 5 cannot give this.
+    assert entry.start == time(6, 5)
+
+    await call(
+        hass,
+        SERVICE_DELETE_WATER_CHANGE,
+        {"device_id": welly_device_id, "entry_id": 3},
+    )
+    assert mock_welly.delete_water_change.await_args.args == (3,)
+
+    with pytest.raises(ServiceValidationError) as err:
+        await call(
+            hass,
+            SERVICE_DELETE_WATER_CHANGE,
+            {"device_id": welly_device_id, "entry_id": 1},
+        )
+    assert err.value.translation_key == "unknown_water_change"
+
+
 async def test_set_water_change_leaves_omitted_fields_unchanged(
     hass: HomeAssistant, mock_welly: MagicMock, welly_device_id: str
 ) -> None:
+    """Omitted means untouched, which only a mask other than the default can show.
+
+    welly_timers.json holds all seven days for entry 0, and that is also what `add`
+    falls back to - so the entry is seeded with Monday, Wednesday and Friday instead:
+    leaving the field alone and resetting it to the default are then different answers.
+    """
+    document = load_json("welly_timers.json")
+    document["water_change"][0]["repeat"] = 0b0101010
+    mock_welly.get_timers.return_value = WellyTimers.from_dict(document)
+
     await call(
         hass,
         SERVICE_SET_WATER_CHANGE,
@@ -751,9 +829,9 @@ async def test_set_water_change_leaves_omitted_fields_unchanged(
     entry = mock_welly.set_water_change.await_args.args[0]
     assert entry.entry_id == 0
     assert entry.enabled is False
-    # Everything else is what welly_timers.json holds for entry 0.
+    # Everything else is what the device reported: 06:30, Mon/Wed/Fri.
     assert entry.start == time(6, 30)
-    assert entry.weekdays == frozenset(range(7))
+    assert entry.weekdays == frozenset({1, 3, 5})
 
 
 async def test_set_water_change_can_change_every_field(

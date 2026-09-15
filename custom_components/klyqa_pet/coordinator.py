@@ -316,10 +316,11 @@ class KlyqaDeviceCoordinator(DataUpdateCoordinator[KlyqaDeviceData]):
     def mark_timers_stale(self) -> None:
         """Force the next poll to reload the timer document instead of the cached copy.
 
-        Two callers. The feeding-schedule services call it after a successful write and
-        then request a refresh, so the new schedule list is on screen without waiting
-        for the next periodic timers poll. Both they and the entities also call it when
-        a write *fails*: the firmware changes its own copy before the step that can fail
+        Two kinds of caller. The schedule-list services - the Foody's feeding schedules
+        and the Welly's water changes - call it after a successful write and then
+        request a refresh, so the new list is on screen without waiting for the next
+        periodic timers poll. Both they and the entities also call it when a write
+        *fails*: the firmware changes its own copy before the step that can fail
         (device_timers.c), so a rejected write may already have moved the device, and
         the cached document can no longer be trusted. That path asks for no refresh -
         the re-read is left to the next scheduled poll.
