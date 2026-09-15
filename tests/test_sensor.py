@@ -122,7 +122,9 @@ async def test_schedule_sensor_counts_only_enabled_and_orders_weekdays(
             "auto_play_voice": True,
         },
         {
-            "schedule_id": 1,
+            # The gapped id pins that the attribute renders the schedule's own id, not
+            # its position in the list - this schedule is the list's index 1.
+            "schedule_id": 4,
             "enabled": False,
             "skip_once": False,
             "time": "00:00",
@@ -187,7 +189,10 @@ async def test_water_change_sensor_counts_only_enabled_and_orders_weekdays(
             "weekdays": ["mon", "wed", "fri"],
         },
         {
-            "entry_id": 1,
+            # The gapped id pins that the attribute renders the entry's own id, not its
+            # position in the list - this entry is the list's index 1, and the id is
+            # what `set_water_change`/`delete_water_change` take.
+            "entry_id": 4,
             "enabled": False,
             "time": "00:00",
             # repeat 65 = bits 0,6 = Sun, Sat.
