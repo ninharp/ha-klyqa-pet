@@ -192,6 +192,14 @@ class WellyDevice(KlyqaDevice):
         The firmware answers a write with `{"type": "success"}` and nothing else, so the
         fresh document takes a second request. A rejected write answers `type: "error"`,
         which `request` already raises on - so this never reaches the read.
+
+        The write is not applied on the ESP but forwarded to the fountain's MCU, so
+        nothing in the protocol promises that the read-back already shows it. In
+        practice it always does, because the MCU round-trip finishes well inside the
+        spacing this client keeps between requests - verified on a real device for all
+        three write types (a dm_timer interval change, an ndt_timer enable, and an
+        hw_timer add, which even reports the MCU-assigned id straight away). Treat that
+        as an observed dependency on the timing, not as a guarantee.
         """
         await self.request("POST", "device/timer", payload)
         return await self.get_timers()

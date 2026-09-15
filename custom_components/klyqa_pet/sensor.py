@@ -163,9 +163,12 @@ def _schedule_attributes(data: KlyqaDeviceData) -> dict[str, Any]:
 def _water_change_attributes(data: KlyqaDeviceData) -> dict[str, Any]:
     """Render the water-change entry list for the `schedules` attribute.
 
-    Entry ids are positions rather than stable identities (the app may reuse a
-    freed id for an unrelated entry), so this attribute is the only place
-    entries are exposed at all - no entity is pinned to a particular id.
+    An entry's id is the MCU's own numbering, not its position in the list the
+    device reports - deleting an entry leaves a gap - and it is no stable
+    identity either, since a freed id may be handed to an unrelated entry next.
+    So this attribute is the only place entries are exposed at all - no entity
+    is pinned to a particular id - and it is where the user reads the id that
+    `set_water_change` and `delete_water_change` take.
     """
     schedules = [
         {

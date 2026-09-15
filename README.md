@@ -246,7 +246,10 @@ service cannot tell you which id it just created, and the new entry may not show
 in the `Water-change schedules` sensor until the next poll. `set_water_change` and
 `delete_water_change` address an entry by the id shown in that sensor's attributes,
 and — like the feeding-schedule services — always re-read the device's current list
-immediately before writing, since an id is a position, not a stable identity.
+immediately before writing, since an entry's id is the MCU's own numbering — deleting
+an entry leaves a gap rather than renumbering the rest — and a freed id may later be
+handed to an unrelated entry. `add_water_change` fails with a clear error once the
+device is full; delete one first.
 
 The quiet-time window shares the same weekday bitmask as feeding schedules and
 water-change entries, with **bit 0 meaning Sunday**, running through bit 6 for

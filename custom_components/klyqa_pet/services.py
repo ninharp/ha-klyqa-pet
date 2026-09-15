@@ -97,8 +97,10 @@ DELETE_SCHEMA: Final = vol.Schema(
     }
 )
 
-# The Welly's entries live in a fixed array of MAX_WATER_CHANGE_ENTRIES slots and the
-# MCU numbers them by position, so an id outside that range can never exist.
+# The Welly's entries live in a fixed array of MAX_WATER_CHANGE_ENTRIES slots on the
+# MCU, which draws their ids from that same range, so an id outside it can never exist.
+# The id is the MCU's own numbering, not the entry's position in the list the device
+# reports: deleting an entry leaves a gap rather than renumbering the rest.
 _ENTRY_ID = vol.All(vol.Coerce(int), vol.Range(min=0, max=MAX_WATER_CHANGE_ENTRIES - 1))
 
 ADD_WATER_CHANGE_SCHEMA: Final = vol.Schema(
@@ -264,11 +266,14 @@ async def _async_write(
 ) -> Any:
     """Await a timer write, dropping the cached document even when the write fails.
 
-    The firmware mutates its own shadow *before* the step that can fail: a delete clears
-    the slot and only then tells the MCU, and a set stores the entry and only then sends
-    it on (device_timers.c). A rejected write can therefore still have changed the
-    device, and keeping the pre-write document would leave the `feeding_schedules`
-    sensor listing a schedule that is already gone. Marking the cache stale lets the
+    A rejected write can still have changed the device. On the Foody the firmware
+    mutates its own shadow *before* the step that can fail: a delete clears the slot and
+    only then tells the MCU, and a set stores the entry and only then sends it on
+    (device_timers.c). On the Welly nothing local changes at all - the entry goes
+    straight to the fountain's MCU, which may have accepted it even when the ESP answers
+    with an error. Either way, keeping the pre-write document would leave the
+    `feeding_schedules` or `water_change_schedules` sensor listing an entry that is
+    already gone. Marking the cache stale lets the
     next scheduled poll re-read it; the failure path deliberately does not force a
     refresh, which would only put another request to a device that has just refused one.
     """
@@ -380,8 +385,9 @@ async def _async_read_water_changes(
     """Read the water-change entries straight from the device, never from the cache.
 
     Same reasoning as the feeding schedules: the list lives in the ESP's shadow of the
-    fountain's MCU, entry ids are positions rather than stable identities, and a cached
-    id may by now address a different entry than the user means.
+    fountain's MCU, an entry id is the MCU's own numbering rather than a stable identity
+    (a freed id may be handed to an unrelated entry next), and a cached id may by now
+    address a different entry than the user means.
     """
     timers = await _async_device_call(coordinator, coordinator.welly_device.get_timers())
     entries: tuple[WaterChangeEntry, ...] = timers.water_changes

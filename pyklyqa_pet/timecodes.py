@@ -33,11 +33,14 @@ def decode_hhmm_lenient(value: int) -> time:
 
     Every `from_dict` in this library is total: `_as_int`/`_as_bool` substitute a
     default rather than raise, so a surprising device response degrades one field
-    instead of failing the whole poll. The times need the same treatment, because the
-    firmware bounds `start_time`/`end_time` to 0-2359 but validates a schedule's
-    `execution_time` only as "is a number" (device_timers.c), so any other client - or
-    a corrupted NVS blob - can leave an out-of-range value there for the next GET to
-    return. `decode_hhmm` stays strict for callers that want the validation.
+    instead of failing the whole poll. The times need the same treatment, because
+    neither family's firmware range-checks every time it stores. The Foody bounds its
+    sleep window but validates a schedule's execution time only as "is a number"; the
+    Welly range-checks none of its times at all, taking the quiet-time window's start
+    and end as plain numbers and casting a water-change entry's start straight to
+    uint16 (device_timers.c in both firmwares). So any other client - or a corrupted
+    NVS blob - can leave an out-of-range value there for the next GET to return.
+    `decode_hhmm` stays strict for callers that want the validation.
     """
     try:
         return decode_hhmm(value)
