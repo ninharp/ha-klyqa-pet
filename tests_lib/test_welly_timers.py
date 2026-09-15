@@ -2,6 +2,8 @@ from datetime import UTC, datetime, time
 import json
 from pathlib import Path
 
+import pytest
+
 from pyklyqa_pet.welly_timers import (
     DescalingReminder,
     QuietTime,
@@ -71,6 +73,36 @@ def test_water_change_to_dict_omits_the_id_when_creating() -> None:
         "start": 630,
         "repeat": 6,
     }
+
+
+@pytest.mark.parametrize("field", ["start", "end"])
+@pytest.mark.parametrize("raw", [9999, -1, 1060])
+def test_from_dict_degrades_an_impossible_quiet_time_to_midnight(field: str, raw: int) -> None:
+    """The Welly firmware range-checks none of its times, so parsing must stay total.
+
+    `ndt_timer`'s start and end are only checked for being numbers (device_timers.c),
+    so the Klyqa app, another client or a corrupted NVS blob can leave a value no clock
+    has. Raising here would fail the whole poll and take every Welly entity with it.
+    """
+    document = json.loads(json.dumps(FIXTURE))
+    document["ndt_timer"][field] = raw
+    quiet_time = WellyTimers.from_dict(document).quiet_time
+    assert getattr(quiet_time, field) == time(0, 0)
+    # The rest of the window still parses, and the raw value is kept for diagnostics.
+    assert quiet_time.weekdays == frozenset(range(7))
+    assert quiet_time.raw[field] == raw
+
+
+@pytest.mark.parametrize("raw", [9999, -1, 1060])
+def test_from_dict_degrades_an_impossible_water_change_start_to_midnight(raw: int) -> None:
+    """`hw_timer`'s start is cast straight to uint16 by the firmware (device_timers.c),
+    with no range check at all, so a GET can return one no clock has."""
+    document = json.loads(json.dumps(FIXTURE))
+    document["water_change"][0]["start"] = raw
+    entry = WellyTimers.from_dict(document).water_changes[0]
+    assert entry.start == time(0, 0)
+    assert entry.entry_id == 0
+    assert entry.raw["start"] == raw
 
 
 def test_from_dict_tolerates_missing_sections() -> None:
