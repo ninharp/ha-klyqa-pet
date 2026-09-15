@@ -135,6 +135,12 @@ except where noted):
 | sensor | Pump status, Power status, Power supply, Descaling status, Light effect, Battery | Power status/supply, descaling status, light effect and battery are diagnostic |
 | binary_sensor | Water tray low, Pump problem, Do not disturb, Charging | |
 | button | Start descaling, Stop descaling | |
+| switch | Quiet time, Water during quiet time | Config category; "Water during quiet time" only controls whether the pump keeps running while the quiet-time window is active |
+| time | Quiet time start, Quiet time end | Config category; the quiet-time window's weekday selection is not exposed here, see [Water change schedules](#water-change-schedules) |
+| switch | Descaling reminder | Config category |
+| number | Descaling interval | Config category; 1–30 days |
+| sensor | Last descaling, Next descaling | "Next descaling" is unknown until the device has recorded at least one descaling |
+| sensor | Water-change schedules | The number of *enabled* entries; the full list is in its attributes |
 
 ### Foody (feeder)
 
@@ -229,6 +235,60 @@ forwards them to the feeder's own control unit; their effect has not been verifi
 against hardware here. Every schedule captured from a real device carries
 `fresh_food_mode: false` and `duration: 0`, which is what `add_feeding_schedule`
 uses when you leave them out.
+
+### Water change schedules
+
+The Welly holds at most **6** water-change entries (`entry_id` 0–5) — not the
+Foody's 20 — in a fixed array on the fountain's MCU. Unlike the Foody, though, the
+device itself assigns a new entry's id: `add_water_change` sends the entry without
+one, and the MCU numbers it and reports the id back asynchronously. That means the
+service cannot tell you which id it just created, and the new entry may not show up
+in the `Water-change schedules` sensor until the next poll. `set_water_change` and
+`delete_water_change` address an entry by the id shown in that sensor's attributes,
+and — like the feeding-schedule services — always re-read the device's current list
+immediately before writing, since an id is a position, not a stable identity.
+
+The quiet-time window shares the same weekday bitmask as feeding schedules and
+water-change entries, with **bit 0 meaning Sunday**, running through bit 6 for
+Saturday. Home Assistant does not expose the quiet-time window's weekday selection
+as an entity or a service field at all: toggling `Quiet time`, `Water during quiet
+time`, `Quiet time start` or `Quiet time end` builds its write from Home Assistant's
+own cached copy of the quiet-time window with only that one field changed, so the
+weekday mask and every other field are carried over unchanged, the same way the
+Foody's sleep window is handled — see [Feeding schedules](#feeding-schedules) for
+the details of that pattern, including the one-write window against the Klyqa app.
+
+Add a water-change entry:
+
+```yaml
+action: klyqa_pet.add_water_change
+data:
+  device_id: 3fa2c1e4b5a6d7e8f9a0b1c2d3e4f5a6
+  time: "07:00:00"
+  weekdays: ["mon", "wed", "fri"]
+```
+
+Change an existing entry — only the fields you set are touched:
+
+```yaml
+action: klyqa_pet.set_water_change
+data:
+  device_id: 3fa2c1e4b5a6d7e8f9a0b1c2d3e4f5a6
+  entry_id: 0
+  enabled: false
+```
+
+Delete an entry by its id:
+
+```yaml
+action: klyqa_pet.delete_water_change
+data:
+  device_id: 3fa2c1e4b5a6d7e8f9a0b1c2d3e4f5a6
+  entry_id: 0
+```
+
+Replace `device_id` above with your own Welly's device id; `entry_id` is the id
+shown in the `Water-change schedules` sensor's attributes.
 
 ### Airpurifier
 
