@@ -57,8 +57,10 @@ The integration's `manifest.json` pins `pyklyqa-pet` to a specific version on Py
 a HACS or manual install resolves and installs it automatically — nothing special to
 do. This only matters when developing against the in-repo copy of the library instead
 of the published package: run Home Assistant with `--skip-pip-packages pyklyqa-pet`
-and the repository root on `PYTHONPATH`, so the in-repo copy is used instead — see
-[`docker/README.md`](docker/README.md) for a working example.
+and the repository root on `PYTHONPATH`, so the in-repo copy is used instead. In a
+Docker setup based on `ghcr.io/home-assistant/home-assistant`, mount the repository
+(e.g. at `/workspace`), set `PYTHONPATH=/workspace` and mount
+`custom_components/klyqa_pet` into `/config/custom_components/`.
 
 ## Configuration
 
@@ -484,8 +486,9 @@ uv pip install -e ".[dev]"
 pytest
 ```
 
-- A Dockerised Home Assistant instance for manual testing is described in
-  [`docker/README.md`](docker/README.md).
+- For manual testing, run Home Assistant in Docker with the in-repo library on
+  `PYTHONPATH` (see [Installation](#installation) above). Docker Desktop for macOS does
+  not forward LAN mDNS into containers, so add devices manually by IP there.
 - `scripts/probe_devices.py` discovers Klyqa devices on the LAN via mDNS and dumps
   their system info and state — useful for verifying connectivity and firmware
   behaviour outside of Home Assistant.
