@@ -14,5 +14,6 @@ services:
     volumes:
       - ./config:/config
       - ../custom_components:/config/custom_components:rw
+      - ../../ha-ninlight/custom_components/ninlight:/config/custom_components/ninlight:ro
       - ..:/workspace:ro
     restart: unless-stopped
