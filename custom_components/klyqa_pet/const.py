@@ -114,10 +114,12 @@ FOODY_SCHEDULED_REPORT: Final[dict[int, str]] = {
 }
 FOODY_CUSTOM_BUTTON: Final[dict[int, str]] = {
     0: "none",
-    1: "indicator_light",
-    2: "alert_tone",
+    1: "wet_food_mode",
+    2: "do_not_disturb",
     3: "privacy_mode",
-    4: "play_audio",
+    4: "indicator_light",
+    5: "alert_tone",
+    6: "play_audio",
 }
 FOODY_BATTERY_MODE: Final[dict[int, str]] = {0: "standard", 1: "power_save"}
 FOODY_CHARGING_PROTECTION: Final[dict[int, str]] = {1: "stop_charging", 2: "continue_charging"}

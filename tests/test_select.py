@@ -50,10 +50,10 @@ async def test_select_commands(
     await hass.services.async_call(
         SELECT_DOMAIN,
         SERVICE_SELECT_OPTION,
-        {ATTR_ENTITY_ID: "select.feeder_custom_button_function", ATTR_OPTION: "privacy_mode"},
+        {ATTR_ENTITY_ID: "select.feeder_custom_button_function", ATTR_OPTION: "alert_tone"},
         blocking=True,
     )
-    mock_foody.update_settings.assert_awaited_with(custom_button_function=3)
+    mock_foody.update_settings.assert_awaited_with(custom_button_function=5)
     await hass.services.async_call(
         SELECT_DOMAIN,
         SERVICE_SELECT_OPTION,

@@ -483,9 +483,11 @@
         "name": "Custom button function",
         "state": {
           "none": "None",
-          "indicator_light": "Toggle indicator light",
-          "alert_tone": "Toggle alert tone",
+          "wet_food_mode": "Toggle wet food mode",
+          "do_not_disturb": "Toggle do not disturb",
           "privacy_mode": "Toggle privacy mode",
+          "indicator_light": "Toggle indicator light",
+          "alert_tone": "Toggle prompt tone",
           "play_audio": "Play audio"
         }
       },

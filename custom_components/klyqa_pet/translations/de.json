@@ -405,7 +405,7 @@
       },
       "custom_button_function": {
         "name": "Funktion der Zusatztaste",
-        "state": { "none": "Keine", "indicator_light": "Anzeige-LED umschalten", "alert_tone": "Hinweiston umschalten", "privacy_mode": "Privatmodus umschalten", "play_audio": "Audio abspielen" }
+        "state": { "none": "Keine", "wet_food_mode": "Nassfuttermodus umschalten", "do_not_disturb": "Nicht stören umschalten", "privacy_mode": "Privatmodus umschalten", "indicator_light": "Anzeige-LED umschalten", "alert_tone": "Hinweiston umschalten", "play_audio": "Audio abspielen" }
       },
       "battery_work_mode": { "name": "Akkumodus", "state": { "standard": "Standard", "power_save": "Energiesparen" } },
       "charging_protection": { "name": "Ladeschutz", "state": { "stop_charging": "Laden stoppen", "continue_charging": "Weiterladen" } }

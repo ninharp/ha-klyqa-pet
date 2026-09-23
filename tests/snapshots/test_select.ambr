@@ -126,9 +126,11 @@
     'capabilities': dict({
       <SelectEntityCapabilityAttribute.OPTIONS: 'options'>: list([
         'none',
+        'wet_food_mode',
+        'do_not_disturb',
+        'privacy_mode',
         'indicator_light',
         'alert_tone',
-        'privacy_mode',
         'play_audio',
       ]),
     }),
@@ -168,9 +170,11 @@
       <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Feeder Custom button function',
       <SelectEntityCapabilityAttribute.OPTIONS: 'options'>: list([
         'none',
+        'wet_food_mode',
+        'do_not_disturb',
+        'privacy_mode',
         'indicator_light',
         'alert_tone',
-        'privacy_mode',
         'play_audio',
       ]),
     }),
