@@ -500,6 +500,8 @@ pytest
   `/api/brands/integration/klyqa_pet/...`, no submission needed.
 - The integration implements the Home Assistant Bronze through Platinum
   quality scale rules (see `custom_components/klyqa_pet/quality_scale.yaml`).
+- Cutting a release: see [RELEASING.md](RELEASING.md). The library and the
+  integration always carry the same version number, and CI enforces it.
 
 Pull requests are welcome at
 [github.com/ninharp/ha-klyqa-pet](https://github.com/ninharp/ha-klyqa-pet).
